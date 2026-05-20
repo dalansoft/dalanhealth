@@ -166,7 +166,9 @@ export function TvDisplay() {
             <span className="text-xs text-white/60">{totalWaiting} waiting</span>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-2.5">
+          {/* List area — no scroll. Rows that don't fit are clipped silently;
+              the +N footer below sits outside the clip so it's always visible. */}
+          <div className="flex-1 min-h-0 overflow-hidden space-y-2.5">
             <AnimatePresence initial={false}>
               {upNext.map((e, idx) => (
                 <motion.div
@@ -202,13 +204,14 @@ export function TvDisplay() {
             {upNext.length === 0 && (
               <div className="text-white/50 text-base lg:text-lg text-center py-10">No further patients in queue.</div>
             )}
-
-            {overflow > 0 && (
-              <div className="pt-1.5 text-center text-xs lg:text-sm font-semibold uppercase tracking-wider text-white/55">
-                + {overflow} more waiting
-              </div>
-            )}
           </div>
+
+          {/* +N more footer — outside the clipped area so it never gets hidden */}
+          {overflow > 0 && (
+            <div className="shrink-0 pt-3 text-center text-xs lg:text-sm font-semibold uppercase tracking-wider text-white/55">
+              + {overflow} more waiting
+            </div>
+          )}
         </section>
       </main>
 
