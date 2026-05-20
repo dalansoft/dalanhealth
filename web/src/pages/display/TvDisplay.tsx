@@ -68,24 +68,26 @@ export function TvDisplay() {
 
       {/* Header — 3 sections: clinic name (left), doctor info (centre), time + toggle (right) */}
       <header className="relative z-10 shrink-0 px-6 sm:px-10 lg:px-14 py-4 lg:py-5 grid grid-cols-3 items-center gap-4 lg:gap-6 border-b border-ink-200 dark:border-white/10">
-        {/* LEFT — heart + clinic name */}
+        {/* LEFT — heart + clinic name + address */}
         <div className="flex items-center gap-3 lg:gap-4 min-w-0">
           <HeartLeafMark size={52} />
-          <div className="text-xl lg:text-2xl xl:text-3xl font-extrabold tracking-tight font-brand truncate">
-            {demoClinic.name}
+          <div className="min-w-0">
+            <div className="text-xl lg:text-2xl xl:text-3xl font-extrabold tracking-tight font-brand truncate">
+              {demoClinic.name}
+            </div>
+            <div className="mt-0.5 text-xs lg:text-sm text-ink-500 dark:text-white/55 truncate">
+              {demoClinic.city}
+            </div>
           </div>
         </div>
 
-        {/* CENTRE — doctor / specialist / address, centred between clinic and time */}
+        {/* CENTRE — doctor name + specialist, centred between clinic and time */}
         <div className="text-center min-w-0">
           <div className="text-base lg:text-lg xl:text-2xl font-bold text-token truncate">
             {demoClinic.doctor}
           </div>
           <div className="mt-0.5 text-xs lg:text-sm text-ink-600 dark:text-white/70 truncate">
             {demoClinic.specialization}
-          </div>
-          <div className="text-xs lg:text-sm text-ink-500 dark:text-white/55 truncate">
-            {demoClinic.city}
           </div>
         </div>
 
