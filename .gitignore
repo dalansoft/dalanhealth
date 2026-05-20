@@ -59,3 +59,6 @@ android/
 
 # Claude Code (per-machine local settings)
 .claude/settings.local.json
+
+# Temporary video frame extraction
+.frames/
