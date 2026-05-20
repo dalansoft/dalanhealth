@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HeartLeafMark } from '@/components/ui/Logo';
 import { SourceBadge } from '@/components/ui/SourceBadge';
@@ -32,12 +32,37 @@ export function TvDisplay() {
 
   const current = entries[0];
 
-  // Cap at 5 visible — comfortably fits on every display at the larger
-  // row size the user asked for. Honest total still appears in the
-  // header counter and the "+N more" footer.
-  const MAX_UP_NEXT = 5;
+  // Dynamic row count — show as many up-next patients as the available
+  // height can fit. On a phone we land around 5; on a 4K wall TV we can
+  // comfortably show 25–30. Recomputed on every container resize.
+  const listRef = useRef<HTMLDivElement>(null);
+  const [visibleCount, setVisibleCount] = useState(8);
+
+  useLayoutEffect(() => {
+    const compute = () => {
+      if (!listRef.current) return;
+      const h = listRef.current.clientHeight;
+      const w = window.innerWidth;
+      // Approximate rendered row height (incl. padding) per Tailwind breakpoint.
+      const rowH = w >= 1280 ? 88 : w >= 1024 ? 76 : w >= 640 ? 64 : 56;
+      const gap = 10; // space-y-2.5 = 0.625rem = 10px
+      const fits = Math.max(1, Math.floor((h + gap) / (rowH + gap)));
+      setVisibleCount(fits);
+    };
+    compute();
+    const ro = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(() => compute())
+      : null;
+    if (ro && listRef.current) ro.observe(listRef.current);
+    window.addEventListener('resize', compute);
+    return () => {
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', compute);
+    };
+  }, []);
+
   const totalWaiting = Math.max(0, entries.length - (current ? 1 : 0));
-  const upNext = entries.slice(1, 1 + MAX_UP_NEXT);
+  const upNext = entries.slice(1, 1 + visibleCount);
   const overflow = Math.max(0, totalWaiting - upNext.length);
 
   // Clock — manual format so seconds + uppercase AM/PM stay consistent.
@@ -91,10 +116,13 @@ export function TvDisplay() {
           </div>
         </div>
 
-        {/* RIGHT — time + date + theme toggle */}
+        {/* RIGHT — product caption + time + date + theme toggle */}
         <div className="flex items-start justify-end gap-3 lg:gap-5 min-w-0">
           <div className="flex flex-col items-end min-w-0">
-            <div className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-extrabold tabular-nums leading-none font-brand whitespace-nowrap">
+            <div className="text-[10px] lg:text-xs uppercase tracking-[0.18em] text-ink-500 dark:text-white/55 whitespace-nowrap">
+              A product of <span className="font-brand font-semibold tracking-[0.22em] text-ink-700 dark:text-white/80">Dalansoft Technologies</span>
+            </div>
+            <div className="mt-1 text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-extrabold tabular-nums leading-none font-brand whitespace-nowrap">
               {time}
             </div>
             <div className="mt-1 text-xs lg:text-sm text-ink-600 dark:text-white/60 whitespace-nowrap">{date}</div>
@@ -186,7 +214,7 @@ export function TvDisplay() {
             <span className="text-xs text-ink-500 dark:text-white/60">{totalWaiting} waiting</span>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-hidden space-y-2.5">
+          <div ref={listRef} className="flex-1 min-h-0 overflow-hidden space-y-2.5">
             <AnimatePresence initial={false}>
               {upNext.map((e, idx) => {
                 const s = statusFor(idx);
@@ -226,20 +254,18 @@ export function TvDisplay() {
               <div className="text-ink-500 dark:text-white/50 text-base lg:text-lg text-center py-10">No further patients in queue.</div>
             )}
           </div>
-
-          {overflow > 0 && (
-            <div className="shrink-0 pt-3 text-center text-xs lg:text-sm font-semibold uppercase tracking-wider text-ink-500 dark:text-white/55">
-              + {overflow} more waiting
-            </div>
-          )}
         </section>
       </main>
 
-      {/* Footer — three sections: brand · company / contact · queue size */}
+      {/* Footer — left: +N more waiting · centre: contact · right: queue size */}
       <footer className="relative z-10 shrink-0 border-t border-ink-200 dark:border-white/10 bg-white/70 dark:bg-black/30 backdrop-blur">
         <div className="px-6 sm:px-10 lg:px-14 py-3 grid grid-cols-3 items-center text-[11px] lg:text-xs text-ink-600 dark:text-white/60 gap-4">
-          <span className="truncate">
-            Powered by <span className="font-brand font-bold text-ink-900 dark:text-white tracking-[0.18em]">DALAN HEALTH</span>
+          <span className="truncate font-semibold uppercase tracking-wider">
+            {overflow > 0 ? (
+              <span className="text-ink-700 dark:text-white/75">+ {overflow} more waiting</span>
+            ) : (
+              <span className="text-ink-400 dark:text-white/40">All waiting patients visible</span>
+            )}
           </span>
           <span className="hidden md:flex items-center justify-center gap-2 lg:gap-3 truncate">
             <span>© {year} Dalansoft Technologies</span>
