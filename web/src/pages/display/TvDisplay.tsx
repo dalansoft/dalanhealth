@@ -124,13 +124,31 @@ export function TvDisplay() {
             </AnimatePresence>
           </div>
 
-          {/* Doctor sitting — beneath the "Please proceed" pill; two blocks split left + right */}
+          {/* Doctor sitting — beneath the "Please proceed" pill.
+              Lays out as a 2-column grid:
+              · 1 block  → centred across both cells
+              · 2 blocks → left + right
+              · 3 blocks → row 1 left+right, row 2 lone block centred
+              · 4+       → wraps cleanly two-per-row, lone odd is centred */}
           <div className="mt-4 lg:mt-6 rounded-2xl border border-white/10 bg-white/[0.04] px-5 lg:px-8 py-3 lg:py-4 shrink-0">
             <div className="text-[10px] lg:text-xs uppercase tracking-wider text-white/60 text-center">Doctor sitting</div>
-            <div className={`mt-1.5 flex items-center gap-4 lg:gap-10 ${timingBlocks.length >= 2 ? 'justify-between' : 'justify-center'}`}>
-              {timingBlocks.map((t, i) => (
-                <div key={i} className="text-lg lg:text-2xl font-bold tracking-tight whitespace-nowrap">{t}</div>
-              ))}
+            <div className="mt-1.5 grid grid-cols-2 gap-x-6 lg:gap-x-10 gap-y-1.5 items-center">
+              {timingBlocks.map((t, i) => {
+                const isLastOdd = i === timingBlocks.length - 1 && timingBlocks.length % 2 === 1;
+                const align = isLastOdd
+                  ? 'col-span-2 text-center'
+                  : i % 2 === 0
+                  ? 'text-left'
+                  : 'text-right';
+                return (
+                  <div
+                    key={i}
+                    className={`text-lg lg:text-2xl font-bold tracking-tight whitespace-nowrap ${align}`}
+                  >
+                    {t}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
