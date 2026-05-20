@@ -153,19 +153,33 @@ export function DashboardShell({ nav, children, title, subtitle, topRight }: Pro
                     <ChevronDown size={12} className={cn('text-white/40 transition-transform', !open && '-rotate-90')} />
                   </button>
                 ) : (
-                  <div className="mb-1 flex flex-col items-center gap-1">
-                    <div className="h-px w-7 bg-white/10" />
-                    <span className={cn('text-[10px] font-extrabold uppercase tracking-[0.18em] leading-none', accentClass[section.accent ?? 'brand'])}>
-                      {section.title.charAt(0)}
-                    </span>
-                  </div>
+                  <Tooltip label={`Open ${section.title}`} side="bottom">
+                    <button
+                      onClick={() => {
+                        setCollapsed(false);
+                        try { localStorage.setItem(COLLAPSE_KEY, '0'); } catch {}
+                        setExpanded((e) => ({ ...e, [section.title]: true }));
+                      }}
+                      className={cn(
+                        'group flex items-center justify-center h-14 w-14 mx-auto rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.10] hover:border-white/20 transition-all',
+                      )}
+                      aria-label={`Open ${section.title} section`}
+                    >
+                      <span className={cn(
+                        'font-brand text-2xl font-extrabold leading-none transition-transform group-hover:scale-110',
+                        accentClass[section.accent ?? 'brand'],
+                      )}>
+                        {section.title.charAt(0)}
+                      </span>
+                    </button>
+                  </Tooltip>
                 )}
                 <AnimatePresence initial={false}>
-                  {(isCollapsed || open) && (
+                  {!isCollapsed && open && (
                     <motion.div
-                      initial={isCollapsed ? false : { height: 0, opacity: 0 }}
+                      initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
-                      exit={isCollapsed ? undefined : { height: 0, opacity: 0 }}
+                      exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.18 }}
                       className="overflow-hidden space-y-1"
                     >
