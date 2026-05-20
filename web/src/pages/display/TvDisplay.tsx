@@ -37,8 +37,17 @@ export function TvDisplay() {
   const current = entries[0];
   const upNext = entries.slice(1);
 
-  const time = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  // Time with seconds + uppercase AM/PM (e.g. "07:11:34 PM").
+  const h24 = now.getHours();
+  const hour12 = String(h24 % 12 || 12).padStart(2, '0');
+  const minute = String(now.getMinutes()).padStart(2, '0');
+  const second = String(now.getSeconds()).padStart(2, '0');
+  const ampm = h24 >= 12 ? 'PM' : 'AM';
+  const time = `${hour12}:${minute}:${second} ${ampm}`;
   const date = now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  // Split "10 AM – 2 PM, 5 PM – 8 PM" so each block can sit on its own side.
+  const timingBlocks = demoClinic.timing.split(',').map((t) => t.trim()).filter(Boolean);
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-navy-950 text-white relative flex flex-col">
@@ -57,7 +66,7 @@ export function TvDisplay() {
           </div>
         </div>
         <div className="text-right shrink-0 ml-4">
-          <div className="text-3xl lg:text-4xl xl:text-5xl font-extrabold tabular-nums leading-none font-brand">{time}</div>
+          <div className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-extrabold tabular-nums leading-none font-brand whitespace-nowrap">{time}</div>
           <div className="mt-1 text-xs lg:text-sm text-white/60">{date}</div>
         </div>
       </header>
@@ -115,10 +124,14 @@ export function TvDisplay() {
             </AnimatePresence>
           </div>
 
-          {/* Doctor sitting — moved here, sits beneath the "Please proceed" pill */}
-          <div className="mt-4 lg:mt-6 rounded-2xl border border-white/10 bg-white/[0.04] px-4 lg:px-5 py-3 lg:py-4 text-center shrink-0">
-            <div className="text-[10px] lg:text-xs uppercase tracking-wider text-white/60">Doctor sitting</div>
-            <div className="mt-0.5 text-lg lg:text-2xl font-bold tracking-tight">{demoClinic.timing}</div>
+          {/* Doctor sitting — beneath the "Please proceed" pill; two blocks split left + right */}
+          <div className="mt-4 lg:mt-6 rounded-2xl border border-white/10 bg-white/[0.04] px-5 lg:px-8 py-3 lg:py-4 shrink-0">
+            <div className="text-[10px] lg:text-xs uppercase tracking-wider text-white/60 text-center">Doctor sitting</div>
+            <div className={`mt-1.5 flex items-center gap-4 lg:gap-10 ${timingBlocks.length >= 2 ? 'justify-between' : 'justify-center'}`}>
+              {timingBlocks.map((t, i) => (
+                <div key={i} className="text-lg lg:text-2xl font-bold tracking-tight whitespace-nowrap">{t}</div>
+              ))}
+            </div>
           </div>
         </section>
 
