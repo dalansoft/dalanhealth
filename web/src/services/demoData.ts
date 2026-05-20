@@ -1,13 +1,54 @@
-import type { QueueEntry } from '@/store/queue';
+import type { QueueEntry, QueueSource } from '@/store/queue';
 
-export const demoQueue: QueueEntry[] = [
-  { id: 'q1', token: 1, patientName: 'Shailesh Kumar', patientMobile: '+91 98765 43210', source: 'ONLINE', status: 'Consultation', joinedAt: '10:02 AM' },
-  { id: 'q2', token: 2, patientName: 'Raj Verma', patientMobile: '+91 91234 56780', source: 'OFFLINE', status: 'Queue', joinedAt: '10:05 AM' },
-  { id: 'q3', token: 3, patientName: 'Saurabh Singh', patientMobile: '+91 99887 12345', source: 'QR', status: 'Waiting', joinedAt: '10:11 AM' },
-  { id: 'q4', token: 4, patientName: 'Ramesh Jha', patientMobile: '+91 90909 12121', source: 'OFFLINE', status: 'Waiting', joinedAt: '10:18 AM' },
-  { id: 'q5', token: 5, patientName: 'Pooja Sharma', patientMobile: '+91 98700 33445', source: 'ONLINE', status: 'Waiting', joinedAt: '10:24 AM' },
-  { id: 'q6', token: 6, patientName: 'Aman Kumar', patientMobile: '+91 99110 22334', source: 'QR', status: 'Waiting', joinedAt: '10:31 AM' },
+// --- 30-patient demo queue -------------------------------------------------
+// Realistic Bihar/Hindi-belt names with a mix of sources (offline majority,
+// online ~30%, QR ~20%) and joined-at timestamps spread across the doctor's
+// morning + early-afternoon session. Status is intentionally set to the
+// initial state — the queue store re-derives Consultation / Queue / Waiting
+// based on token order when setEntries() is called.
+
+const _patients: Array<[name: string, mobile: string, source: QueueSource, joined: string]> = [
+  ['Shailesh Kumar',    '+91 98765 43210', 'ONLINE',  '09:42 AM'],
+  ['Raj Verma',         '+91 91234 56780', 'OFFLINE', '09:55 AM'],
+  ['Saurabh Singh',     '+91 99887 12345', 'QR',      '10:05 AM'],
+  ['Pooja Sharma',      '+91 98700 33445', 'ONLINE',  '10:11 AM'],
+  ['Ramesh Jha',        '+91 90909 12121', 'OFFLINE', '10:18 AM'],
+  ['Aman Kumar',        '+91 99110 22334', 'QR',      '10:24 AM'],
+  ['Anjali Devi',       '+91 91100 33455', 'OFFLINE', '10:31 AM'],
+  ['Manoj Yadav',       '+91 98345 11220', 'OFFLINE', '10:38 AM'],
+  ['Pinky Kumari',      '+91 92110 88775', 'ONLINE',  '10:45 AM'],
+  ['Vikas Sah',         '+91 99887 30021', 'OFFLINE', '10:52 AM'],
+  ['Sumit Roy',         '+91 90065 12339', 'QR',      '10:59 AM'],
+  ['Neha Singh',        '+91 98800 11223', 'ONLINE',  '11:06 AM'],
+  ['Aditya Mishra',     '+91 98445 67712', 'OFFLINE', '11:13 AM'],
+  ['Sunita Devi',       '+91 99775 23310', 'OFFLINE', '11:20 AM'],
+  ['Rohit Paswan',      '+91 90123 44559', 'QR',      '11:27 AM'],
+  ['Priya Choudhary',   '+91 92250 77881', 'ONLINE',  '11:34 AM'],
+  ['Deepak Tiwari',     '+91 98221 56678', 'OFFLINE', '11:41 AM'],
+  ['Kavita Singh',      '+91 99220 81134', 'OFFLINE', '11:48 AM'],
+  ['Arjun Pandey',      '+91 90011 67723', 'ONLINE',  '11:55 AM'],
+  ['Babita Kumari',     '+91 98889 12245', 'OFFLINE', '12:02 PM'],
+  ['Naresh Gupta',      '+91 99001 22778', 'QR',      '12:09 PM'],
+  ['Reshma Khatun',     '+91 92345 11876', 'OFFLINE', '12:16 PM'],
+  ['Sanjay Mahto',      '+91 98778 33442', 'OFFLINE', '12:23 PM'],
+  ['Geeta Devi',        '+91 99650 88712', 'OFFLINE', '12:30 PM'],
+  ['Rakesh Thakur',     '+91 98012 56641', 'ONLINE',  '12:37 PM'],
+  ['Mamta Sinha',       '+91 92208 11098', 'OFFLINE', '12:44 PM'],
+  ['Bipin Ranjan',      '+91 98556 71223', 'QR',      '12:51 PM'],
+  ['Shweta Verma',      '+91 99440 33871', 'ONLINE',  '12:58 PM'],
+  ['Ankit Raj',         '+91 90112 67782', 'OFFLINE', '01:05 PM'],
+  ['Kiran Bala',        '+91 98330 21109', 'QR',      '01:12 PM'],
 ];
+
+export const demoQueue: QueueEntry[] = _patients.map(([name, mobile, source, joined], i) => ({
+  id: `q${i + 1}`,
+  token: i + 1,
+  patientName: name,
+  patientMobile: mobile,
+  source,
+  status: 'Waiting', // recomputed by useQueue.setEntries()
+  joinedAt: joined,
+}));
 
 export const demoClinic = {
   name: 'Sharma ENT Clinic',
