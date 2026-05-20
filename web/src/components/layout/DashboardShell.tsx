@@ -181,12 +181,19 @@ export function DashboardShell({ nav, children, title, subtitle, topRight }: Pro
                           >
                             {({ isActive }) => (
                               <>
-                                <span className={cn(
-                                  'inline-flex h-5 w-5 items-center justify-center transition-colors shrink-0',
-                                  isActive ? 'text-white' : 'text-white/60 group-hover:text-white',
-                                )}>{n.icon}</span>
-                                {!isCollapsed && (
+                                {isCollapsed ? (
+                                  <span className={cn(
+                                    'font-brand text-base font-bold uppercase tracking-tight leading-none transition-colors',
+                                    isActive ? 'text-white' : 'text-white/75 group-hover:text-white',
+                                  )}>
+                                    {n.label.trim().charAt(0)}
+                                  </span>
+                                ) : (
                                   <>
+                                    <span className={cn(
+                                      'inline-flex h-5 w-5 items-center justify-center transition-colors shrink-0',
+                                      isActive ? 'text-white' : 'text-white/60 group-hover:text-white',
+                                    )}>{n.icon}</span>
                                     <span className="truncate flex-1">{n.label}</span>
                                     {n.badge !== undefined && (
                                       <span className={cn(
