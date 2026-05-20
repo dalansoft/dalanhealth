@@ -159,43 +159,43 @@ export function TvDisplay() {
           </div>
         </section>
 
-        {/* RIGHT: Up next — internally scrollable */}
-        <section className="rounded-3xl bg-white/[0.04] border border-white/10 backdrop-blur-xl p-5 lg:p-7 flex flex-col min-h-0 overflow-hidden">
-          <div className="shrink-0 flex items-center justify-between mb-4">
+        {/* RIGHT: Up next — compact rows so 10 fit without scrolling */}
+        <section className="rounded-3xl bg-white/[0.04] border border-white/10 backdrop-blur-xl p-4 lg:p-5 flex flex-col min-h-0 overflow-hidden">
+          <div className="shrink-0 flex items-center justify-between mb-3">
             <div className="text-[10px] lg:text-xs uppercase tracking-[0.32em] text-brand-300 font-semibold">Up next</div>
             <span className="text-xs text-white/60">{totalWaiting} waiting</span>
           </div>
 
-          {/* List area — no scroll. Rows that don't fit are clipped silently;
-              the +N footer below sits outside the clip so it's always visible. */}
-          <div className="flex-1 min-h-0 overflow-hidden space-y-2.5">
+          {/* Compact list — no scroll. Rows that don't fit clip silently;
+              +N footer sits below so it's always visible. */}
+          <div className="flex-1 min-h-0 overflow-hidden space-y-1.5">
             <AnimatePresence initial={false}>
               {upNext.map((e, idx) => (
                 <motion.div
                   key={e.id}
                   layout
-                  initial={{ opacity: 0, x: 24 }}
+                  initial={{ opacity: 0, x: 16 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -24 }}
+                  exit={{ opacity: 0, x: -16 }}
                   transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-                  className={`flex items-center gap-4 rounded-2xl border border-white/10 p-3 lg:p-4 ${
+                  className={`flex items-center gap-3 rounded-xl border border-white/10 px-3 lg:px-4 py-1.5 lg:py-2 ${
                     idx === 0 ? 'bg-brand-500/15' : 'bg-white/[0.02]'
                   }`}
                 >
-                  <div className={`w-16 lg:w-20 text-center text-3xl lg:text-4xl xl:text-5xl font-extrabold tabular-nums leading-none font-brand ${
+                  <div className={`w-12 lg:w-14 text-center text-xl lg:text-2xl xl:text-3xl font-extrabold tabular-nums leading-none font-brand ${
                     idx === 0 ? 'text-brand-300' : 'text-white/70'
                   }`}>
                     #{e.token}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-base lg:text-lg xl:text-xl font-semibold text-white truncate">{e.patientName}</div>
-                    <div className="mt-1 flex items-center gap-2 text-xs lg:text-sm text-white/60">
+                    <div className="text-sm lg:text-base font-semibold text-white truncate leading-tight">{e.patientName}</div>
+                    <div className="mt-0.5 flex items-center gap-1.5 text-[10px] lg:text-xs text-white/55">
                       <SourceBadge source={e.source} />
                       <span>Joined {e.joinedAt}</span>
                     </div>
                   </div>
                   {idx === 0 && (
-                    <div className="hidden sm:block text-[10px] lg:text-xs uppercase tracking-wider text-brand-300 font-semibold shrink-0">Get ready</div>
+                    <div className="hidden sm:block text-[9px] lg:text-[11px] uppercase tracking-wider text-brand-300 font-semibold shrink-0">Get ready</div>
                   )}
                 </motion.div>
               ))}
@@ -208,7 +208,7 @@ export function TvDisplay() {
 
           {/* +N more footer — outside the clipped area so it never gets hidden */}
           {overflow > 0 && (
-            <div className="shrink-0 pt-3 text-center text-xs lg:text-sm font-semibold uppercase tracking-wider text-white/55">
+            <div className="shrink-0 pt-2 text-center text-[11px] lg:text-xs font-semibold uppercase tracking-wider text-white/55">
               + {overflow} more waiting
             </div>
           )}
