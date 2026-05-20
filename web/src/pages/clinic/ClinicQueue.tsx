@@ -45,11 +45,11 @@ export function ClinicQueue() {
                   #{current.token}
                 </div>
                 <div>
-                  <div className="text-xl font-semibold text-ink-900 dark:text-ink-50">{current.patientName}</div>
-                  <div className="text-sm text-muted flex items-center gap-2 mt-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xl font-semibold text-ink-900 dark:text-ink-50">{current.patientName}</span>
                     <SourceBadge source={current.source} />
-                    <span>{current.patientMobile}</span>
                   </div>
+                  <div className="text-sm text-muted mt-1">{current.patientMobile}</div>
                 </div>
               </div>
               <div className="mt-5 flex flex-wrap gap-2">

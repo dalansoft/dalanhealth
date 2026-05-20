@@ -43,10 +43,12 @@ export function CurrentTokenCard({ current, onComplete, onSkip }: Props) {
               >
                 #{current.token}
               </motion.div>
-              <div className="mt-4 text-lg font-semibold text-ink-900 dark:text-ink-50">{current.patientName}</div>
-              <div className="mt-1 flex items-center gap-2 text-xs text-muted">
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                <span className="text-lg font-semibold text-ink-900 dark:text-ink-50">{current.patientName}</span>
                 <SourceBadge source={current.source} />
-                <span className="inline-flex items-center gap-1"><Phone size={11} />{current.patientMobile}</span>
+              </div>
+              <div className="mt-1 inline-flex items-center gap-1 text-xs text-muted">
+                <Phone size={11} />{current.patientMobile}
               </div>
             </div>
 

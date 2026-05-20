@@ -32,14 +32,14 @@ export function QueuePreview({ entries, title = 'Live queue', viewAllTo = '/clin
                 #{e.token}
               </div>
               <div className="min-w-0">
-                <div className="text-sm font-medium text-ink-900 dark:text-ink-50 truncate">{e.patientName}</div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-sm font-medium text-ink-900 dark:text-ink-50 truncate">{e.patientName}</span>
+                  <SourceBadge source={e.source} />
+                </div>
                 <div className="text-[11px] text-muted truncate">{e.patientMobile}</div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <SourceBadge source={e.source} />
-              {idx === 0 && <Badge tone="success" pulse size="sm">Now</Badge>}
-            </div>
+            {idx === 0 && <Badge tone="success" pulse size="sm">Now</Badge>}
           </div>
         ))}
         {list.length === 0 && <div className="text-sm text-muted text-center py-6">Queue is empty.</div>}

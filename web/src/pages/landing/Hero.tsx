@@ -103,9 +103,9 @@ function HeroVisual() {
             >
               <div className="flex items-center gap-3">
                 <div className="h-9 w-9 rounded-xl bg-brand-500/15 text-brand-700 dark:text-brand-300 flex items-center justify-center font-semibold">#{e.t}</div>
-                <div>
-                  <div className="text-sm font-medium text-ink-900 dark:text-ink-50">{e.n}</div>
-                  <div className="mt-0.5"><SourceBadge source={e.src} /></div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-ink-900 dark:text-ink-50">{e.n}</span>
+                  <SourceBadge source={e.src} />
                 </div>
               </div>
               <Badge tone={e.st === 'Consultation' ? 'success' : e.st === 'Up next' ? 'brand' : 'neutral'} pulse={e.st === 'Consultation'}>{e.st}</Badge>

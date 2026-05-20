@@ -134,8 +134,8 @@ export function TvDisplay() {
                   >
                     #{current.token}
                   </div>
-                  <div className="mt-4 lg:mt-6 text-2xl lg:text-4xl xl:text-5xl font-bold">{current.patientName}</div>
-                  <div className="mt-2 lg:mt-3 flex items-center justify-center gap-3 text-ink-600 dark:text-white/70 text-sm lg:text-base">
+                  <div className="mt-4 lg:mt-6 flex flex-wrap items-center justify-center gap-3 lg:gap-4">
+                    <div className="text-2xl lg:text-4xl xl:text-5xl font-bold">{current.patientName}</div>
                     <SourceBadge source={current.source} />
                   </div>
                   <div className="mt-4 lg:mt-5 inline-flex items-center gap-2 rounded-full bg-token/15 px-4 lg:px-5 py-1.5 lg:py-2 text-token font-semibold uppercase tracking-wider text-xs lg:text-sm">
@@ -210,11 +210,9 @@ export function TvDisplay() {
                     }`}>
                       #{e.token}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-base lg:text-lg xl:text-xl font-semibold truncate">{e.patientName}</div>
-                      <div className="mt-1 flex items-center gap-2">
-                        <SourceBadge source={e.source} />
-                      </div>
+                    <div className="flex-1 min-w-0 flex items-center gap-2 lg:gap-3">
+                      <div className="text-base lg:text-lg xl:text-xl font-semibold truncate min-w-0">{e.patientName}</div>
+                      <SourceBadge source={e.source} />
                     </div>
                     <div className={`text-[10px] lg:text-xs uppercase tracking-wider font-bold shrink-0 ${s.tone}`}>
                       {s.label}
