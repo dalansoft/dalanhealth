@@ -85,14 +85,14 @@ export function TvDisplay() {
             </div>
           </div>
         </div>
-        <div className="shrink-0 flex flex-col items-end gap-2">
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
+        <div className="shrink-0 flex items-start gap-3 lg:gap-5">
+          <div className="flex flex-col items-end">
+            <div className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-extrabold tabular-nums leading-none font-brand whitespace-nowrap">
+              {time}
+            </div>
+            <div className="mt-1 text-xs lg:text-sm text-ink-600 dark:text-white/60">{date}</div>
           </div>
-          <div className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-extrabold tabular-nums leading-none font-brand whitespace-nowrap">
-            {time}
-          </div>
-          <div className="text-xs lg:text-sm text-ink-600 dark:text-white/60">{date}</div>
+          <ThemeToggle />
         </div>
       </header>
 
