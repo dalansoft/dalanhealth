@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "DalanHealth",
+    "slug": "dalanhealth",
+    "version": "0.1.0",
+    "scheme": "dalanhealth",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "platforms": ["ios", "android"],
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f172a"
+    },
+    "plugins": ["expo-router"],
+    "experiments": { "typedRoutes": true }
+  }
+}

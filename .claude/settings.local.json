@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(git -C \"D:\\\\DalanHealth\\(Final\\)\" status --short)",
+      "PowerShell(git -C \"D:\\\\DalanHealth\\(Final\\)\" rev-parse --abbrev-ref HEAD)",
+      "PowerShell(git -C \"D:\\\\DalanHealth\\(Final\\)\" remote -v)"
+    ]
+  }
+}

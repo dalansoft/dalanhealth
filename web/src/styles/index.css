@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: 248 250 252;
+  --bg-elev: 255 255 255;
+  --fg: 15 23 42;
+  --fg-muted: 100 116 139;
+  --border: 226 232 240;
+  --brand: 47 127 255;
+  --accent: 139 92 246;
+}
+
+.dark {
+  --bg: 4 8 20;
+  --bg-elev: 15 23 42;
+  --fg: 226 232 240;
+  --fg-muted: 148 163 184;
+  --border: 30 41 59;
+  --brand: 91 163 255;
+  --accent: 167 139 250;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  @apply font-sans antialiased;
+  background-color: rgb(var(--bg));
+  color: rgb(var(--fg));
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(47, 127, 255, 0.25);
+}
+
+/* Premium scrollbar */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.55); background-clip: padding-box; }
+
+@layer components {
+  .glass {
+    @apply bg-white/70 dark:bg-ink-900/60 backdrop-blur-xl border border-ink-200/60 dark:border-ink-800/60;
+  }
+  .glass-strong {
+    @apply bg-white/85 dark:bg-ink-900/80 backdrop-blur-2xl border border-ink-200/70 dark:border-ink-800/70;
+  }
+  .card {
+    @apply rounded-2xl bg-white dark:bg-ink-900 border border-ink-200/70 dark:border-ink-800/70 shadow-card dark:shadow-cardDark;
+  }
+  .hairline {
+    @apply border-ink-200/70 dark:border-ink-800/70;
+  }
+  .text-muted {
+    @apply text-ink-500 dark:text-ink-400;
+  }
+  .text-faint {
+    @apply text-ink-400 dark:text-ink-500;
+  }
+  .gradient-text {
+    @apply bg-gradient-to-br from-brand-600 via-brand-500 to-accent-500 bg-clip-text text-transparent;
+  }
+  .grid-bg {
+    @apply bg-grid-light dark:bg-grid-dark bg-grid;
+  }
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-ink-950;
+  }
+  .shimmer {
+    background: linear-gradient(90deg, rgba(148,163,184,0.08) 0%, rgba(148,163,184,0.2) 50%, rgba(148,163,184,0.08) 100%);
+    background-size: 200% 100%;
+    @apply animate-shimmer;
+  }
+}
+
+/* Print styling for invoices + prescriptions */
+@media print {
+  body { background: white !important; color: black !important; }
+  .no-print { display: none !important; }
+}
