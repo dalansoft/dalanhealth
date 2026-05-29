@@ -5,6 +5,7 @@ import { StatTile } from '@/components/dashboard/StatTile';
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed';
 import { Card, CardSubtitle, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { LiveClock } from '@/components/ui/LiveClock';
 import { demoClinics, demoRevenueSeries, demoQueueTrend, demoSuperAdmin } from '@/services/demoData';
 import { adminActivity, adminSparklines } from '@/services/activityData';
 import { inr, inrCompact, num } from '@/lib/format';
@@ -18,7 +19,10 @@ export function AdminDashboard() {
           <div className="text-2xl font-bold tracking-tight text-ink-900 dark:text-ink-50">Operations dashboard</div>
           <div className="text-sm text-muted">Realtime view of every clinic on DalanHealth</div>
         </div>
-        <Badge tone="success" pulse>All systems operational</Badge>
+        <div className="flex items-center gap-2">
+          <LiveClock />
+          <Badge tone="success" pulse>All systems operational</Badge>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

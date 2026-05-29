@@ -63,6 +63,93 @@ export const demoClinic = {
   bookingFee: 1,
 };
 
+// --- Per-branch overlays ---------------------------------------------------
+// Each branch in the BranchSwitcher has its own queue length, wallet balance,
+// daily stats, and (sometimes) a different on-duty doctor. The ClinicDashboard
+// and TvDisplay read from `branchData[currentBranchId]` so switching branches
+// swaps the whole dashboard context.
+
+const _branchQueueSlice = (start: number, count: number): QueueEntry[] => {
+  // Re-tokenise a slice so tokens always begin at #1 for each branch.
+  return demoQueue.slice(start, start + count).map((e, i) => ({
+    ...e,
+    id: `${e.id}-${i}`,
+    token: i + 1,
+  }));
+};
+
+export interface BranchData {
+  doctor: string;
+  specialization: string;
+  city: string;
+  timing: string;
+  queue: QueueEntry[];
+  walletBalance: number;
+  todayRevenue: number;
+  todayPatients: number;
+  completedToday: number;
+}
+
+export const branchData: Record<string, BranchData> = {
+  b1: {
+    doctor: 'Dr. Anil Sharma',
+    specialization: 'ENT Specialist',
+    city: 'Boring Road, Patna',
+    timing: '10 AM – 2 PM, 5 PM – 8 PM',
+    queue: _branchQueueSlice(0, 30),
+    walletBalance: 12540,
+    todayRevenue: 8600,
+    todayPatients: 24,
+    completedToday: 25,
+  },
+  b2: {
+    doctor: 'Dr. Anil Sharma',
+    specialization: 'ENT Specialist',
+    city: 'Kankarbagh, Patna',
+    timing: '11 AM – 1 PM, 6 PM – 9 PM',
+    queue: _branchQueueSlice(5, 15),
+    walletBalance: 7820,
+    todayRevenue: 4180,
+    todayPatients: 14,
+    completedToday: 12,
+  },
+  b3: {
+    doctor: 'Dr. Priyanka Sharma',
+    specialization: 'ENT Specialist',
+    city: 'Civil Lines, Gaya',
+    timing: '10 AM – 1 PM',
+    queue: _branchQueueSlice(12, 8),
+    walletBalance: 3240,
+    todayRevenue: 2160,
+    todayPatients: 9,
+    completedToday: 7,
+  },
+};
+
+/**
+ * Look up branch data. For demo-seeded branches (b1/b2/b3) returns the rich
+ * pre-populated data. For dynamically-added branches (via "Add new branch"),
+ * returns a clean zero state using the branch's metadata so the dashboard
+ * renders without bleeding data from another branch.
+ */
+export const getBranchData = (
+  branchId: string | undefined,
+  branchMeta?: { name?: string; city?: string },
+): BranchData => {
+  if (branchId && branchData[branchId]) return branchData[branchId];
+  return {
+    doctor: 'Doctor not assigned',
+    specialization: 'Add a specialization',
+    city: branchMeta?.city ?? 'City',
+    timing: 'Hours not set',
+    queue: [],
+    walletBalance: 0,
+    todayRevenue: 0,
+    todayPatients: 0,
+    completedToday: 0,
+  };
+};
+
 export const demoPatient = {
   name: 'Shailesh Kumar',
   mobile: '+91 98765 43210',

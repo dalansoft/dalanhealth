@@ -1,8 +1,11 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronsDownUp, ChevronsUpDown, LogOut, Search, Bell, Menu, X } from 'lucide-react';
+import { ChevronDown, ChevronsDownUp, ChevronsUpDown, LogOut, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo, DalanMark } from '@/components/ui/Logo';
+import { GlobalSearch } from '@/components/layout/GlobalSearch';
+import { NotificationBell } from '@/components/layout/NotificationBell';
+import { BranchSwitcher } from '@/components/layout/BranchSwitcher';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
@@ -255,17 +258,9 @@ export function DashboardShell({ nav, children, title, subtitle, topRight }: Pro
           })}
         </nav>
 
-        {/* User + logout */}
-        <div className={cn('border-t border-ink-200 dark:border-white/10 space-y-2', isCollapsed ? 'p-2' : 'p-3')}>
-          {!isCollapsed && user && (
-            <div className="flex items-center gap-3 rounded-xl px-2 py-2">
-              <Avatar name={user.name} size="sm" />
-              <div className="min-w-0 flex-1">
-                <div className="text-xs font-semibold text-ink-900 dark:text-white truncate">{user.name}</div>
-                <div className="text-[10px] uppercase tracking-wider text-ink-500 dark:text-white/50">{user.role.replace('_', ' ')}</div>
-              </div>
-            </div>
-          )}
+        {/* Logout-only footer. User identity moved out of the sidebar — the
+            top-right header avatar + CLINIC › Profile page cover that role. */}
+        <div className={cn('border-t border-ink-200 dark:border-white/10', isCollapsed ? 'p-2' : 'p-3')}>
           {isCollapsed ? (
             <Tooltip label="Logout" side="bottom">
               <button
@@ -279,7 +274,7 @@ export function DashboardShell({ nav, children, title, subtitle, topRight }: Pro
           ) : (
             <button
               onClick={onLogout}
-              className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-danger-500 hover:bg-danger-500/10 transition-colors"
+              className="w-full flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-danger-500 hover:bg-danger-500/10 transition-colors"
             >
               <LogOut size={16} /> Logout
             </button>
@@ -290,7 +285,7 @@ export function DashboardShell({ nav, children, title, subtitle, topRight }: Pro
   };
 
   return (
-    <div className="min-h-screen flex bg-ink-50 dark:bg-ink-950">
+    <div className="h-screen flex bg-ink-50 dark:bg-ink-950 overflow-hidden">
       {/* Desktop sidebar */}
       <aside className={cn('hidden md:flex sticky top-0 h-screen flex-col transition-[width] duration-300', collapsed ? 'w-[72px]' : 'w-[244px]')}>
         {sidebar('desktop')}
@@ -333,21 +328,19 @@ export function DashboardShell({ nav, children, title, subtitle, topRight }: Pro
               {title && <h1 className="text-base sm:text-lg font-semibold tracking-tight text-ink-900 dark:text-ink-50 truncate">{title}</h1>}
               {subtitle && <p className="text-xs text-muted truncate">{subtitle}</p>}
             </div>
+            <div className="hidden md:block shrink-0">
+              <BranchSwitcher />
+            </div>
             <div className="hidden lg:flex items-center gap-2 max-w-md flex-1">
-              <div className="w-full inline-flex items-center gap-2 rounded-xl border hairline bg-white/70 dark:bg-ink-900/60 px-3 py-2 text-sm text-ink-500 dark:text-ink-400">
-                <Search size={14} /> <span className="truncate">Search patients, tokens, invoices…</span>
-              </div>
+              <GlobalSearch />
             </div>
             <div className="flex items-center gap-2">
               {isDemo && <Badge tone="accent" size="sm">Demo</Badge>}
               {topRight}
               <ThemeToggle />
-              <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl border hairline relative">
-                <Bell size={16} />
-                <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-danger-500" />
-              </button>
+              <NotificationBell />
               <div className="hidden sm:flex items-center gap-2 rounded-xl border hairline pl-1 pr-3 py-1">
-                <Avatar name={user?.name ?? 'You'} size="sm" />
+                <Avatar name={user?.name ?? 'You'} src={user?.photoDataUrl} size="sm" />
                 <div className="leading-tight">
                   <div className="text-xs font-semibold text-ink-900 dark:text-ink-50 truncate max-w-[120px]">{user?.name ?? 'Guest'}</div>
                   <div className="text-[10px] uppercase tracking-wider text-muted">{user?.role?.replace('_', ' ') ?? 'guest'}</div>
@@ -356,8 +349,14 @@ export function DashboardShell({ nav, children, title, subtitle, topRight }: Pro
             </div>
           </div>
         </header>
-        <div className="flex-1 p-5 sm:p-8 max-w-[1600px] w-full mx-auto">{children}</div>
+        {/* Content area scrolls itself instead of the whole page, so the
+            sidebar + header stay fixed and tightly-fitting pages (like the
+            clinic dashboard) can render fully without a page scrollbar. */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="h-full p-4 sm:p-6 max-w-[1600px] w-full mx-auto">{children}</div>
+        </div>
       </div>
+
     </div>
   );
 }

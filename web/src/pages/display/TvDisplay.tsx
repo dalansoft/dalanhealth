@@ -4,7 +4,11 @@ import { DalanMark } from '@/components/ui/Logo';
 import { SourceBadge } from '@/components/ui/SourceBadge';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useQueue } from '@/store/queue';
-import { demoQueue, demoClinic } from '@/services/demoData';
+import { useBranch, useCurrentBranch } from '@/store/branch';
+import { getBranchData } from '@/services/demoData';
+import { useAuth } from '@/store/auth';
+import { useTvAccounts, isWithinSchedule } from '@/store/tvAccounts';
+import { TvClosedScreen } from './TvClosedScreen';
 
 /**
  * TV / kiosk display for the clinic waiting room.
@@ -17,10 +21,51 @@ import { demoQueue, demoClinic } from '@/services/demoData';
 export function TvDisplay() {
   const { entries, setEntries } = useQueue();
   const [now, setNow] = useState(new Date());
+  const user = useAuth((s) => s.user);
+  const switchBranch = useBranch((s) => s.switchBranch);
+  const branches = useBranch((s) => s.branches);
+  const storeBranchId = useBranch((s) => s.currentBranchId);
+  const tvAccounts = useTvAccounts((s) => s.accounts);
+  const touchTv = useTvAccounts((s) => s.touch);
 
+  // ─── TV account binding ────────────────────────────────────────────────
+  // If a TV is signed in (role=tv_display), its session pins the branch.
+  // Otherwise (e.g. a clinic admin previewing the display) we fall back to
+  // whichever branch the dashboard has selected. This is the line that keeps
+  // multiple TVs at multiple branches independent of each other.
+  const tvAccount = user?.role === 'tv_display' && user.tvId
+    ? tvAccounts.find((a) => a.id === user.tvId)
+    : undefined;
+  const effectiveBranchId = tvAccount?.branchId ?? user?.branchId ?? storeBranchId;
+  const branch = branches.find((b) => b.id === effectiveBranchId);
+  const data = getBranchData(effectiveBranchId, branch);
+
+  // If a TV session locks to a branch different from the dashboard's stored
+  // selection, sync the branch store so QueuePreview / Profile / etc. line up.
   useEffect(() => {
-    if (entries.length === 0) setEntries(demoQueue);
-  }, [entries.length, setEntries]);
+    if (tvAccount && tvAccount.branchId !== storeBranchId) {
+      switchBranch(tvAccount.branchId);
+    }
+  }, [tvAccount, storeBranchId, switchBranch]);
+
+  // Heartbeat: stamp lastSeenAt so admins can see this TV is alive. Every
+  // 60s is plenty — we're not building Datadog.
+  useEffect(() => {
+    if (!tvAccount) return;
+    touchTv(tvAccount.id);
+    const id = setInterval(() => touchTv(tvAccount.id), 60_000);
+    return () => clearInterval(id);
+  }, [tvAccount, touchTv]);
+
+  // Seed the queue with the current branch's patients on first mount and
+  // refresh it whenever the branch changes. Deps are deliberately limited to
+  // the branch id — `data` / `branch` / `setEntries` are derived or stable;
+  // including them caused an infinite render loop.
+  useEffect(() => {
+    const d = getBranchData(effectiveBranchId, branch);
+    setEntries(d.queue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveBranchId]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -77,13 +122,20 @@ export function TvDisplay() {
   const date = now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const year = now.getFullYear();
 
-  const timingBlocks = demoClinic.timing.split(',').map((t) => t.trim()).filter(Boolean);
+  const timingBlocks = data.timing.split(',').map((t) => t.trim()).filter(Boolean);
 
   const statusFor = (idx: number) => {
     if (idx === 0) return { label: 'Get ready', tone: 'text-brand-600 dark:text-brand-300' };
     if (idx === 1) return { label: 'Queue', tone: 'text-token' };
     return { label: 'Waiting', tone: 'text-ink-500 dark:text-white/55' };
   };
+
+  // ─── After-hours guard ────────────────────────────────────────────────
+  // Only paired TVs are subject to a schedule. Anonymous or admin previews
+  // always see the live display (so admins can debug at any hour).
+  if (tvAccount && !isWithinSchedule(tvAccount.schedule, now)) {
+    return <TvClosedScreen schedule={tvAccount.schedule} tvName={tvAccount.name} />;
+  }
 
   return (
     <div
@@ -105,16 +157,16 @@ export function TvDisplay() {
           <DalanMark size={44} />
           <div className="min-w-0 flex-1">
             <div
-              title={demoClinic.name}
+              title={(branch?.name ?? '')}
               className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-extrabold tracking-tight font-brand leading-tight break-words"
             >
-              {demoClinic.name}
+              {(branch?.name ?? '')}
             </div>
             <div
-              title={demoClinic.city}
+              title={data.city}
               className="mt-0.5 text-[11px] sm:text-xs lg:text-sm text-ink-500 dark:text-white/55 break-words"
             >
-              {demoClinic.city}
+              {data.city}
             </div>
           </div>
         </div>
@@ -123,16 +175,16 @@ export function TvDisplay() {
         <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0 lg:order-3 lg:justify-end">
           <div className="text-right min-w-0">
             <div
-              title={demoClinic.doctor}
+              title={data.doctor}
               className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold text-token leading-tight break-words"
             >
-              {demoClinic.doctor}
+              {data.doctor}
             </div>
             <div
-              title={demoClinic.specialization}
+              title={data.specialization}
               className="mt-0.5 text-[11px] sm:text-xs lg:text-sm text-ink-600 dark:text-white/70 break-words"
             >
-              {demoClinic.specialization}
+              {data.specialization}
             </div>
           </div>
           <ThemeToggle />
@@ -149,16 +201,32 @@ export function TvDisplay() {
                   to content and up-next filling remaining.
                   Laptop: 2-col grid 1.5fr / 1fr. */}
       <main className="relative z-10 min-h-0 px-4 sm:px-6 md:px-10 lg:px-14 py-3 sm:py-4 md:py-6 lg:py-8 grid grid-rows-2 lg:grid-rows-1 lg:grid-cols-[1.5fr_1fr] gap-3 sm:gap-4 md:gap-6 lg:gap-8 overflow-hidden">
-        {/* TOKEN PANEL: Now serving + Doctor sitting */}
-        <section className="rounded-2xl sm:rounded-3xl bg-white dark:bg-white/[0.04] border border-ink-200 dark:border-white/10 backdrop-blur-xl p-3 sm:p-5 lg:p-8 flex flex-col relative overflow-hidden min-h-0 shadow-card dark:shadow-none">
-          <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-br from-token/8 via-transparent to-brand-500/8 dark:from-token/10 dark:to-brand-500/10" />
+        {/* TOKEN PANEL: Now serving + Doctor sitting. Tints warm-yellow when
+            the current patient was previously skipped + called back, so the
+            audit trail is visible on the wall display too. */}
+        <section className={`rounded-2xl sm:rounded-3xl border backdrop-blur-xl p-3 sm:p-5 lg:p-8 flex flex-col relative overflow-hidden min-h-0 shadow-card dark:shadow-none ${
+          current?.wasSkipped
+            ? 'border-warning-500/50 bg-warning-500/10 dark:bg-warning-500/15'
+            : 'border-ink-200 dark:border-white/10 bg-white dark:bg-white/[0.04]'
+        }`}>
+          <div aria-hidden className={`absolute inset-0 -z-10 ${
+            current?.wasSkipped
+              ? 'bg-gradient-to-br from-warning-500/10 via-transparent to-warning-500/15'
+              : 'bg-gradient-to-br from-token/8 via-transparent to-brand-500/8 dark:from-token/10 dark:to-brand-500/10'
+          }`} />
 
-          <div className="flex items-center justify-center gap-2 text-[10px] lg:text-xs uppercase tracking-[0.32em] text-token font-semibold">
+          <div className={`flex items-center justify-center gap-2 text-[10px] lg:text-xs uppercase tracking-[0.32em] font-semibold ${
+            current?.wasSkipped ? 'text-warning-700 dark:text-warning-300' : 'text-token'
+          }`}>
             <span className="relative inline-flex h-2 w-2">
-              <span className="absolute inset-0 inline-flex h-full w-full rounded-full bg-token opacity-60 animate-ping" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-token" />
+              <span className={`absolute inset-0 inline-flex h-full w-full rounded-full opacity-60 animate-ping ${
+                current?.wasSkipped ? 'bg-warning-500' : 'bg-token'
+              }`} />
+              <span className={`relative inline-flex h-2 w-2 rounded-full ${
+                current?.wasSkipped ? 'bg-warning-500' : 'bg-token'
+              }`} />
             </span>
-            Now serving
+            {current?.wasSkipped ? 'Called back · Now serving' : 'Now serving'}
           </div>
 
           <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-center">
@@ -173,16 +241,31 @@ export function TvDisplay() {
                   className="flex flex-col items-center"
                 >
                   <div
-                    className="font-extrabold leading-none tracking-tight text-token lg:drop-shadow-[0_0_60px_rgba(34,197,94,0.45)] font-brand"
+                    className={`font-extrabold leading-none tracking-tight font-brand ${
+                      current.wasSkipped
+                        ? 'text-warning-600 dark:text-warning-300 lg:drop-shadow-[0_0_60px_rgba(245,158,11,0.45)]'
+                        : 'text-token lg:drop-shadow-[0_0_60px_rgba(34,197,94,0.45)]'
+                    }`}
                     style={{ fontSize: 'clamp(2.25rem, 7vh, 14rem)' }}
                   >
                     #{current.token}
                   </div>
                   <div className="mt-2 sm:mt-3 lg:mt-6 flex flex-wrap items-center justify-center gap-2 sm:gap-3 lg:gap-4">
-                    <div className="text-xl sm:text-2xl lg:text-4xl xl:text-5xl font-bold">{current.patientName}</div>
+                    <div className={`text-xl sm:text-2xl lg:text-4xl xl:text-5xl font-bold ${
+                      current.wasSkipped ? 'text-warning-700 dark:text-warning-200' : ''
+                    }`}>{current.patientName}</div>
                     <SourceBadge source={current.source} />
+                    {current.wasSkipped && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-warning-500/20 text-warning-700 dark:text-warning-200 px-2 py-0.5 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+                        Skipped
+                      </span>
+                    )}
                   </div>
-                  <div className="mt-2 sm:mt-3 lg:mt-5 inline-flex items-center gap-2 rounded-full bg-token/15 px-3 sm:px-4 lg:px-5 py-1 sm:py-1.5 lg:py-2 text-token font-semibold uppercase tracking-wider text-[10px] sm:text-xs lg:text-sm text-center">
+                  <div className={`mt-2 sm:mt-3 lg:mt-5 inline-flex items-center gap-2 rounded-full px-3 sm:px-4 lg:px-5 py-1 sm:py-1.5 lg:py-2 font-semibold uppercase tracking-wider text-[10px] sm:text-xs lg:text-sm text-center ${
+                    current.wasSkipped
+                      ? 'bg-warning-500/15 text-warning-700 dark:text-warning-300'
+                      : 'bg-token/15 text-token'
+                  }`}>
                     Please proceed to the consultation room
                   </div>
                 </motion.div>
@@ -231,6 +314,25 @@ export function TvDisplay() {
               {upNext.map((e, idx) => {
                 const s = statusFor(idx);
                 const isLead = idx === 0;
+                const skipped = e.wasSkipped === true;
+                // Skipped patients win the styling regardless of position so
+                // staff and patients in the waiting room can spot a deferred
+                // token at a glance — they need a "they were skipped, watch
+                // for them to come back" cue even from across the room.
+                const rowBg = skipped
+                  ? 'border-warning-500/50 bg-warning-500/15 dark:bg-warning-500/20'
+                  : isLead
+                  ? 'border-brand-500/40 bg-brand-500/10 dark:bg-brand-500/15'
+                  : 'border-ink-200 dark:border-white/10 bg-ink-50 dark:bg-white/[0.02]';
+                const tokenColor = skipped
+                  ? 'text-warning-700 dark:text-warning-300'
+                  : isLead
+                  ? 'text-brand-600 dark:text-brand-300'
+                  : 'text-ink-500 dark:text-white/70';
+                const statusToneClass = skipped
+                  ? 'text-warning-700 dark:text-warning-300'
+                  : s.tone;
+                const statusLabel = skipped ? 'Skipped' : s.label;
                 return (
                   <motion.div
                     key={e.id}
@@ -240,23 +342,19 @@ export function TvDisplay() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -16 }}
                     transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-                    className={`flex items-center gap-3 lg:gap-4 rounded-2xl border px-3 lg:px-4 py-2.5 lg:py-3 ${
-                      isLead
-                        ? 'border-brand-500/40 bg-brand-500/10 dark:bg-brand-500/15'
-                        : 'border-ink-200 dark:border-white/10 bg-ink-50 dark:bg-white/[0.02]'
-                    }`}
+                    className={`flex items-center gap-3 lg:gap-4 rounded-2xl border px-3 lg:px-4 py-2.5 lg:py-3 ${rowBg}`}
                   >
-                    <div className={`w-14 lg:w-16 xl:w-20 text-center text-2xl lg:text-3xl xl:text-4xl font-extrabold tabular-nums leading-none font-brand ${
-                      isLead ? 'text-brand-600 dark:text-brand-300' : 'text-ink-500 dark:text-white/70'
-                    }`}>
+                    <div className={`w-14 lg:w-16 xl:w-20 text-center text-2xl lg:text-3xl xl:text-4xl font-extrabold tabular-nums leading-none font-brand ${tokenColor}`}>
                       #{e.token}
                     </div>
                     <div className="flex-1 min-w-0 flex items-center gap-2 lg:gap-3">
-                      <div className="text-base lg:text-lg font-semibold truncate min-w-0">{e.patientName}</div>
+                      <div className={`text-base lg:text-lg font-semibold truncate min-w-0 ${skipped ? 'text-warning-700 dark:text-warning-200' : ''}`}>
+                        {e.patientName}
+                      </div>
                       <SourceBadge source={e.source} />
                     </div>
-                    <div className={`text-[10px] lg:text-xs uppercase tracking-wider font-bold shrink-0 ${s.tone}`}>
-                      {s.label}
+                    <div className={`text-[10px] lg:text-xs uppercase tracking-wider font-bold shrink-0 ${statusToneClass}`}>
+                      {statusLabel}
                     </div>
                   </motion.div>
                 );

@@ -2,7 +2,8 @@ import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
+  /** Plain string or any ReactNode — supports e.g. labels with a "*" suffix. */
+  label?: ReactNode;
   hint?: string;
   error?: string;
   leftIcon?: ReactNode;

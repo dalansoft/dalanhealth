@@ -33,6 +33,10 @@ import { ClinicReports } from '@/pages/clinic/ClinicReports';
 import { ClinicStaff } from '@/pages/clinic/ClinicStaff';
 import { ClinicNotifications } from '@/pages/clinic/ClinicNotifications';
 import { ClinicSettings } from '@/pages/clinic/ClinicSettings';
+import { ClinicProfile } from '@/pages/clinic/ClinicProfile';
+import { ClinicBranches } from '@/pages/clinic/ClinicBranches';
+import { ClinicTvDisplays } from '@/pages/clinic/ClinicTvDisplays';
+import { TvPair } from '@/pages/display/TvPair';
 
 import { ReceptionistLayout } from '@/pages/receptionist/ReceptionistLayout';
 import { ReceptionistDashboard } from '@/pages/receptionist/ReceptionistDashboard';
@@ -66,6 +70,8 @@ export const router = createBrowserRouter([
   },
   { path: '/demo', element: <DemoSelector /> },
   { path: '/display/clinic', element: <TvDisplay /> },
+  { path: '/tv/pair', element: <TvPair /> },
+  { path: '/tv', element: <TvPair /> },
 
   {
     path: '/admin',
@@ -98,6 +104,9 @@ export const router = createBrowserRouter([
       { path: 'prescription', element: <PrescriptionScreen /> },
       { path: 'reports', element: <ClinicReports /> },
       { path: 'wallet', element: <ClinicWallet /> },
+      { path: 'profile', element: <ClinicProfile /> },
+      { path: 'branches', element: <ClinicBranches /> },
+      { path: 'tv-displays', element: <ClinicTvDisplays /> },
       { path: 'staff', element: <ClinicStaff /> },
       { path: 'qr', element: <ClinicQR /> },
       { path: 'notifications', element: <ClinicNotifications /> },

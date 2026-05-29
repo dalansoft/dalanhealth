@@ -9,6 +9,7 @@ import { ActivityFeed } from '@/components/dashboard/ActivityFeed';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
+import { LiveClock } from '@/components/ui/LiveClock';
 import { useQueue } from '@/store/queue';
 import { demoClinic, demoQueue } from '@/services/demoData';
 import { clinicActivity, clinicSparklines } from '@/services/activityData';
@@ -38,6 +39,7 @@ export function ReceptionistDashboard() {
           <div className="text-sm text-muted">Five-second token generation · {demoClinic.name}</div>
         </div>
         <div className="flex items-center gap-2">
+          <LiveClock />
           <Badge tone="success" pulse>Live</Badge>
           <a href="/display/clinic" target="_blank" rel="noreferrer">
             <Button variant="outline" leftIcon={<Monitor size={14} />}>TV display</Button>

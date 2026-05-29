@@ -29,7 +29,7 @@ export function MobileShell({ children }: { children: ReactNode }) {
             {isDemo && <Badge tone="accent" size="sm">Demo</Badge>}
             <ThemeToggle />
             <button onClick={() => { logout(); navigate('/'); }}>
-              <Avatar name={user?.name ?? 'Guest'} size="sm" />
+              <Avatar name={user?.name ?? 'Guest'} src={user?.photoDataUrl} size="sm" />
             </button>
           </div>
         </div>

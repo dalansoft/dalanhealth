@@ -1,10 +1,11 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Ticket, Calendar, Receipt, FileText, BarChart3,
-  Wallet, UserCog, QrCode, Bell, Settings, CreditCard,
+  Wallet, UserCog, QrCode, Bell, Settings, CreditCard, UserCircle, Building2,
+  Monitor,
 } from 'lucide-react';
 import { DashboardShell, type NavSection } from '@/components/layout/DashboardShell';
-import { useAuth } from '@/store/auth';
+import { useCurrentBranch } from '@/store/branch';
 
 const nav: NavSection[] = [
   {
@@ -31,6 +32,9 @@ const nav: NavSection[] = [
     title: 'Clinic',
     accent: 'accent',
     items: [
+      { to: '/clinic/profile', label: 'Profile', icon: <UserCircle size={16} /> },
+      { to: '/clinic/branches', label: 'Branches', icon: <Building2 size={16} /> },
+      { to: '/clinic/tv-displays', label: 'TV Displays', icon: <Monitor size={16} /> },
       { to: '/clinic/staff', label: 'Staff', icon: <UserCog size={16} /> },
       { to: '/clinic/qr', label: 'QR Posters', icon: <QrCode size={16} /> },
       { to: '/clinic/notifications', label: 'Notifications', icon: <Bell size={16} /> },
@@ -47,14 +51,20 @@ const titles: Record<string, { title: string; sub: string }> = {
   '/clinic/prescription': { title: 'Prescription', sub: 'Doctor-grade prescription builder' },
   '/clinic/wallet': { title: 'Wallet & recharge', sub: 'Prepaid balance and consumption' },
   '/clinic/qr': { title: 'Clinic QR', sub: 'Patients scan to join your queue' },
+  '/clinic/profile': { title: 'My profile', sub: 'Edit your public details' },
+  '/clinic/branches': { title: 'Branches', sub: 'Add, switch, or manage clinic locations' },
+  '/clinic/tv-displays': { title: 'TV Displays', sub: 'Register, pair, and schedule waiting-room TVs' },
 };
 
 export function ClinicLayout() {
   const { pathname } = useLocation();
   const meta = titles[pathname] ?? { title: 'Clinic', sub: 'DalanHealth' };
-  const clinicName = useAuth((s) => s.user?.clinicName);
+  const branch = useCurrentBranch();
+  // Subtitle follows the selected branch so it updates instantly when the user
+  // switches branches in the BranchSwitcher chip.
+  const subtitle = branch ? `${branch.name} · ${meta.sub}` : meta.sub;
   return (
-    <DashboardShell nav={nav} title={meta.title} subtitle={clinicName ? `${clinicName} · ${meta.sub}` : meta.sub}>
+    <DashboardShell nav={nav} title={meta.title} subtitle={subtitle}>
       <Outlet />
     </DashboardShell>
   );

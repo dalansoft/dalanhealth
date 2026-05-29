@@ -3,14 +3,42 @@ import { create } from 'zustand';
 export type QueueSource = 'ONLINE' | 'OFFLINE' | 'QR';
 export type QueueStatus = 'Consultation' | 'Queue' | 'Waiting';
 
+export interface PatientDetails {
+  age?: number;
+  gender?: 'Male' | 'Female' | 'Other';
+  /** Kilograms. */
+  weight?: number;
+  /** Centimetres. */
+  height?: number;
+  /** e.g. 'A+', 'O-', 'AB+'. */
+  bloodGroup?: string;
+  address?: string;
+  allergies?: string;
+  conditions?: string;
+  emergencyName?: string;
+  emergencyMobile?: string;
+}
+
 export interface QueueEntry {
   id: string;
+  /** Permanent, patient-visible token assigned at booking time. Never changes
+   *  after creation — patients track this number. Skip / call-back only
+   *  affect queue position, not this. */
   token: number;
   patientName: string;
   patientMobile: string;
   source: QueueSource;
   status: QueueStatus;
   joinedAt: string;
+  /** True if this patient was skipped earlier. */
+  wasSkipped?: boolean;
+  /** Internal sort key for queue position. Defaults to token when unset.
+   *  Skipping makes it larger (moves to back); calling back makes it smaller
+   *  (jumps to front). The patient's `token` itself stays the same. */
+  order?: number;
+  /** Extended health record captured at booking. All fields optional —
+   *  receptionist can skip the "More details" section for a fast flow. */
+  details?: PatientDetails;
 }
 
 interface QueueState {
@@ -19,10 +47,15 @@ interface QueueState {
   addEntry: (e: QueueEntry) => void;
   advance: () => void;
   skipCurrent: () => void;
+  /** Bring a previously-skipped patient back to the front (becomes the next
+   *  after the currently-serving one). Resets their wasSkipped flag. */
+  callBack: (id: string) => void;
 }
 
+const orderOf = (e: QueueEntry): number => e.order ?? e.token;
+
 const sortAndStatus = (list: QueueEntry[]): QueueEntry[] => {
-  const sorted = [...list].sort((a, b) => a.token - b.token);
+  const sorted = [...list].sort((a, b) => orderOf(a) - orderOf(b));
   return sorted.map((e, i) => ({
     ...e,
     status: i === 0 ? 'Consultation' : i === 1 ? 'Queue' : 'Waiting',
@@ -124,9 +157,33 @@ export const useQueue = create<QueueState>((set, get) => {
       broadcast(next);
     },
     skipCurrent: () => {
-      const [first, ...rest] = get().entries;
-      if (!first) return;
-      const next = sortAndStatus([...rest, first]);
+      const list = get().entries;
+      if (list.length === 0) return;
+      const [first, ...rest] = list;
+      // Bump the sort position to the back (max order + 1). Token stays the
+      // same — the patient still knows themselves as "#N". Setting wasSkipped
+      // surfaces the Skipped badge + Call back button in the UI.
+      const maxOrder = list.reduce((m, e) => Math.max(m, orderOf(e)), 0);
+      const skipped: QueueEntry = { ...first, order: maxOrder + 1, wasSkipped: true };
+      const next = sortAndStatus([...rest, skipped]);
+      set({ entries: next });
+      broadcast(next);
+    },
+    callBack: (id) => {
+      const list = get().entries;
+      const target = list.find((e) => e.id === id);
+      if (!target) return;
+      // Insert the called-back patient right after the currently-serving one
+      // (= second smallest order). Token is preserved — the patient sees the
+      // same "#19" they originally booked, just now they're next in line.
+      // `wasSkipped` stays TRUE so the yellow tint persists on the TV and in
+      // the queue table — that way staff + patients know this token was
+      // deferred earlier and has returned (an audit trail for the visit).
+      const others = list.filter((e) => e.id !== id);
+      const minOrder = others.reduce((m, e) => Math.min(m, orderOf(e)), Infinity);
+      const newOrder = isFinite(minOrder) ? minOrder + 0.5 : 1;
+      const updated: QueueEntry = { ...target, order: newOrder };
+      const next = sortAndStatus([...others, updated]);
       set({ entries: next });
       broadcast(next);
     },

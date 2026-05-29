@@ -12,6 +12,8 @@ interface Props {
   sparkline?: number[];
   accent?: 'brand' | 'accent' | 'teal' | 'success' | 'warning' | 'token';
   className?: string;
+  /** Compact variant — smaller padding, smaller value font, shorter sparkline. */
+  dense?: boolean;
 }
 
 const accents = {
@@ -23,25 +25,29 @@ const accents = {
   token: { tint: 'from-token/15 to-transparent', color: '#22c55e', text: 'text-token' },
 };
 
-export function StatTile({ label, value, hint, icon, sparkline, accent = 'brand', className }: Props) {
+export function StatTile({ label, value, hint, icon, sparkline, accent = 'brand', className, dense }: Props) {
   const a = accents[accent];
   return (
-    <Card className={cn('relative overflow-hidden', className)}>
+    <Card padded={false} className={cn('relative overflow-hidden', dense ? 'p-3' : 'p-5', className)}>
       <div className={cn('pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-br blur-2xl', a.tint)} />
       <div className="relative">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">{label}</span>
+          <span className={cn('font-semibold uppercase tracking-wider text-muted', dense ? 'text-[10px]' : 'text-[11px]')}>{label}</span>
           {icon && (
-            <div className={cn('inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br', a.tint, a.text)}>
+            <div className={cn('inline-flex items-center justify-center rounded-xl bg-gradient-to-br', dense ? 'h-7 w-7' : 'h-8 w-8', a.tint, a.text)}>
               {icon}
             </div>
           )}
         </div>
-        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-2 text-3xl font-extrabold tracking-tight text-ink-900 dark:text-ink-50">
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={cn('font-extrabold tracking-tight text-ink-900 dark:text-ink-50', dense ? 'mt-1 text-2xl' : 'mt-2 text-3xl')}
+        >
           {value}
         </motion.div>
-        {hint && <div className="mt-0.5 text-[11px] text-muted">{hint}</div>}
-        {sparkline && <Sparkline data={sparkline} color={a.color} className="mt-3 h-9 w-full" />}
+        {hint && <div className={cn('text-muted', dense ? 'text-[10px]' : 'mt-0.5 text-[11px]')}>{hint}</div>}
+        {sparkline && <Sparkline data={sparkline} color={a.color} className={cn('w-full', dense ? 'mt-1.5 h-6' : 'mt-3 h-9')} />}
       </div>
     </Card>
   );

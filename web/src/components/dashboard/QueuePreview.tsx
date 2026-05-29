@@ -14,8 +14,8 @@ interface Props {
 export function QueuePreview({ entries, title = 'Live queue', viewAllTo = '/clinic/queue', limit = 6 }: Props) {
   const list = entries.slice(0, limit);
   return (
-    <Card className="h-full">
-      <div className="flex items-center justify-between mb-3">
+    <Card className="h-full flex flex-col overflow-hidden">
+      <div className="shrink-0 flex items-center justify-between mb-3">
         <div>
           <CardTitle>{title}</CardTitle>
           <CardSubtitle>Next {list.length} in line</CardSubtitle>
@@ -24,7 +24,7 @@ export function QueuePreview({ entries, title = 'Live queue', viewAllTo = '/clin
           View all
         </Link>
       </div>
-      <div className="space-y-1.5">
+      <div className="flex-1 min-h-0 space-y-1.5 overflow-y-auto pr-1">
         {list.map((e, idx) => (
           <div key={e.id} className="flex items-center justify-between rounded-xl border hairline p-2.5">
             <div className="flex items-center gap-3 min-w-0">

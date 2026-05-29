@@ -1,18 +1,42 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, SkipForward, Receipt, FileText, Plus, Clock, Monitor } from 'lucide-react';
+import { Check, SkipForward, Receipt, FileText, Plus, Clock, Monitor, RotateCcw } from 'lucide-react';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { SourceBadge } from '@/components/ui/SourceBadge';
 import { StatusPill } from '@/components/ui/StatusPill';
-import { useQueue } from '@/store/queue';
+import { useQueue, type QueueEntry } from '@/store/queue';
 import { demoQueue } from '@/services/demoData';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { PatientDetailsDrawer } from '@/components/dashboard/PatientDetailsDrawer';
+import { AddPatientModal } from '@/pages/receptionist/AddPatientModal';
 
 export function ClinicQueue() {
-  const { entries, setEntries, advance, skipCurrent } = useQueue();
+  const { entries, setEntries, advance, skipCurrent, callBack } = useQueue();
+  const [selectedEntry, setSelectedEntry] = useState<QueueEntry | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Deep-link support: navigating here as `?patient=<id>` (from the header
+  // GlobalSearch) auto-opens the patient drawer with that entry's history.
+  // Clearing the param when the drawer closes keeps refreshes clean.
+  useEffect(() => {
+    const id = searchParams.get('patient');
+    if (!id) return;
+    const match = entries.find((e) => e.id === id);
+    if (match) setSelectedEntry(match);
+  }, [searchParams, entries]);
+
+  const closeDrawer = () => {
+    setSelectedEntry(null);
+    if (searchParams.get('patient')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('patient');
+      setSearchParams(next, { replace: true });
+    }
+  };
 
   useEffect(() => {
     if (entries.length === 0) setEntries(demoQueue);
@@ -70,9 +94,15 @@ export function ClinicQueue() {
               ) : (
                 <div className="mt-3 text-sm text-muted">No one queued.</div>
               )}
-              <Link to="/receptionist/add" className="mt-5 block">
-                <Button variant="outline" fullWidth leftIcon={<Plus size={14} />}>Add patient</Button>
-              </Link>
+              <Button
+                variant="outline"
+                fullWidth
+                leftIcon={<Plus size={14} />}
+                onClick={() => setAddOpen(true)}
+                className="mt-5"
+              >
+                Add patient
+              </Button>
             </div>
           </div>
         ) : (
@@ -109,13 +139,36 @@ export function ClinicQueue() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.98 }}
                     transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-                    className="text-sm"
+                    onClick={() => setSelectedEntry(q)}
+                    className={`text-sm cursor-pointer transition-colors hover:bg-ink-50 dark:hover:bg-ink-900/60 ${q.wasSkipped ? 'bg-warning-500/5' : ''}`}
+                    title="Click for full patient details & visit history"
                   >
                     <td className="px-5 py-3.5 font-semibold">#{q.token}</td>
-                    <td className="px-5 py-3.5 font-medium text-ink-900 dark:text-ink-50">{q.patientName}</td>
+                    <td className="px-5 py-3.5 font-medium text-ink-900 dark:text-ink-50">
+                      <div className="flex items-center gap-2">
+                        <span>{q.patientName}</span>
+                        {q.wasSkipped && (
+                          <Badge tone="warning" size="sm">Skipped</Badge>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-5 py-3.5 text-muted">{q.patientMobile}</td>
                     <td className="px-5 py-3.5"><SourceBadge source={q.source} /></td>
-                    <td className="px-5 py-3.5"><StatusPill status={q.status} /></td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-2">
+                        <StatusPill status={q.status} />
+                        {q.wasSkipped && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); callBack(q.id); }}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold text-brand-600 dark:text-brand-300 hover:bg-brand-500/10 transition-colors"
+                            title="Bring this patient back to the front of the queue"
+                          >
+                            <RotateCcw size={11} /> Call back
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   </motion.tr>
                 ))}
               </AnimatePresence>
@@ -123,6 +176,20 @@ export function ClinicQueue() {
           </table>
         </div>
       </Card>
+
+      {/* Per-patient detail drawer — opens on any row click */}
+      <PatientDetailsDrawer
+        open={!!selectedEntry}
+        entry={selectedEntry}
+        onClose={closeDrawer}
+      />
+
+      {/* Inline Add patient modal — keeps the receptionist on the same page,
+          no route switch into /receptionist/add */}
+      <AddPatientModal open={addOpen} onClose={() => setAddOpen(false)} />
     </div>
   );
 }
+
+// ─── Inline Add Patient modal ─────────────────────────────────────────────
+

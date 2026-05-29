@@ -1,65 +1,84 @@
-import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Users, Ticket, IndianRupee, CheckCircle, Monitor } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Users, Ticket, IndianRupee, CheckCircle, Monitor, UserPlus } from 'lucide-react';
 import { StatTile } from '@/components/dashboard/StatTile';
 import { CurrentTokenCard } from '@/components/dashboard/CurrentTokenCard';
 import { WalletMiniCard } from '@/components/dashboard/WalletMiniCard';
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed';
 import { QueuePreview } from '@/components/dashboard/QueuePreview';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
+import { LiveClock } from '@/components/ui/LiveClock';
+import { AddPatientModal } from '@/pages/receptionist/AddPatientModal';
 import { useQueue } from '@/store/queue';
 import { useAuth } from '@/store/auth';
-import { demoClinic, demoQueue } from '@/services/demoData';
+import { useBranch, useCurrentBranch } from '@/store/branch';
+import { getBranchData } from '@/services/demoData';
+// Note: demoClinic kept around for legacy uses elsewhere; this page now reads
+// from branchData via `data` instead.
 import { clinicActivity, clinicSparklines } from '@/services/activityData';
 import { inr } from '@/lib/format';
 
 export function ClinicDashboard() {
   const { entries, setEntries, advance, skipCurrent } = useQueue();
   const userName = useAuth((s) => s.user?.name);
+  const currentBranchId = useBranch((s) => s.currentBranchId);
+  const branch = useCurrentBranch();
+  const data = getBranchData(currentBranchId, branch);
+  const [addOpen, setAddOpen] = useState(false);
 
+  // Whenever the branch changes (or on first mount), reload the queue with
+  // that branch's patient list. Deps are deliberately limited to the branch
+  // id — `data` / `branch` / `setEntries` are derived or stable, and including
+  // them caused an infinite render loop because `getBranchData()` returns a
+  // fresh object for dynamically-added branches.
   useEffect(() => {
-    if (entries.length === 0) setEntries(demoQueue);
-  }, [entries.length, setEntries]);
+    const d = getBranchData(currentBranchId, branch);
+    setEntries(d.queue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentBranchId]);
 
   const current = entries[0];
-  const completedToday = 25;
+  const completedToday = data.completedToday;
   const liveQueue = entries.length;
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="h-full flex flex-col gap-3 min-h-0">
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-2xl font-bold tracking-tight text-ink-900 dark:text-ink-50">
+          <div className="text-xl font-bold tracking-tight text-ink-900 dark:text-ink-50">
             Good {greeting()}, {(userName ?? 'Doctor')} <span aria-hidden>👋</span>
           </div>
-          <div className="text-sm text-muted">Here's what's happening at {demoClinic.name} today.</div>
+          <div className="text-xs text-muted">
+            Here's what's happening at <span className="font-semibold text-ink-700 dark:text-ink-200">{branch?.name ?? 'your clinic'}</span> today
+            {data.doctor && <> · attending: <span className="font-semibold text-token">{data.doctor}</span></>}.
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge tone="brand">{new Date().toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}</Badge>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button size="sm" leftIcon={<UserPlus size={14} />} onClick={() => setAddOpen(true)}>
+            Add patient
+          </Button>
+          <LiveClock />
           <a href="/display/clinic" target="_blank" rel="noreferrer">
-            <Button variant="outline" leftIcon={<Monitor size={14} />}>TV display</Button>
+            <Button variant="outline" size="sm" leftIcon={<Monitor size={14} />}>TV display</Button>
           </a>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatTile label="Patients today" value={demoClinic.todayPatients} hint="18 new · 14 old" icon={<Users size={14} />} accent="brand" sparkline={clinicSparklines.patients} />
-        <StatTile label="Live queue" value={liveQueue} hint={`${liveQueue} tokens in line`} icon={<Ticket size={14} />} accent="accent" sparkline={clinicSparklines.queue} />
-        <StatTile label="Completed" value={completedToday} hint="Successful visits" icon={<CheckCircle size={14} />} accent="success" sparkline={clinicSparklines.completed} />
-        <StatTile label="Earnings today" value={inr(demoClinic.todayRevenue)} hint="Revenue generated" icon={<IndianRupee size={14} />} accent="warning" sparkline={clinicSparklines.earnings} />
+      <AddPatientModal open={addOpen} onClose={() => setAddOpen(false)} />
+
+      <div className="shrink-0 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatTile label="Patients today" value={data.todayPatients} hint="18 new · 14 old" icon={<Users size={14} />} accent="brand" sparkline={clinicSparklines.patients} dense />
+        <StatTile label="Live queue" value={liveQueue} hint={`${liveQueue} tokens in line`} icon={<Ticket size={14} />} accent="accent" sparkline={clinicSparklines.queue} dense />
+        <StatTile label="Completed" value={completedToday} hint="Successful visits" icon={<CheckCircle size={14} />} accent="success" sparkline={clinicSparklines.completed} dense />
+        <StatTile label="Earnings today" value={inr(data.todayRevenue)} hint="Revenue generated" icon={<IndianRupee size={14} />} accent="warning" sparkline={clinicSparklines.earnings} dense />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         <QueuePreview entries={entries} viewAllTo="/clinic/queue" limit={5} />
         <CurrentTokenCard current={current} onComplete={advance} onSkip={skipCurrent} />
-        <WalletMiniCard balance={demoClinic.walletBalance} perVisitRate={12} to="/clinic/wallet" />
+        <WalletMiniCard balance={data.walletBalance} perVisitRate={12} to="/clinic/wallet" />
         <ActivityFeed items={clinicActivity} />
       </div>
 
-      <Link to="/clinic/queue" className="block">
-        <Button size="xl" fullWidth>Call next patient</Button>
-      </Link>
     </div>
   );
 }
