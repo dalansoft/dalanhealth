@@ -7,6 +7,7 @@ import { GlobalSearch } from '@/components/layout/GlobalSearch';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { BranchSwitcher } from '@/components/layout/BranchSwitcher';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { SoundToggle } from '@/components/ui/SoundToggle';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { Tooltip } from '@/components/ui/Tooltip';
@@ -337,6 +338,7 @@ export function DashboardShell({ nav, children, title, subtitle, topRight }: Pro
             <div className="flex items-center gap-2">
               {isDemo && <Badge tone="accent" size="sm">Demo</Badge>}
               {topRight}
+              <SoundToggle />
               <ThemeToggle />
               <NotificationBell />
               <div className="hidden sm:flex items-center gap-2 rounded-xl border hairline pl-1 pr-3 py-1">

@@ -39,6 +39,7 @@ export function LoginPage() {
       clinic_admin: 'Dr. Anil Sharma',
       receptionist: 'Pooja Receptionist',
       super_admin: 'Dalan Admin',
+      tv_display: 'Waiting Room TV',
     };
     login(
       {

@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Link, useSearchParams } from 'react-router-dom';
 import { PatientDetailsDrawer } from '@/components/dashboard/PatientDetailsDrawer';
 import { AddPatientModal } from '@/pages/receptionist/AddPatientModal';
+import { NowServingAnnouncer } from '@/components/feedback/NowServingAnnouncer';
 
 export function ClinicQueue() {
   const { entries, setEntries, advance, skipCurrent, callBack } = useQueue();
@@ -47,6 +48,7 @@ export function ClinicQueue() {
 
   return (
     <div className="space-y-5">
+      <NowServingAnnouncer placement="panel" />
       <Card>
         <CardHeader>
           <div>

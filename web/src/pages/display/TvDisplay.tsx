@@ -3,8 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { DalanMark } from '@/components/ui/Logo';
 import { SourceBadge } from '@/components/ui/SourceBadge';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { SoundToggle } from '@/components/ui/SoundToggle';
+import { NowServingAnnouncer } from '@/components/feedback/NowServingAnnouncer';
 import { useQueue } from '@/store/queue';
-import { useBranch, useCurrentBranch } from '@/store/branch';
+import { useBranch } from '@/store/branch';
 import { getBranchData } from '@/services/demoData';
 import { useAuth } from '@/store/auth';
 import { useTvAccounts, isWithinSchedule } from '@/store/tvAccounts';
@@ -147,6 +149,9 @@ export function TvDisplay() {
       <div aria-hidden className="pointer-events-none absolute -bottom-40 -right-40 h-[640px] w-[640px] rounded-full bg-brand-500/15 dark:bg-brand-500/20 blur-3xl" />
       <div aria-hidden className="pointer-events-none absolute inset-0 grid-bg opacity-10" />
 
+      {/* Chime + toast when the served token changes */}
+      <NowServingAnnouncer placement="tv" />
+
       {/* Header — 3 sections on lg+ (clinic | time | doctor + toggle).
           On mobile: clinic + doctor + toggle on row 1, time centred row 2. */}
       <header className="relative z-10 px-4 sm:px-6 md:px-10 lg:px-14 py-3 sm:py-4 lg:py-5 grid grid-cols-[1fr_auto] lg:grid-cols-3 lg:items-center gap-x-3 gap-y-2 sm:gap-y-3 lg:gap-6 border-b border-ink-200 dark:border-white/10">
@@ -187,6 +192,7 @@ export function TvDisplay() {
               {data.specialization}
             </div>
           </div>
+          <SoundToggle />
           <ThemeToggle />
         </div>
 

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { LiveClock } from '@/components/ui/LiveClock';
+import { NowServingAnnouncer } from '@/components/feedback/NowServingAnnouncer';
 import { useQueue } from '@/store/queue';
 import { demoClinic, demoQueue } from '@/services/demoData';
 import { clinicActivity, clinicSparklines } from '@/services/activityData';
@@ -33,6 +34,7 @@ export function ReceptionistDashboard() {
 
   return (
     <div className="space-y-5">
+      <NowServingAnnouncer placement="panel" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="text-2xl font-bold tracking-tight text-ink-900 dark:text-ink-50">Reception desk</div>

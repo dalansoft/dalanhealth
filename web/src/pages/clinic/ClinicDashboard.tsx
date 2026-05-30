@@ -8,6 +8,7 @@ import { QueuePreview } from '@/components/dashboard/QueuePreview';
 import { Button } from '@/components/ui/Button';
 import { LiveClock } from '@/components/ui/LiveClock';
 import { AddPatientModal } from '@/pages/receptionist/AddPatientModal';
+import { NowServingAnnouncer } from '@/components/feedback/NowServingAnnouncer';
 import { useQueue } from '@/store/queue';
 import { useAuth } from '@/store/auth';
 import { useBranch, useCurrentBranch } from '@/store/branch';
@@ -42,6 +43,7 @@ export function ClinicDashboard() {
 
   return (
     <div className="h-full flex flex-col gap-3 min-h-0">
+      <NowServingAnnouncer placement="panel" />
       <div className="shrink-0 flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="text-xl font-bold tracking-tight text-ink-900 dark:text-ink-50">

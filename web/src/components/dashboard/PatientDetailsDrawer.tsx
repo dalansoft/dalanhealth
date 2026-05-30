@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, User, Phone, MapPin, Calendar, Activity, Droplet, Weight, Ruler,
   ShieldAlert, AlertTriangle, Clock, History, Receipt, FileText, Ticket,
-  CheckCircle2, Users as UsersIcon,
+  Users as UsersIcon,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';

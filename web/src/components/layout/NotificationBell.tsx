@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCheck, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/store/auth';
 

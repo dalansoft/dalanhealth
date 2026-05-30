@@ -65,5 +65,9 @@ export const dashboardPathForRole = (role: Role): string => {
       return '/receptionist';
     case 'super_admin':
       return '/admin';
+    case 'tv_display':
+      return '/display/clinic';
+    default:
+      return '/';
   }
 };
