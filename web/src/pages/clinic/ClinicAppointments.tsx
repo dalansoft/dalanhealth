@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, CheckCircle, Phone, Ticket } from 'lucide-react';
-import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
+import { Card, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard } from '@/components/ui/StatCard';

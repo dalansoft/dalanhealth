@@ -13,6 +13,8 @@ from app.api.v1 import prescription as prescription_router
 from app.api.v1 import wallet as wallet_router
 from app.api.v1 import notifications as notifications_router
 from app.api.v1 import cashback as cashback_router
+from app.api.v1 import health as health_router
+from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware
 from app.websocket.queue_ws import router as ws_router
 
 
@@ -37,6 +39,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RateLimitMiddleware)
 
 
 @app.get("/")
@@ -49,11 +53,9 @@ async def root():
     }
 
 
-@app.get("/health")
-async def health():
-    ok = await db.ping()
-    return {"status": "ok" if ok else "degraded", "db": ok}
-
+# Health checks — /health, /health/database, /health/redis, /health/storage,
+# /health/email (see app/api/v1/health.py). Railway's healthcheck hits /health.
+app.include_router(health_router.router)
 
 # v1 API
 prefix = "/api/v1"

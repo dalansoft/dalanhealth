@@ -1,14 +1,14 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Smartphone, ShieldCheck, Stethoscope, Headset, ArrowRight, Sparkles } from 'lucide-react';
+import { Smartphone, ShieldCheck, Stethoscope, Headset, ArrowRight, Sparkles, type LucideIcon } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Logo } from '@/components/ui/Logo';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useAuth, dashboardPathForRole, type Role } from '@/store/auth';
 
-const demos: { role: Role; title: string; subtitle: string; mobile?: string; email?: string; preset: string; features: string[]; icon: any; tone: string; color: string; name: string }[] = [
+const demos: { role: Role; title: string; subtitle: string; mobile?: string; email?: string; preset: string; features: string[]; icon: LucideIcon; tone: string; color: string; name: string }[] = [
   {
     role: 'patient',
     title: 'Patient app',

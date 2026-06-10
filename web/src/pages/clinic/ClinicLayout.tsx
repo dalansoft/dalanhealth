@@ -1,7 +1,7 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Ticket, Calendar, Receipt, FileText, BarChart3,
-  Wallet, UserCog, QrCode, Bell, Settings, CreditCard, UserCircle, Building2,
+  UserCog, QrCode, Bell, Settings, CreditCard, UserCircle, Building2,
   Monitor,
 } from 'lucide-react';
 import { DashboardShell, type NavSection } from '@/components/layout/DashboardShell';

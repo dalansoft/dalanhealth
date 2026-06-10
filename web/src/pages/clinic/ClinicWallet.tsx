@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Wallet, Plus, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
+import { Plus, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';

@@ -1,7 +1,7 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
-interface Props extends HTMLAttributes<HTMLElement> {
+interface Props extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
   eyebrow?: string;
   title?: ReactNode;
   description?: ReactNode;
