@@ -4,6 +4,7 @@ import { DalanMark } from '@/components/ui/Logo';
 import { SourceBadge } from '@/components/ui/SourceBadge';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { SoundToggle } from '@/components/ui/SoundToggle';
+import { VoiceLangSelect } from '@/components/ui/VoiceLangSelect';
 import { NowServingAnnouncer } from '@/components/feedback/NowServingAnnouncer';
 import { useQueue } from '@/store/queue';
 import { useBranch } from '@/store/branch';
@@ -149,12 +150,14 @@ export function TvDisplay() {
       <div aria-hidden className="pointer-events-none absolute -bottom-40 -right-40 h-[640px] w-[640px] rounded-full bg-brand-500/15 dark:bg-brand-500/20 blur-3xl" />
       <div aria-hidden className="pointer-events-none absolute inset-0 grid-bg opacity-10" />
 
-      {/* Chime + toast when the served token changes */}
-      <NowServingAnnouncer placement="tv" />
+      {/* Chime + spoken call + toast when the served token changes */}
+      <NowServingAnnouncer placement="tv" speak />
 
       {/* Header — 3 sections on lg+ (clinic | time | doctor + toggle).
           On mobile: clinic + doctor + toggle on row 1, time centred row 2. */}
-      <header className="relative z-10 px-4 sm:px-6 md:px-10 lg:px-14 py-3 sm:py-4 lg:py-5 grid grid-cols-[1fr_auto] lg:grid-cols-3 lg:items-center gap-x-3 gap-y-2 sm:gap-y-3 lg:gap-6 border-b border-ink-200 dark:border-white/10">
+      {/* z-30 (above main's z-10) so header dropdowns — voice language picker —
+          paint over the queue panels instead of being clipped behind them. */}
+      <header className="relative z-30 px-4 sm:px-6 md:px-10 lg:px-14 py-3 sm:py-4 lg:py-5 grid grid-cols-[1fr_auto] lg:grid-cols-3 lg:items-center gap-x-3 gap-y-2 sm:gap-y-3 lg:gap-6 border-b border-ink-200 dark:border-white/10">
         {/* LEFT — logo + clinic name + city. No truncation: names always wrap
             in full so nothing is hidden behind "…". `title` gives a hover/long-
             press tooltip on every device. */}
@@ -192,6 +195,7 @@ export function TvDisplay() {
               {data.specialization}
             </div>
           </div>
+          <VoiceLangSelect />
           <SoundToggle />
           <ThemeToggle />
         </div>

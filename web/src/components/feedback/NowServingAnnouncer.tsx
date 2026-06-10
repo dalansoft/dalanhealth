@@ -5,12 +5,18 @@ import { useQueue } from '@/store/queue';
 import { useSound } from '@/store/sound';
 import { SourceBadge } from '@/components/ui/SourceBadge';
 import { playChime, unlockAudio, isAudioUnlocked } from '@/lib/chime';
+import { speakAnnouncement, speakCustomText } from '@/lib/speech';
+import { subscribeAnnouncements } from '@/lib/announceBus';
 import { cn } from '@/lib/cn';
 
 interface Props {
   /** 'tv' → large top-centre banner for wall displays.
    *  'panel' → compact bottom-right toast for staff dashboards. */
   placement?: 'tv' | 'panel';
+  /** When true, speak the announcement aloud (TTS) after the chime, using the
+   *  language chosen in the sound store. Enabled on the TV; staff panels stay
+   *  chime-only so the office isn't talked at all day. */
+  speak?: boolean;
 }
 
 /**
@@ -27,9 +33,12 @@ interface Props {
  * Mount one instance per surface that should announce (TV display, clinic
  * dashboard, receptionist dashboard, clinic queue).
  */
-export function NowServingAnnouncer({ placement = 'panel' }: Props) {
+export function NowServingAnnouncer({ placement = 'panel', speak = false }: Props) {
   const current = useQueue((s) => s.entries[0]);
   const soundEnabled = useSound((s) => s.enabled);
+  const announceLang = useSound((s) => s.announceLang);
+  const templateEn = useSound((s) => s.templateEn);
+  const templateHi = useSound((s) => s.templateHi);
 
   const prevTokenRef = useRef<number | null>(null);
   const [toast, setToast] = useState<{ token: number; name: string; source: string } | null>(null);
@@ -51,6 +60,17 @@ export function NowServingAnnouncer({ placement = 'panel' }: Props) {
     };
   }, []);
 
+  // Custom PA announcements posted from the clinic panel's TV settings —
+  // only speaking surfaces (the TV) react, and only while sound is on.
+  useEffect(() => {
+    if (!speak) return;
+    return subscribeAnnouncements((a) => {
+      if (!useSound.getState().enabled) return;
+      playChime();
+      setTimeout(() => speakCustomText(a.text, a.lang), 600);
+    });
+  }, [speak]);
+
   // Detect "new patient called".
   useEffect(() => {
     const token = current?.token ?? null;
@@ -68,6 +88,21 @@ export function NowServingAnnouncer({ placement = 'panel' }: Props) {
         if (soundEnabled) {
           if (isAudioUnlocked()) {
             playChime();
+            // Speak the call ~0.7s after the chime so the ding leads in,
+            // then the voice reads the token + name in the chosen language.
+            if (speak) {
+              const c = current;
+              setTimeout(
+                () => speakAnnouncement({
+                  token: c.token,
+                  name: c.patientName,
+                  lang: announceLang,
+                  templateEn,
+                  templateHi,
+                }),
+                700,
+              );
+            }
           } else {
             // Sound wanted but blocked by autoplay policy — surface a hint.
             setNeedsUnlock(true);

@@ -51,7 +51,7 @@ export function AddPatientModal({ open, onClose }: Props) {
             aria-modal="true"
             aria-labelledby="add-patient-modal-title"
           >
-            <div className="w-full max-w-2xl pointer-events-auto rounded-2xl bg-white dark:bg-ink-900 border hairline shadow-2xl my-auto">
+            <div className="w-full max-w-md pointer-events-auto rounded-2xl bg-white dark:bg-ink-900 border hairline shadow-2xl my-auto">
               <div className="flex items-center justify-between px-5 py-3 border-b hairline">
                 <div id="add-patient-modal-title" className="text-sm font-semibold text-ink-900 dark:text-ink-50">
                   Add patient

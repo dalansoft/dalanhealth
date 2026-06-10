@@ -2,6 +2,7 @@ import { Volume2, VolumeX } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSound } from '@/store/sound';
 import { unlockAudio, playChime } from '@/lib/chime';
+import { cancelSpeech } from '@/lib/speech';
 import { cn } from '@/lib/cn';
 
 interface Props {
@@ -24,6 +25,9 @@ export function SoundToggle({ className }: Props) {
       // Unlock + confirmation ding so the operator hears it's working.
       unlockAudio();
       setTimeout(() => playChime(0.4), 60);
+    } else {
+      // Muting — stop any announcement that's mid-sentence.
+      cancelSpeech();
     }
   };
 

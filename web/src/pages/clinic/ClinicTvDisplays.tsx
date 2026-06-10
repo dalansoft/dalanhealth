@@ -1,13 +1,19 @@
 import { useState } from 'react';
 import {
   Monitor, Plus, Trash2, Copy, RefreshCw, Power, Edit3, Check,
-  AlertCircle, KeyRound, Clock, Building2, ExternalLink,
+  AlertCircle, KeyRound, Clock, Building2, ExternalLink, Megaphone, Send,
+  Play, Save, RotateCcw,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useBranch } from '@/store/branch';
+import { useSound } from '@/store/sound';
+import { useQueue } from '@/store/queue';
 import { useTvAccounts, type TvAccount, type TvSchedule } from '@/store/tvAccounts';
+import { postAnnouncement } from '@/lib/announceBus';
+import { previewVoice, DEFAULT_TEMPLATE_EN, DEFAULT_TEMPLATE_HI, type AnnounceLang } from '@/lib/speech';
+import { unlockAudio } from '@/lib/chime';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/cn';
 
@@ -82,6 +88,9 @@ export function ClinicTvDisplays() {
         </div>
       </Card>
 
+      {/* Announcement voice + custom PA message */}
+      <AnnouncementSettingsCard />
+
       {/* TV list */}
       {accounts.length === 0 ? (
         <Card>
@@ -127,6 +136,230 @@ export function ClinicTvDisplays() {
           setEditingId(null);
         }}
         branches={branches}
+      />
+    </div>
+  );
+}
+
+// ─── Announcement settings (voice language + custom PA message) ──────────
+
+const LANG_OPTIONS: { value: AnnounceLang; label: string }[] = [
+  { value: 'en', label: 'English' },
+  { value: 'hi', label: 'हिन्दी' },
+  { value: 'both', label: 'Hindi + English' },
+];
+
+function AnnouncementSettingsCard() {
+  const announceLang = useSound((s) => s.announceLang);
+  const setLang = useSound((s) => s.setLang);
+  const templateEn = useSound((s) => s.templateEn);
+  const templateHi = useSound((s) => s.templateHi);
+  const setTemplates = useSound((s) => s.setTemplates);
+
+  // Drafts — edited locally, applied on Save so half-typed sentences never
+  // reach a live TV.
+  const [enDraft, setEnDraft] = useState(templateEn);
+  const [hiDraft, setHiDraft] = useState(templateHi);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+
+  const [text, setText] = useState('');
+  const [sentAt, setSentAt] = useState<number | null>(null);
+
+  const dirty = enDraft !== templateEn || hiDraft !== templateHi;
+  const showEn = announceLang === 'en' || announceLang === 'both';
+  const showHi = announceLang === 'hi' || announceLang === 'both';
+
+  // Speak the DRAFT templates with the live current patient (or sample data)
+  // so the operator hears exactly what the waiting room will hear.
+  const handlePreview = () => {
+    unlockAudio();
+    const current = useQueue.getState().entries[0];
+    previewVoice(
+      announceLang,
+      current?.patientName,
+      { templateEn: enDraft, templateHi: hiDraft },
+      current?.token ?? 1,
+    );
+  };
+
+  const handleSave = () => {
+    setTemplates(enDraft, hiDraft);
+    setSavedAt(Date.now());
+    setTimeout(() => setSavedAt(null), 2500);
+  };
+
+  const handleReset = () => {
+    setEnDraft(DEFAULT_TEMPLATE_EN);
+    setHiDraft(DEFAULT_TEMPLATE_HI);
+  };
+
+  // Insert a placeholder chip at the end of a draft field.
+  const insertInto = (which: 'en' | 'hi', placeholder: string) => {
+    if (which === 'en') setEnDraft((d) => `${d.trimEnd()} ${placeholder}`.trimStart());
+    else setHiDraft((d) => `${d.trimEnd()} ${placeholder}`.trimStart());
+  };
+
+  const handlePlay = () => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    postAnnouncement({ text: trimmed, lang: announceLang });
+    setSentAt(Date.now());
+    setTimeout(() => setSentAt(null), 2500);
+  };
+
+  return (
+    <Card className="relative overflow-hidden">
+      <div className="pointer-events-none absolute -left-20 -top-20 h-40 w-40 rounded-full bg-accent-500/15 blur-2xl" />
+      <div className="relative flex flex-col sm:flex-row items-start gap-4">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-accent-500/15 text-accent-600 dark:text-accent-300 shrink-0">
+          <Megaphone size={16} />
+        </span>
+        <div className="min-w-0 flex-1 space-y-4">
+          <div>
+            <div className="text-sm font-semibold text-ink-900 dark:text-ink-50">TV announcements</div>
+            <div className="text-xs text-muted mt-0.5">
+              Voice language, the call sentence the TV speaks for every patient, and a one-off message you can play now.
+            </div>
+          </div>
+
+          {/* Language — synced live to the TV via the sound store */}
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-1.5">Announcement language</div>
+            <div className="inline-grid grid-cols-3 rounded-xl border hairline p-1 text-sm">
+              {LANG_OPTIONS.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  onClick={() => setLang(o.value)}
+                  className={cn(
+                    'rounded-lg px-3 py-2 transition-all whitespace-nowrap',
+                    announceLang === o.value
+                      ? 'bg-brand-500 text-white'
+                      : 'text-muted hover:text-ink-900 dark:hover:text-ink-50',
+                  )}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+            <div className="mt-1 text-[10px] text-muted">Female voice · Indian accent · applies to every TV instantly.</div>
+          </div>
+
+          {/* Call sentence template — write → play → save */}
+          <div className="rounded-xl border hairline bg-ink-50/40 dark:bg-ink-900/40 p-3 space-y-3">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">Call sentence</div>
+              <div className="mt-0.5 text-[10px] text-muted">
+                Spoken automatically for every patient call. <span className="font-mono font-semibold text-ink-700 dark:text-ink-200">[Token no]</span> and{' '}
+                <span className="font-mono font-semibold text-ink-700 dark:text-ink-200">[Name]</span> are filled in automatically — write the rest yourself.
+              </div>
+            </div>
+
+            {showEn && (
+              <TemplateField
+                label="English sentence"
+                value={enDraft}
+                onChange={setEnDraft}
+                onInsert={(p) => insertInto('en', p)}
+                placeholder="Token number [Token no], [Name], please go to the doctor chamber."
+              />
+            )}
+            {showHi && (
+              <TemplateField
+                label="Hindi sentence"
+                value={hiDraft}
+                onChange={setHiDraft}
+                onInsert={(p) => insertInto('hi', p)}
+                placeholder="टोकन नंबर [Token no], [Name], कृपया डॉक्टर के कक्ष में जाएँ।"
+              />
+            )}
+
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={handleReset}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted hover:text-ink-900 dark:hover:text-ink-50 transition-colors"
+              >
+                <RotateCcw size={11} /> Reset to default
+              </button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" leftIcon={<Play size={14} />} onClick={handlePreview}>
+                  Play
+                </Button>
+                <Button
+                  size="sm"
+                  leftIcon={savedAt ? <Check size={14} /> : <Save size={14} />}
+                  onClick={handleSave}
+                  disabled={!dirty && !savedAt}
+                >
+                  {savedAt ? 'Saved — live on TV' : 'Save'}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* One-off PA message */}
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-1.5">One-off announcement</div>
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={2}
+              placeholder='e.g. "Doctor will be 10 minutes late, please keep waiting." / "डॉक्टर साहब 10 मिनट में आएँगे, कृपया प्रतीक्षा करें।"'
+              className="w-full rounded-xl border hairline bg-white dark:bg-ink-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-shadow resize-y"
+            />
+            <div className="mt-2 flex items-center justify-between gap-3 flex-wrap">
+              <div className="text-[10px] text-muted">
+                Write in any language — it's read aloud once with the voice selected above.
+              </div>
+              <Button
+                size="sm"
+                leftIcon={sentAt ? <Check size={14} /> : <Send size={14} />}
+                onClick={handlePlay}
+                disabled={!text.trim()}
+              >
+                {sentAt ? 'Playing on TV' : 'Play on TV'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/** Template input with one-click [Token no] / [Name] placeholder chips. */
+function TemplateField({ label, value, onChange, onInsert, placeholder }: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  onInsert: (placeholder: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">{label}</span>
+        <div className="flex items-center gap-1">
+          {['[Token no]', '[Name]'].map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => onInsert(p)}
+              className="rounded-md border hairline px-1.5 py-0.5 text-[10px] font-mono text-brand-600 dark:text-brand-300 hover:bg-brand-500/10 transition-colors"
+              title={`Insert ${p}`}
+            >
+              + {p}
+            </button>
+          ))}
+        </div>
+      </div>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={2}
+        placeholder={placeholder}
+        className="w-full rounded-xl border hairline bg-white dark:bg-ink-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-shadow resize-y"
       />
     </div>
   );
