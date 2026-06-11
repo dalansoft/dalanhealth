@@ -29,14 +29,31 @@ class Base(DeclarativeBase):
     pass
 
 
-def _normalize_url(url: str) -> str:
-    """Accept common Postgres URL spellings (Neon/Railway hand out
-    `postgres://` or `postgresql://`) and route them to the asyncpg driver."""
+def _normalize_url(url: str) -> tuple[str, bool]:
+    """Make any pasted Postgres URL work with asyncpg.
+
+    - `postgres://` / `postgresql://` → `postgresql+asyncpg://`
+    - Strips libpq-only query params (`sslmode`, `channel_binding`) that Neon
+      includes by default — asyncpg rejects them as unknown kwargs and the
+      app would crash at boot (seen as a Railway "Healthcheck failure").
+
+    Returns (url, ssl_required).
+    """
     if url.startswith("postgres://"):
-        return url.replace("postgres://", "postgresql+asyncpg://", 1)
-    if url.startswith("postgresql://"):
-        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    return url
+        url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    if not url.startswith("postgresql+asyncpg://"):
+        return url, False
+
+    from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+    parts = urlsplit(url)
+    params = dict(parse_qsl(parts.query))
+    sslmode = params.pop("sslmode", "require")  # Neon always wants TLS
+    params.pop("channel_binding", None)
+    cleaned = urlunsplit(parts._replace(query=urlencode(params)))
+    return cleaned, sslmode != "disable"
 
 
 class Database:
@@ -45,10 +62,14 @@ class Database:
         self.session_factory: async_sessionmaker[AsyncSession] | None = None
 
     async def connect(self) -> None:
-        url = _normalize_url(settings.database_url)
-        # Neon's pooled endpoints run PgBouncer (transaction mode) — disable
-        # asyncpg's prepared-statement cache, it's incompatible with PgBouncer.
-        connect_args = {"statement_cache_size": 0} if url.startswith("postgresql+asyncpg") else {}
+        url, ssl_required = _normalize_url(settings.database_url)
+        connect_args: dict = {}
+        if url.startswith("postgresql+asyncpg"):
+            # Neon's pooled endpoints run PgBouncer (transaction mode) — disable
+            # asyncpg's prepared-statement cache, it's incompatible with PgBouncer.
+            connect_args["statement_cache_size"] = 0
+            if ssl_required:
+                connect_args["ssl"] = True
         self.engine = create_async_engine(
             url,
             echo=False,
