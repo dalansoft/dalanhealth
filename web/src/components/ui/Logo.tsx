@@ -12,37 +12,32 @@ interface Props {
 }
 
 const sizes = {
-  sm: { box: 28, text: 'text-[11px]', tagline: 'text-[7px]' },
-  md: { box: 34, text: 'text-[12px]', tagline: 'text-[8px]' },
-  lg: { box: 42, text: 'text-[14px]', tagline: 'text-[9px]' },
+  sm: { box: 28, wordH: 22 },
+  md: { box: 34, wordH: 27 },
+  lg: { box: 42, wordH: 33 },
 };
 
 /**
- * DalanHealth lockup — the brand mark (user-supplied PNG) next to the navy
- * "DALAN HEALTH" wordmark with the teal "Better Health" tagline, matching
- * the official logo.
+ * DalanHealth lockup — the brand mark next to the official wordmark image
+ * (DALAN HEALTH + Better Health tagline) cropped straight from the logo
+ * file, so letterforms, teal A-notches and spacing match the brand exactly.
+ * Theme/variant aware: dark surfaces get the white-text version.
  */
 export function Logo({ size = 'md', className, asLink = true, variant = 'auto', showWordmark = true }: Props) {
   const s = sizes[size];
-  const wordmarkClass =
-    variant === 'onDark'
-      ? 'text-white'
-      : variant === 'onLight'
-      ? 'text-ink-900'
-      : 'text-ink-900 dark:text-white';
+  const isDarkTheme = useTheme((st) => st.theme === 'dark');
+  const dark = variant === 'onDark' || (variant === 'auto' && isDarkTheme);
 
   const inner = (
     <span className={cn('inline-flex items-center gap-2.5', className)}>
       <DalanMark size={s.box} />
       {showWordmark && (
-        <span className="flex flex-col">
-          <span className={cn('font-brand font-bold leading-none tracking-[0.18em] uppercase', s.text, wordmarkClass)}>
-            Dalan Health
-          </span>
-          <span className={cn('mt-0.5 font-medium leading-none tracking-[0.3em] text-teal-500 dark:text-teal-400', s.tagline)}>
-            Better Health
-          </span>
-        </span>
+        <img
+          src={dark ? '/wordmark-dark.png' : '/wordmark.png'}
+          alt="Dalan Health — Better Health"
+          style={{ height: s.wordH, width: 'auto', display: 'block' }}
+          draggable={false}
+        />
       )}
     </span>
   );
