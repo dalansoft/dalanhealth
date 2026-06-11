@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTheme } from '@/store/theme';
 import { cn } from '@/lib/cn';
 
 interface Props {
@@ -56,16 +57,16 @@ export function Logo({ size = 'md', className, asLink = true, variant = 'auto', 
 }
 
 /**
- * DalanHealth brand mark — renders the user-supplied PNG from `/logo.png`
- * verbatim (no recolouring, no halo, no SVG redraw). Drop the source file at
- * `web/public/logo.png` and it will appear everywhere the Logo / DalanMark is
- * used. Width/height stay square; `object-contain` preserves the file's own
- * aspect ratio and transparency.
+ * DalanHealth brand mark — renders the official PNG verbatim. Theme-aware:
+ * light mode uses /logo.png (navy D + gradient bars); dark mode swaps to
+ * /logo-dark.png where the navy is white so the mark stays visible on dark
+ * headers (the teal-blue gradient is identical in both).
  */
 export function DalanMark({ size = 34 }: { size?: number }) {
+  const isDark = useTheme((s) => s.theme === 'dark');
   return (
     <img
-      src="/logo.png"
+      src={isDark ? '/logo-dark.png' : '/logo.png'}
       alt="DalanHealth"
       width={size}
       height={size}
