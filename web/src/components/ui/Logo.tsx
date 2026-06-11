@@ -11,14 +11,15 @@ interface Props {
 }
 
 const sizes = {
-  sm: { box: 28, text: 'text-[11px]' },
-  md: { box: 34, text: 'text-[12px]' },
-  lg: { box: 42, text: 'text-[14px]' },
+  sm: { box: 28, text: 'text-[11px]', tagline: 'text-[7px]' },
+  md: { box: 34, text: 'text-[12px]', tagline: 'text-[8px]' },
+  lg: { box: 42, text: 'text-[14px]', tagline: 'text-[9px]' },
 };
 
 /**
- * DalanHealth mark — stylised capital "D" with a 3-disk database stack
- * peeking through a notch in the top, paired with a spaced uppercase wordmark.
+ * DalanHealth lockup — the brand mark (user-supplied PNG) next to the navy
+ * "DALAN HEALTH" wordmark with the teal "Better Health" tagline, matching
+ * the official logo.
  */
 export function Logo({ size = 'md', className, asLink = true, variant = 'auto', showWordmark = true }: Props) {
   const s = sizes[size];
@@ -33,8 +34,13 @@ export function Logo({ size = 'md', className, asLink = true, variant = 'auto', 
     <span className={cn('inline-flex items-center gap-2.5', className)}>
       <DalanMark size={s.box} />
       {showWordmark && (
-        <span className={cn('font-brand font-semibold leading-none tracking-[0.22em] uppercase', s.text, wordmarkClass)}>
-          Dalan <span className="font-light opacity-80">Health</span>
+        <span className="flex flex-col">
+          <span className={cn('font-brand font-bold leading-none tracking-[0.18em] uppercase', s.text, wordmarkClass)}>
+            Dalan Health
+          </span>
+          <span className={cn('mt-0.5 font-medium leading-none tracking-[0.3em] text-teal-500 dark:text-teal-400', s.tagline)}>
+            Better Health
+          </span>
         </span>
       )}
     </span>
