@@ -63,14 +63,25 @@ jobs:
     needs: [web-ci, api-ci]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}
     steps:
       - uses: actions/checkout@v4
-      - run: npm i -g @railway/cli
-      - run: railway up --service "$RAILWAY_SERVICE" --ci
+      # Two deploy modes:
+      #  - RAILWAY_TOKEN set   → controlled CLI deploy from this pipeline.
+      #  - RAILWAY_TOKEN empty → Railway's native GitHub integration already
+      #    auto-deploys this push; nothing to do here. (Token creation needs
+      #    a verified Railway account, so this keeps CI green without one.)
+      - name: Deploy via Railway CLI (or defer to native auto-deploy)
         working-directory: backend
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "RAILWAY_TOKEN not set — Railway's GitHub integration auto-deploys this push. Skipping CLI deploy."
+            exit 0
+          fi
+          npm i -g @railway/cli
+          railway up --service "$RAILWAY_SERVICE" --ci
 
   # ── 4. Deploy frontend to Vercel ──────────────────────────────────────
   deploy-web:
@@ -80,16 +91,25 @@ jobs:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: web } }
     env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - run: npm i -g vercel
-      - run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-      - run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-      - run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+      # Same dual-mode as the API: without VERCEL_TOKEN, Vercel's own GitHub
+      # integration builds + deploys this push automatically.
+      - name: Deploy via Vercel CLI (or defer to native auto-deploy)
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "VERCEL_TOKEN not set — Vercel's GitHub integration auto-deploys this push. Skipping CLI deploy."
+            exit 0
+          fi
+          npm i -g vercel
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          vercel build --prod --token="$VERCEL_TOKEN"
+          vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
 
   # ── 5. Smoke tests against production ─────────────────────────────────
   smoke:
@@ -114,7 +134,11 @@ jobs:
           [ "$code" = "200" ] && echo "Database healthy ✅" || { echo "Database check returned $code ❌"; exit 1; }
       - name: Frontend reachable
         run: |
-          code=$(curl -s -o /dev/null -w "%{http_code}" -L https://dalanhealth.vercel.app || true)
-          [ "$code" = "200" ] && echo "Web healthy ✅" || { echo "Web returned $code ❌"; exit 1; }
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -L https://dalanhealth.vercel.app || true)
+            [ "$code" = "200" ] && echo "Web healthy ✅" && exit 0
+            echo "attempt $i → $code, retrying in 20s…" && sleep 20
+          done
+          echo "Web health check failed ❌" && exit 1
       - name: Success
         run: echo "🚀 DalanHealth deployed — laptop can sleep."
