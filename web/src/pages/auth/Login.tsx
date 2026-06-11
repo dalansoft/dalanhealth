@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Phone, ShieldCheck, Stethoscope, Headset } from 'lucide-react';
+import { Mail, Lock, Phone, ShieldCheck, Stethoscope, Headset, AlertCircle } from 'lucide-react';
 import { Card, CardTitle, CardSubtitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useAuth, dashboardPathForRole, type Role } from '@/store/auth';
+import { authApi } from '@/services/api';
 
 const tabs: { id: Role; label: string; icon: React.ReactNode; method: 'otp' | 'password' }[] = [
   { id: 'patient', label: 'Patient', icon: <Phone size={14} />, method: 'otp' },
@@ -21,40 +22,49 @@ export function LoginPage() {
   const [step, setStep] = useState<'enter' | 'otp'>('enter');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [demoHint, setDemoHint] = useState<string | null>(null);
   const navigate = useNavigate();
   const login = useAuth((s) => s.login);
   const method = tabs.find((t) => t.id === tab)!.method;
 
+  // Real authentication against the live API. Demo browsing stays on /demo.
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
-    if (method === 'otp' && step === 'enter') {
-      setStep('otp');
+    try {
+      if (method === 'otp' && step === 'enter') {
+        const sent = await authApi.sendOtp(mobile, tab);
+        if (sent.demo_code) setDemoHint(sent.demo_code);
+        setStep('otp');
+        return;
+      }
+      const resp =
+        method === 'otp'
+          ? await authApi.verifyOtp(mobile, otp, tab)
+          : await authApi.login(email, password, tab);
+      login(
+        {
+          id: resp.user.id,
+          name: resp.user.name,
+          role: (resp.user.role as Role) ?? tab,
+          mobile: resp.user.mobile ?? undefined,
+          email: resp.user.email ?? undefined,
+          clinicId: resp.user.clinic_id ?? undefined,
+          clinicName: resp.user.clinic_name ?? undefined,
+        },
+        resp.access_token,
+        false,
+      );
+      navigate(dashboardPathForRole(tab));
+    } catch (err) {
+      const detail =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setError(detail ?? 'Could not reach the server — check your connection and try again.');
+    } finally {
       setLoading(false);
-      return;
     }
-    const names: Record<Role, string> = {
-      patient: 'Shailesh Kumar',
-      clinic_admin: 'Dr. Anil Sharma',
-      receptionist: 'Pooja Receptionist',
-      super_admin: 'Dalan Admin',
-      tv_display: 'Waiting Room TV',
-    };
-    login(
-      {
-        id: `u-${tab}`,
-        name: names[tab],
-        role: tab,
-        mobile: mobile || undefined,
-        email: email || undefined,
-        clinicName: tab === 'patient' ? undefined : 'Sharma ENT Clinic',
-      },
-      'mock-jwt-token',
-      false,
-    );
-    setLoading(false);
-    navigate(dashboardPathForRole(tab));
   };
 
   return (
@@ -96,7 +106,7 @@ export function LoginPage() {
                 placeholder="6-digit code"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
-                hint={`Sent to ${mobile || 'your number'} · Use 123456 in demo`}
+                hint={demoHint ? `Sent to ${mobile} · code: ${demoHint}` : `Sent to ${mobile || 'your number'}`}
                 required
               />
             )
@@ -105,6 +115,12 @@ export function LoginPage() {
               <Input label="Email" type="email" placeholder="you@clinic.com" leftIcon={<Mail size={14} />} value={email} onChange={(e) => setEmail(e.target.value)} required />
               <Input label="Password" type="password" placeholder="••••••••" leftIcon={<Lock size={14} />} value={password} onChange={(e) => setPassword(e.target.value)} required />
             </>
+          )}
+
+          {error && (
+            <div className="rounded-xl border border-danger-500/40 bg-danger-500/5 px-3 py-2 text-xs text-danger-600 dark:text-danger-500 flex items-center gap-1.5">
+              <AlertCircle size={12} className="shrink-0" /> {error}
+            </div>
           )}
 
           <Button type="submit" size="lg" fullWidth loading={loading}>

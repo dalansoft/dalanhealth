@@ -83,6 +83,29 @@ class Database:
 
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+        await self._ensure_columns()
+
+    async def _ensure_columns(self) -> None:
+        """Tiny forward-only migration: create_all never ALTERs existing
+        tables, so columns added after first deploy are applied here. Replace
+        with Alembic once the schema churns with real data."""
+        statements = [
+            "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS sort_order DOUBLE PRECISION",
+            "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS was_skipped BOOLEAN DEFAULT FALSE",
+        ]
+        assert self.engine is not None
+        for stmt in statements:
+            try:
+                async with self.engine.begin() as conn:
+                    await conn.execute(text(stmt))
+            except Exception:
+                # SQLite has no IF NOT EXISTS for ADD COLUMN — retry without it;
+                # if that also fails the column already exists. Never fatal.
+                try:
+                    async with self.engine.begin() as conn:
+                        await conn.execute(text(stmt.replace(" IF NOT EXISTS", "")))
+                except Exception:
+                    pass
 
     async def disconnect(self) -> None:
         if self.engine:

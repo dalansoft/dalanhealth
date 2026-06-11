@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DalanMark } from '@/components/ui/Logo';
 import { SourceBadge } from '@/components/ui/SourceBadge';
@@ -7,6 +8,7 @@ import { SoundToggle } from '@/components/ui/SoundToggle';
 import { VoiceLangSelect } from '@/components/ui/VoiceLangSelect';
 import { NowServingAnnouncer } from '@/components/feedback/NowServingAnnouncer';
 import { useQueue } from '@/store/queue';
+import { useQueueBoot } from '@/hooks/useQueueBoot';
 import { useBranch } from '@/store/branch';
 import { getBranchData } from '@/services/demoData';
 import { useAuth } from '@/store/auth';
@@ -25,6 +27,9 @@ export function TvDisplay() {
   const { entries, setEntries } = useQueue();
   const [now, setNow] = useState(new Date());
   const user = useAuth((s) => s.user);
+  const authToken = useAuth((s) => s.token);
+  const isDemo = useAuth((s) => s.isDemo);
+  const [searchParams] = useSearchParams();
   const switchBranch = useBranch((s) => s.switchBranch);
   const branches = useBranch((s) => s.branches);
   const storeBranchId = useBranch((s) => s.currentBranchId);
@@ -60,15 +65,24 @@ export function TvDisplay() {
     return () => clearInterval(id);
   }, [tvAccount, touchTv]);
 
-  // Seed the queue with the current branch's patients on first mount and
-  // refresh it whenever the branch changes. Deps are deliberately limited to
-  // the branch id — `data` / `branch` / `setEntries` are derived or stable;
-  // including them caused an infinite render loop.
+  // ─── Live vs demo data source ─────────────────────────────────────────
+  // A physical wall TV opens /display/clinic?clinic=<clinic-id> — no login
+  // needed; the queue arrives over WebSocket (the server pushes the current
+  // listing on connect). A signed-in clinic admin previewing the display
+  // gets their own clinic's live queue automatically. Demo browsing keeps
+  // the local demo queue.
+  const liveClinicId =
+    searchParams.get('clinic') ??
+    (authToken && !isDemo ? user?.clinicId ?? null : null);
+  const queueMode = useQueueBoot(liveClinicId);
+
+  // Demo only: seed the branch overlay's queue on branch switches.
   useEffect(() => {
+    if (useQueue.getState().mode !== 'demo') return;
     const d = getBranchData(effectiveBranchId, branch);
     setEntries(d.queue);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveBranchId]);
+  }, [effectiveBranchId, queueMode]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);

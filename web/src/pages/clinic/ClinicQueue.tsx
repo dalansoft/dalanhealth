@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/Badge';
 import { SourceBadge } from '@/components/ui/SourceBadge';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { useQueue, type QueueEntry } from '@/store/queue';
-import { demoQueue } from '@/services/demoData';
+import { useQueueBoot } from '@/hooks/useQueueBoot';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Link, useSearchParams } from 'react-router-dom';
 import { PatientDetailsDrawer } from '@/components/dashboard/PatientDetailsDrawer';
@@ -15,7 +15,9 @@ import { AddPatientModal } from '@/pages/receptionist/AddPatientModal';
 import { NowServingAnnouncer } from '@/components/feedback/NowServingAnnouncer';
 
 export function ClinicQueue() {
-  const { entries, setEntries, advance, skipCurrent, callBack } = useQueue();
+  const { entries, advance, skipCurrent, callBack } = useQueue();
+  // Live mode (real login) or demo seeding — one hook decides.
+  useQueueBoot();
   const [selectedEntry, setSelectedEntry] = useState<QueueEntry | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -38,10 +40,6 @@ export function ClinicQueue() {
       setSearchParams(next, { replace: true });
     }
   };
-
-  useEffect(() => {
-    if (entries.length === 0) setEntries(demoQueue);
-  }, [entries.length, setEntries]);
 
   const current = entries[0];
   const upNext = entries[1];

@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Users, Ticket, IndianRupee, CheckCircle, UserPlus, Monitor, Receipt, FileText } from 'lucide-react';
@@ -12,7 +11,8 @@ import { Card } from '@/components/ui/Card';
 import { LiveClock } from '@/components/ui/LiveClock';
 import { NowServingAnnouncer } from '@/components/feedback/NowServingAnnouncer';
 import { useQueue } from '@/store/queue';
-import { demoClinic, demoQueue } from '@/services/demoData';
+import { useQueueBoot } from '@/hooks/useQueueBoot';
+import { demoClinic } from '@/services/demoData';
 import { clinicActivity, clinicSparklines } from '@/services/activityData';
 import { inr } from '@/lib/format';
 
@@ -24,11 +24,8 @@ const actions = [
 ];
 
 export function ReceptionistDashboard() {
-  const { entries, setEntries, advance, skipCurrent } = useQueue();
-
-  useEffect(() => {
-    if (entries.length === 0) setEntries(demoQueue);
-  }, [entries.length, setEntries]);
+  const { entries, advance, skipCurrent } = useQueue();
+  useQueueBoot();
 
   const current = entries[0];
 

@@ -89,6 +89,8 @@ class QueueEntryRow(_Pk, Base):
 
     clinic_id: Mapped[str] = mapped_column(String(36))
     date_key: Mapped[str] = mapped_column(String(10))
+    # Patient-visible token — assigned at booking, NEVER changed afterwards.
+    # Patients track this number; skip/call-back only affect sort_order.
     token: Mapped[int] = mapped_column(Integer)
     patient_id: Mapped[str] = mapped_column(String(36))
     patient_name: Mapped[str] = mapped_column(String(120))
@@ -96,6 +98,11 @@ class QueueEntryRow(_Pk, Base):
     source: Mapped[str] = mapped_column(String(12))
     status: Mapped[str] = mapped_column(String(20), default="waiting")
     joined_at: Mapped[str | None] = mapped_column(String(8))
+    # Queue-position key (defaults to token). Skip pushes it past the max so
+    # the patient drops to the back with their token intact; call-back sets it
+    # just after the currently-serving entry. Float so we can insert between.
+    sort_order: Mapped[float | None] = mapped_column(Float)
+    was_skipped: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class InvoiceRow(_Pk, Base):
@@ -157,5 +164,13 @@ class NotificationRow(_Pk, Base):
 
 
 def row_to_dict(row: Base) -> dict:
-    """Serialize an ORM row to a plain dict for API responses."""
-    return {c.name: getattr(row, c.name) for c in row.__table__.columns}
+    """Serialize an ORM row to a JSON-safe dict. Datetimes become ISO strings
+    here because WebSocket send_json (plain json.dumps) can't encode datetime —
+    REST responses go through FastAPI's encoder either way."""
+    out: dict = {}
+    for c in row.__table__.columns:
+        v = getattr(row, c.name)
+        if isinstance(v, datetime):
+            v = v.isoformat()
+        out[c.name] = v
+    return out

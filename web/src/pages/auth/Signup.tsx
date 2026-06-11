@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, Check } from 'lucide-react';
+import { Sparkles, Check, AlertCircle } from 'lucide-react';
 import { Card, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useAuth } from '@/store/auth';
+import { authApi } from '@/services/api';
 import { cn } from '@/lib/cn';
 
 type Plan = 'starter' | 'growth';
@@ -26,19 +27,47 @@ export function SignupPage() {
   const [password, setPassword] = useState('');
   const [plan, setPlan] = useState<Plan>('growth');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const login = useAuth((s) => s.login);
 
+  // Creates a REAL clinic account on the live API (Postgres-backed).
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 700));
-    login(
-      { id: 'u-clinic-new', name: doctor || 'Dr. New Clinic', role: 'clinic_admin', email, mobile, clinicName: clinic || 'New Clinic' },
-      'mock-jwt-token',
-    );
-    setLoading(false);
-    navigate('/clinic');
+    try {
+      const resp = await authApi.signupClinic({
+        doctor_name: doctor,
+        clinic_name: clinic,
+        mobile,
+        email,
+        password,
+        city: city || undefined,
+        specialization: spec || undefined,
+        plan,
+      });
+      login(
+        {
+          id: resp.user.id,
+          name: resp.user.name,
+          role: 'clinic_admin',
+          email: resp.user.email ?? email,
+          mobile,
+          clinicId: resp.user.clinic_id ?? undefined,
+          clinicName: resp.user.clinic_name ?? clinic,
+        },
+        resp.access_token,
+        false,
+      );
+      navigate('/clinic');
+    } catch (err) {
+      const detail =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setError(detail ?? 'Could not reach the server — check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -63,6 +92,12 @@ export function SignupPage() {
               <Input label="Specialization" placeholder="ENT, Pediatrics…" value={spec} onChange={(e) => setSpec(e.target.value)} />
             </div>
             <Input label="Password" type="password" placeholder="At least 8 characters" value={password} onChange={(e) => setPassword(e.target.value)} required />
+
+            {error && (
+              <div className="rounded-xl border border-danger-500/40 bg-danger-500/5 px-3 py-2 text-xs text-danger-600 dark:text-danger-500 flex items-center gap-1.5">
+                <AlertCircle size={12} className="shrink-0" /> {error}
+              </div>
+            )}
 
             <Button type="submit" size="lg" fullWidth loading={loading}>Create clinic account</Button>
           </form>

@@ -41,15 +41,27 @@ export interface QueueEntry {
   details?: PatientDetails;
 }
 
+export type QueueMode = 'demo' | 'live';
+
 interface QueueState {
   entries: QueueEntry[];
+  /** demo → browser-local data + BroadcastChannel tab sync (the /demo flow).
+   *  live → the FastAPI backend owns the queue; actions are REST calls and a
+   *  WebSocket keeps every device in sync. */
+  mode: QueueMode;
+  /** True while the live WebSocket is connected (drives the Live badge). */
+  liveConnected: boolean;
   setEntries: (e: QueueEntry[]) => void;
   addEntry: (e: QueueEntry) => void;
   advance: () => void;
   skipCurrent: () => void;
   /** Bring a previously-skipped patient back to the front (becomes the next
-   *  after the currently-serving one). Resets their wasSkipped flag. */
+   *  after the currently-serving one). */
   callBack: (id: string) => void;
+  /** Switch to live mode: fetch the clinic's queue and open the socket. */
+  startLive: (clinicId: string) => Promise<void>;
+  /** Tear down the socket and return to demo mode. */
+  stopLive: () => void;
 }
 
 const orderOf = (e: QueueEntry): number => e.order ?? e.token;
@@ -110,14 +122,20 @@ const readPersisted = (): QueueEntry[] | null => {
   }
 };
 
+// Live-mode socket handle lives outside the store (not serializable state).
+let liveSocket: { close: () => void } | null = null;
+let liveClinicId: string | null = null;
+
 export const useQueue = create<QueueState>((set, get) => {
   // Hydrate from localStorage on first store creation so a freshly-opened TV
   // tab can pick up the queue without waiting for a broadcast.
   const initial = readPersisted() ?? [];
 
   // Listen for sync messages from other tabs and for hydrate requests.
+  // Demo-mode only — in live mode the backend WebSocket is the sync layer.
   if (channel) {
     channel.addEventListener('message', (e) => {
+      if (get().mode === 'live') return;
       const msg = e.data as { type?: string; entries?: QueueEntry[] } | null;
       if (!msg || typeof msg !== 'object') return;
       if (msg.type === 'sync' && Array.isArray(msg.entries)) {
@@ -139,24 +157,51 @@ export const useQueue = create<QueueState>((set, get) => {
     }, 50);
   }
 
+  /** Demo-only persistence + cross-tab broadcast. */
+  const publish = (entries: QueueEntry[]) => {
+    if (get().mode === 'demo') broadcast(entries);
+  };
+
   return {
     entries: initial,
+    mode: 'demo',
+    liveConnected: false,
     setEntries: (e) => {
       const next = sortAndStatus(e);
       set({ entries: next });
-      broadcast(next);
+      publish(next);
     },
     addEntry: (e) => {
       const next = sortAndStatus([...get().entries, e]);
       set({ entries: next });
-      broadcast(next);
+      publish(next);
     },
     advance: () => {
+      if (get().mode === 'live') {
+        import('@/services/api').then(({ queueApi }) =>
+          queueApi.completeCurrent().then(({ entries }) =>
+            import('@/services/liveQueue').then(({ mapApiEntries }) =>
+              set({ entries: mapApiEntries(entries) }),
+            ),
+          ),
+        ).catch(() => {/* WS will reconcile */});
+        return;
+      }
       const next = sortAndStatus(get().entries.slice(1));
       set({ entries: next });
-      broadcast(next);
+      publish(next);
     },
     skipCurrent: () => {
+      if (get().mode === 'live') {
+        import('@/services/api').then(({ queueApi }) =>
+          queueApi.skipCurrent().then(({ entries }) =>
+            import('@/services/liveQueue').then(({ mapApiEntries }) =>
+              set({ entries: mapApiEntries(entries) }),
+            ),
+          ),
+        ).catch(() => {/* WS will reconcile */});
+        return;
+      }
       const list = get().entries;
       if (list.length === 0) return;
       const [first, ...rest] = list;
@@ -167,9 +212,19 @@ export const useQueue = create<QueueState>((set, get) => {
       const skipped: QueueEntry = { ...first, order: maxOrder + 1, wasSkipped: true };
       const next = sortAndStatus([...rest, skipped]);
       set({ entries: next });
-      broadcast(next);
+      publish(next);
     },
     callBack: (id) => {
+      if (get().mode === 'live') {
+        import('@/services/api').then(({ queueApi }) =>
+          queueApi.callBack(id).then(({ entries }) =>
+            import('@/services/liveQueue').then(({ mapApiEntries }) =>
+              set({ entries: mapApiEntries(entries) }),
+            ),
+          ),
+        ).catch(() => {/* WS will reconcile */});
+        return;
+      }
       const list = get().entries;
       const target = list.find((e) => e.id === id);
       if (!target) return;
@@ -185,7 +240,34 @@ export const useQueue = create<QueueState>((set, get) => {
       const updated: QueueEntry = { ...target, order: newOrder };
       const next = sortAndStatus([...others, updated]);
       set({ entries: next });
-      broadcast(next);
+      publish(next);
+    },
+    startLive: async (clinicId: string) => {
+      // Idempotent: navigating between clinic pages re-runs the boot hook —
+      // don't tear down a healthy socket for the same clinic.
+      if (liveClinicId === clinicId && liveSocket && get().mode === 'live') return;
+      const { queueApi } = await import('@/services/api');
+      const { mapApiEntries, connectQueueSocket } = await import('@/services/liveQueue');
+      liveSocket?.close();
+      liveClinicId = clinicId;
+      set({ mode: 'live' });
+      try {
+        const listing = await queueApi.list();
+        set({ entries: mapApiEntries(listing) });
+      } catch {
+        set({ entries: [] }); // socket reconcile / next action will populate
+      }
+      liveSocket = connectQueueSocket(
+        clinicId,
+        (entries) => set({ entries }),
+        (connected) => set({ liveConnected: connected }),
+      );
+    },
+    stopLive: () => {
+      liveSocket?.close();
+      liveSocket = null;
+      liveClinicId = null;
+      set({ mode: 'demo', liveConnected: false });
     },
   };
 });

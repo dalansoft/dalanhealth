@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useQueue, type PatientDetails } from '@/store/queue';
 import { demoQueue } from '@/services/demoData';
+import { patientsApi, queueApi } from '@/services/api';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-', 'Unknown'];
 
@@ -140,7 +141,8 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
   const [step, setStep] = useState<Step>('lookup');
   const [family, setFamily] = useState<PatientRecord[]>([]);
   const [generatedToken, setGeneratedToken] = useState<number | null>(null);
-  const { entries, setEntries, addEntry } = useQueue();
+  const [busy, setBusy] = useState(false);
+  const { entries, setEntries, addEntry, mode } = useQueue();
   const navigate = useNavigate();
 
   // Lookup field accepts only 10 digits — country code is always +91.
@@ -159,23 +161,85 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
   const formatStoredMobile = (digits: string): string =>
     digits.length === 10 ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : `+91 ${digits}`;
 
-  const submitLookup = (e: FormEvent) => {
+  const submitLookup = async (e: FormEvent) => {
     e.preventDefault();
     if (mobile.length !== 10) return;
+    setFormError(null);
     const formatted = formatStoredMobile(mobile);
+
+    if (mode === 'live') {
+      // Real lookup against the clinic's patient table; anyone already in
+      // today's live queue with this mobile is surfaced with their token.
+      setBusy(true);
+      try {
+        const resp = await patientsApi.lookup(formatted);
+        const inQueue = entries.find(
+          (en) => _normalize(en.patientMobile) === _normalize(formatted),
+        );
+        const found: PatientRecord[] = resp.found && resp.patient
+          ? [{
+              id: resp.patient.id,
+              name: resp.patient.name,
+              age: resp.patient.age ?? undefined,
+              gender: (resp.patient.gender as PatientRecord['gender']) ?? undefined,
+              relation: 'Self',
+              inQueueToken: inQueue?.token,
+            }]
+          : [];
+        setFamily(found);
+        setStep(found.length > 0 ? 'select' : 'new');
+      } catch {
+        setFormError('Could not reach the server — try again.');
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
     const found = lookupHistory(formatted, entries);
     setFamily(found);
-    if (found.length > 0) {
-      setStep('select');
-    } else {
-      setStep('new');
-    }
+    setStep(found.length > 0 ? 'select' : 'new');
   };
 
-  const generateTokenFor = (
-    patient: { name: string; age?: number; gender?: string },
+  const generateTokenFor = async (
+    patient: { id?: string; name: string; age?: number; gender?: string },
     details?: PatientDetails,
   ) => {
+    if (mode === 'live') {
+      // Server owns tokens: ensure the patient exists, then enqueue. The
+      // WebSocket broadcast updates every device's queue automatically.
+      setBusy(true);
+      setFormError(null);
+      try {
+        const formatted = formatStoredMobile(mobile);
+        let patientId = patient.id;
+        if (!patientId) {
+          const created = await patientsApi.create({
+            name: patient.name || 'New patient',
+            mobile: formatted,
+            age: patient.age,
+            gender: patient.gender,
+            address: details?.address,
+          });
+          patientId = created.id;
+        }
+        const entry = await queueApi.enqueue({
+          patient_id: patientId,
+          patient_name: patient.name || 'New patient',
+          patient_mobile: formatted,
+          source: 'OFFLINE',
+        });
+        setName(patient.name);
+        setGeneratedToken(entry.token);
+        setStep('done');
+      } catch {
+        setFormError('Could not reach the server — the patient was NOT added. Try again.');
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
     if (entries.length === 0) setEntries(demoQueue);
     const list = entries.length === 0 ? demoQueue : entries;
     const nextToken = list.reduce((m, e) => Math.max(m, e.token), 0) + 1;
@@ -271,11 +335,18 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
                 onChange={handleMobileChange}
                 autoFocus
               />
-              <div className="text-xs text-muted">
-                Try <code className="font-mono">9876543210</code> for a family with 3 patients,
-                or <code className="font-mono">9876543100</code> for a single returning patient.
-              </div>
-              <Button type="submit" size="lg" fullWidth disabled={mobile.length !== 10}>
+              {mode === 'demo' && (
+                <div className="text-xs text-muted">
+                  Try <code className="font-mono">9876543210</code> for a family with 3 patients,
+                  or <code className="font-mono">9876543100</code> for a single returning patient.
+                </div>
+              )}
+              {formError && (
+                <div className="rounded-xl border border-danger-500/40 bg-danger-500/5 px-3 py-2 text-xs text-danger-600 dark:text-danger-500 flex items-center gap-1.5">
+                  <AlertCircle size={12} /> {formError}
+                </div>
+              )}
+              <Button type="submit" size="lg" fullWidth disabled={mobile.length !== 10} loading={busy}>
                 Continue
               </Button>
             </motion.form>
@@ -543,6 +614,7 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
                   fullWidth
                   leftIcon={<Ticket size={16} />}
                   onClick={handleSaveNewPatient}
+                  loading={busy}
                 >
                   Save & generate token
                 </Button>

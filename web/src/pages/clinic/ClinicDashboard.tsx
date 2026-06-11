@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { LiveClock } from '@/components/ui/LiveClock';
 import { AddPatientModal } from '@/pages/receptionist/AddPatientModal';
 import { NowServingAnnouncer } from '@/components/feedback/NowServingAnnouncer';
+import { useQueueBoot } from '@/hooks/useQueueBoot';
 import { useQueue } from '@/store/queue';
 import { useAuth } from '@/store/auth';
 import { useBranch, useCurrentBranch } from '@/store/branch';
@@ -20,22 +21,26 @@ import { inr } from '@/lib/format';
 
 export function ClinicDashboard() {
   const { entries, setEntries, advance, skipCurrent } = useQueue();
+  // Live mode when really signed in; demo data otherwise.
+  const queueMode = useQueueBoot();
   const userName = useAuth((s) => s.user?.name);
   const currentBranchId = useBranch((s) => s.currentBranchId);
   const branch = useCurrentBranch();
   const data = getBranchData(currentBranchId, branch);
   const [addOpen, setAddOpen] = useState(false);
 
-  // Whenever the branch changes (or on first mount), reload the queue with
-  // that branch's patient list. Deps are deliberately limited to the branch
-  // id — `data` / `branch` / `setEntries` are derived or stable, and including
-  // them caused an infinite render loop because `getBranchData()` returns a
-  // fresh object for dynamically-added branches.
+  // Demo only: branch switching swaps the demo queue overlay. In live mode
+  // the backend owns the queue — branches are a demo concept for now.
+  // Deps are deliberately limited to the branch id — `data` / `branch` /
+  // `setEntries` are derived or stable, and including them caused an infinite
+  // render loop because `getBranchData()` returns a fresh object for
+  // dynamically-added branches.
   useEffect(() => {
+    if (useQueue.getState().mode !== 'demo') return;
     const d = getBranchData(currentBranchId, branch);
     setEntries(d.queue);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentBranchId]);
+  }, [currentBranchId, queueMode]);
 
   const current = entries[0];
   const completedToday = data.completedToday;

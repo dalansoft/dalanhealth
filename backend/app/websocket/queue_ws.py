@@ -29,6 +29,16 @@ async def queue_socket(ws: WebSocket, clinic_id: str):
     await ws.accept()
     _connections[clinic_id].add(ws)
     await ws.send_json({"type": "hello", "clinic_id": clinic_id})
+    # Push the current listing immediately so a freshly-opened display (e.g.
+    # a wall TV on /display/clinic?clinic=…, which has no auth for the REST
+    # endpoint) renders the queue without waiting for the next change.
+    try:
+        from app.services import queue_service
+
+        entries = await queue_service.list_active(clinic_id)
+        await ws.send_json({"type": "queue_updated", "entries": entries})
+    except Exception:
+        pass  # initial snapshot is best-effort; broadcasts will catch up
     try:
         while True:
             msg = await ws.receive_text()

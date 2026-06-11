@@ -105,9 +105,40 @@ with TestClient(main.app) as client:
     r = client.get("/api/v1/wallet/balance", headers=auth)
     check("wallet deducted on completion", r.json()["balance"] == 488, r.text)
 
-    # Skip: re-enqueue then skip current
+    # Skip semantics: token is patient-visible and NEVER changes; only the
+    # queue position moves. Enqueue a 3rd patient so there are two active.
+    r = client.post("/api/v1/queue/enqueue", json={
+        "patient_id": patient_id, "patient_name": "Pooja Sharma",
+        "patient_mobile": "+919870033445", "source": "ONLINE",
+    }, headers=auth)
+    check("POST /queue/enqueue #3", r.status_code == 200 and r.json()["token"] == 3, r.text)
+
     r = client.post("/api/v1/queue/skip-current", headers=auth)
-    check("POST /queue/skip-current", r.status_code == 200, r.text)
+    skipped = r.json().get("skipped") or {}
+    check(
+        "skip keeps token + flags was_skipped",
+        r.status_code == 200 and skipped.get("token") == 2 and skipped.get("was_skipped") is True,
+        r.text,
+    )
+    entries_after_skip = r.json()["entries"]
+    check(
+        "skip reorders (3 now first, 2 last)",
+        [e["token"] for e in entries_after_skip] == [3, 2],
+        str(entries_after_skip),
+    )
+
+    # Call-back = "next in line" — slots right behind the patient currently in
+    # consultation (never interrupts them). Token + skipped-mark preserved.
+    r = client.post(f"/api/v1/queue/call-back/{skipped['id']}", headers=auth)
+    cb = r.json().get("called_back") or {}
+    cb_entries = r.json()["entries"]
+    check(
+        "call-back → next in line, token unchanged",
+        r.status_code == 200 and cb.get("token") == 2 and cb.get("was_skipped") is True
+        and [e["token"] for e in cb_entries] == [3, 2]
+        and cb_entries[1]["status"] == "queued",
+        r.text,
+    )
 
     # Billing + prescription
     r = client.post("/api/v1/billing/", json={
@@ -133,6 +164,19 @@ with TestClient(main.app) as client:
     # Wallet history + transactions recorded
     r = client.get("/api/v1/wallet/history", headers=auth)
     check("GET /wallet/history", r.status_code == 200 and len(r.json()) == 2, r.text)
+
+    # WebSocket — a freshly-connected display (no auth) must receive the
+    # current queue snapshot immediately (how wall TVs get their data).
+    with client.websocket_connect(f"/ws/queue/{clinic_id}") as ws_conn:
+        hello = ws_conn.receive_json()
+        snapshot = ws_conn.receive_json()
+        check(
+            "WS hello + initial queue snapshot",
+            hello.get("type") == "hello"
+            and snapshot.get("type") == "queue_updated"
+            and [e["token"] for e in snapshot.get("entries", [])] == [3, 2],
+            f"{hello} / {snapshot}",
+        )
 
 print()
 if failures:
