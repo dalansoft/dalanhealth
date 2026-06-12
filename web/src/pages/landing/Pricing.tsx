@@ -46,16 +46,16 @@ export function Pricing() {
               transition={{ type: 'spring', stiffness: 200, damping: 16 }}
               className="text-6xl sm:text-7xl md:text-8xl font-extrabold tracking-tight gradient-text"
             >
-              ₹9
+              ₹15
             </motion.span>
             <span className="text-lg sm:text-xl font-semibold text-ink-700 dark:text-ink-200">+ GST</span>
           </div>
           <div className="mt-2 text-base sm:text-lg font-semibold text-ink-900 dark:text-ink-50">
-            per completed patient
+            per visit
           </div>
           <p className="mt-3 text-sm text-muted max-w-md mx-auto">
-            Only pay when you earn. A patient walks out consulted — ₹9 + GST is deducted from
-            your wallet. Nothing else, ever.
+            Only pay when you earn. A patient walks out consulted — ₹15 + GST is deducted from
+            your wallet. Charged per visit, not per patient: two visits in a month = 2 × ₹15 + GST.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
             {['No Setup Fee', 'No Monthly Fee', 'No Annual Fee'].map((t) => (
@@ -78,7 +78,7 @@ export function Pricing() {
       {/* ─── What doctors get ──────────────────────────────────────── */}
       <div className="mt-20 text-center">
         <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink-900 dark:text-ink-50">
-          What doctors get for just <span className="gradient-text">₹9 + GST</span> per completed patient
+          What doctors get for just <span className="gradient-text">₹15 + GST</span> per visit
         </h3>
       </div>
       <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -159,7 +159,7 @@ export function Pricing() {
       <motion.div {...fadeUp} className="mt-16 text-center">
         <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted">Pricing summary</div>
         <div className="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight text-ink-900 dark:text-ink-50">
-          ₹9 <span className="text-lg font-semibold text-ink-600 dark:text-ink-300">+ GST</span> per completed patient
+          ₹15 <span className="text-lg font-semibold text-ink-600 dark:text-ink-300">+ GST</span> per visit
         </div>
         <p className="mt-2 text-base font-semibold gradient-text">Only pay when you earn.</p>
         <p className="mt-1 text-xs text-muted">No Setup Fee • No Monthly Fee • No Annual Fee</p>

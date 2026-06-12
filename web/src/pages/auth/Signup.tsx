@@ -13,8 +13,8 @@ import { cn } from '@/lib/cn';
 type Plan = 'starter' | 'growth';
 
 const plans: Record<Plan, { title: string; price: string; period: string; perks: string[] }> = {
-  starter: { title: 'Starter', price: '₹999', period: '/year + ₹9/visit', perks: ['Unified queue', 'Billing', '2 staff'] },
-  growth: { title: 'Growth', price: '₹12', period: '/visit', perks: ['Unlimited staff', 'Analytics', 'WhatsApp + Push'] },
+  starter: { title: 'Starter', price: '₹15', period: '/visit', perks: ['Unified queue', 'Billing', '2 staff'] },
+  growth: { title: 'Growth', price: '₹15', period: '/visit', perks: ['Unlimited staff', 'Analytics', 'WhatsApp + Push'] },
 };
 
 export function SignupPage() {

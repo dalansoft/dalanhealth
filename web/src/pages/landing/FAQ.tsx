@@ -5,13 +5,13 @@ import { Section } from '@/components/ui/Section';
 import { cn } from '@/lib/cn';
 
 const faqs = [
-  { q: 'How does pricing work?', a: 'Simple pay-per-use: ₹9 + GST is deducted from your prepaid wallet only when a consultation is marked complete. Cancellations, no-shows and unconsulted tokens are never charged — you only pay when you earn. No monthly fee, no annual contract.' },
+  { q: 'How does pricing work?', a: 'Simple pay-per-use: ₹15 + GST per visit, deducted from your prepaid wallet only when a consultation is marked complete. Charged per visit, not per patient — if a patient visits twice in a month, that is 2 × ₹15 + GST. Cancellations, no-shows and unconsulted tokens are never charged. No monthly fee, no annual contract.' },
   { q: 'Do I need hardware?', a: 'No special hardware. Any phone, tablet or computer with a browser runs the clinic panel. For the waiting room, any ordinary TV with a browser (or a ₹2,000 Android stick) becomes your live queue display.' },
   { q: 'Can patients book online?', a: 'Yes. Patients book from home through the Dalan Health app or your clinic link, get a token instantly, and track the live queue on their phone — so they walk in just before their number is called.' },
   { q: 'How does QR booking work?', a: 'Print your clinic\'s unique QR and stick it at reception. Patients scan it with their phone camera, enter their name and mobile number, and join the same unified queue as walk-ins and online bookings — no app download required for a token.' },
   { q: 'Can I use TV Display?', a: 'Yes — it\'s included free. Open the display link on any TV browser and it shows the live token, up-next list and doctor info, with voice announcements in Hindi, English or both. Patients hear their name called.' },
   { q: 'Is there any setup fee?', a: 'Zero. No setup fee, no installation charges, no per-doctor license, no AMC, no server purchase, no IT team. You sign up, add your doctors, and start generating tokens the same day.' },
-  { q: 'How do I recharge wallet?', a: 'Recharge anytime from the clinic dashboard via UPI, card or net banking. ₹9 + GST auto-deducts per completed visit, you can see every transaction in the wallet ledger, and we alert you before the balance runs low.' },
+  { q: 'How do I recharge wallet?', a: 'Recharge anytime from the clinic dashboard via UPI, card or net banking. ₹15 + GST auto-deducts per completed visit, you can see every transaction in the wallet ledger, and we alert you before the balance runs low.' },
 ];
 
 export function FAQ() {

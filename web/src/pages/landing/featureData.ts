@@ -4,7 +4,7 @@
  * Pure data so the sections stay lean and the lists stay easy to edit.
  */
 
-// ─── Pricing catalog: "What doctors get for ₹9 + GST" ─────────────────────
+// ─── Pricing catalog: "What doctors get for ₹15 + GST" ────────────────────
 
 export interface CatalogCategory {
   title: string;
@@ -141,9 +141,9 @@ export const SUBSCRIBE_PLANS: SubscribePlan[] = [
   {
     id: 'clinic',
     audience: 'Clinics / Hospitals',
-    price: '₹9',
+    price: '₹15',
     period: '/visit',
-    tagline: 'Everything a doctor and clinic team needs — pay only per completed patient.',
+    tagline: 'Everything a doctor and clinic team needs — pay only per completed visit.',
     groups: [
       {
         emoji: '👨‍⚕️', title: 'Doctor Dashboard',

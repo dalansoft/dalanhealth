@@ -8,7 +8,8 @@ class Plan(str, Enum):
     growth = "growth"
 
 
-PLAN_RATE = {Plan.starter: 9, Plan.growth: 12}
+# Single advertised price: ₹15 + GST per completed visit (both plans).
+PLAN_RATE = {Plan.starter: 15, Plan.growth: 15}
 
 
 class DoctorTiming(BaseDoc):

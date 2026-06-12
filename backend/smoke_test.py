@@ -99,11 +99,11 @@ with TestClient(main.app) as client:
         str(entries),
     )
 
-    # Complete → wallet deducted at growth rate (₹12)
+    # Complete → wallet deducted at the per-visit rate (₹15)
     r = client.post("/api/v1/queue/complete-current", headers=auth)
     check("POST /queue/complete-current", r.status_code == 200 and r.json()["completed"]["token"] == 1, r.text)
     r = client.get("/api/v1/wallet/balance", headers=auth)
-    check("wallet deducted on completion", r.json()["balance"] == 488, r.text)
+    check("wallet deducted on completion", r.json()["balance"] == 485, r.text)
 
     # Skip semantics: token is patient-visible and NEVER changes; only the
     # queue position moves. Enqueue a 3rd patient so there are two active.
