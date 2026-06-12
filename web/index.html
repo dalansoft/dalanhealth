@@ -66,9 +66,10 @@
     <script>
       (function () {
         try {
+          // Dark-mode-first: dark unless the visitor explicitly chose light
+          // via the theme toggle (stored preference always wins).
           var stored = localStorage.getItem('dh-theme');
-          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          var theme = stored || (prefersDark ? 'dark' : 'light');
+          var theme = stored || 'dark';
           if (theme === 'dark') document.documentElement.classList.add('dark');
         } catch (e) {}
       })();
