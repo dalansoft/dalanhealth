@@ -68,7 +68,15 @@
         try {
           // Dark-mode-first: dark unless the visitor explicitly chose light
           // via the theme toggle (stored preference always wins).
+          // One-time reset: themes stored before the dark-first switch came
+          // from the old OS-preference default, so they don't count as an
+          // explicit choice — clear them once so everyone starts dark.
           var stored = localStorage.getItem('dh-theme');
+          if (!localStorage.getItem('dh-dark-default-v1')) {
+            localStorage.setItem('dh-dark-default-v1', '1');
+            localStorage.removeItem('dh-theme');
+            stored = null;
+          }
           var theme = stored || 'dark';
           if (theme === 'dark') document.documentElement.classList.add('dark');
         } catch (e) {}
