@@ -26,8 +26,8 @@ export function Showcase() {
             </div>
             <Badge tone="success" pulse>Realtime</Badge>
           </div>
-          <div className="mt-5 overflow-hidden rounded-2xl border hairline">
-            <table className="w-full text-sm">
+          <div className="mt-5 overflow-x-auto rounded-2xl border hairline">
+            <table className="w-full min-w-[640px] text-sm">
               <thead className="bg-ink-50 dark:bg-ink-900/60 text-ink-500 dark:text-ink-400">
                 <tr>
                   <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider">Token</th>

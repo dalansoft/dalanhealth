@@ -92,8 +92,8 @@ export function AdminDashboard() {
               <CardSubtitle>By patient throughput</CardSubtitle>
             </div>
           </CardHeader>
-          <div className="overflow-hidden rounded-xl border hairline">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-xl border hairline">
+            <table className="w-full min-w-[640px] text-sm">
               <thead className="bg-ink-50 dark:bg-ink-900/60">
                 <tr className="text-left text-[11px] uppercase tracking-wider text-muted">
                   <th className="px-4 py-2.5">Clinic</th>

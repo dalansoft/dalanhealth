@@ -70,8 +70,8 @@ export function ClinicPatients() {
           </div>
         </div>
 
-        <div className="mt-4 overflow-hidden rounded-xl border hairline">
-          <table className="w-full text-sm">
+        <div className="mt-4 overflow-x-auto rounded-xl border hairline">
+          <table className="w-full min-w-[640px] text-sm">
             <thead className="bg-ink-50 dark:bg-ink-900/60">
               <tr className="text-left text-[11px] uppercase tracking-wider text-muted">
                 <th className="px-4 py-3">Patient</th>

@@ -118,8 +118,8 @@ export function ClinicQueue() {
           </div>
           <Badge tone="neutral">{entries.length} in queue</Badge>
         </div>
-        <div className="overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
             <thead className="bg-ink-50 dark:bg-ink-900/60">
               <tr className="text-left text-[11px] uppercase tracking-wider text-muted">
                 <th className="px-5 py-3">Token</th>

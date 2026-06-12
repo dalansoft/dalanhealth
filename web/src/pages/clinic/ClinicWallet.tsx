@@ -53,7 +53,8 @@ export function ClinicWallet() {
           <CardTitle>Transaction history</CardTitle>
           <CardSubtitle>Recent activity</CardSubtitle>
         </div>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[560px] text-sm">
           <thead className="bg-ink-50 dark:bg-ink-900/60">
             <tr className="text-left text-[11px] uppercase tracking-wider text-muted">
               <th className="px-5 py-3">Date</th>
@@ -81,6 +82,7 @@ export function ClinicWallet() {
             ))}
           </tbody>
         </table>
+        </div>
       </Card>
     </div>
   );

@@ -101,8 +101,8 @@ export function PrescriptionScreen() {
 
           <div className="mt-6">
             <div className="text-xs uppercase tracking-wider text-muted mb-2">℞ Medicines</div>
-            <div className="rounded-2xl border hairline overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="rounded-2xl border hairline overflow-x-auto">
+              <table className="w-full min-w-[640px] text-sm">
                 <thead className="bg-ink-50 dark:bg-ink-900/60 text-[11px] uppercase tracking-wider text-muted">
                   <tr>
                     <th className="text-left px-4 py-2">Medicine</th>

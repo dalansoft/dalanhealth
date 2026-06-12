@@ -71,8 +71,8 @@ export function AdminPlans() {
             <CardSubtitle>Per-plan capabilities. Wallet deduction triggers on consultation complete only.</CardSubtitle>
           </div>
         </CardHeader>
-        <div className="overflow-hidden rounded-xl border hairline">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-xl border hairline">
+          <table className="w-full min-w-[640px] text-sm">
             <thead className="bg-ink-50 dark:bg-ink-900/60">
               <tr className="text-left text-[11px] uppercase tracking-wider text-muted">
                 <th className="px-5 py-3">Feature</th>
