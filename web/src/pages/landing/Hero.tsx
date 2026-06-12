@@ -46,12 +46,14 @@ export function Hero() {
             <Badge tone="brand" icon={<Sparkles size={11} />}>Trusted by Modern Clinics Across India</Badge>
           </motion.div>
 
-          {/* Staggered headline */}
-          <h1 className="mt-6 text-4xl sm:text-5xl md:text-6xl font-semibold tracking-tight leading-[1.05] text-ink-900 dark:text-ink-50">
-            <motion.span initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="block">
+          {/* Staggered headline — fluid font size keeps each line on a single
+              line at every viewport (nowrap + size derived from the column
+              width instead of fixed breakpoint steps). */}
+          <h1 className="mt-6 font-semibold tracking-tight leading-[1.08] text-ink-900 dark:text-ink-50 text-[min(7.3vw,3.4rem)] lg:text-[min(3.2vw,3rem)]">
+            <motion.span initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="block whitespace-nowrap">
               Goodbye, Waiting Lines.
             </motion.span>
-            <motion.span initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }} className="block gradient-text">
+            <motion.span initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }} className="block whitespace-nowrap gradient-text">
               Hello, Smart Clinic.
             </motion.span>
           </h1>
