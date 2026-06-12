@@ -7,6 +7,7 @@ import { AboutPage } from '@/pages/site/AboutPage';
 import { CareersPage } from '@/pages/site/CareersPage';
 import { ContactPage } from '@/pages/site/ContactPage';
 import { FeaturesPage, PricingPage, HowItWorksPage, TvDisplayPage, FaqPage } from '@/pages/site/SectionPages';
+import { PrivacyPage, TermsPage, CompliancePage } from '@/pages/site/LegalPages';
 import { LoginPage } from '@/pages/auth/Login';
 import { SignupPage } from '@/pages/auth/Signup';
 import { DemoSelector } from '@/pages/demo/DemoSelector';
@@ -85,6 +86,9 @@ export const router = createBrowserRouter([
       { path: '/about', element: <AboutPage /> },
       { path: '/careers', element: <CareersPage /> },
       { path: '/contact', element: <ContactPage /> },
+      { path: '/privacy', element: <PrivacyPage /> },
+      { path: '/terms', element: <TermsPage /> },
+      { path: '/compliance', element: <CompliancePage /> },
     ],
   },
   {
