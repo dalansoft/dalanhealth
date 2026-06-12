@@ -156,8 +156,9 @@ export function TvDisplay() {
 
   return (
     <div
-      style={{ height: '100dvh', display: 'grid', gridTemplateRows: 'auto 1fr auto' }}
-      className="w-full overflow-hidden bg-ink-50 dark:bg-navy-950 text-ink-900 dark:text-white relative"
+      // Phones scroll naturally (min-h); laptops/TVs lock to the viewport so
+      // the wall display never shows a scrollbar.
+      className="w-full grid grid-rows-[auto_1fr_auto] min-h-[100dvh] lg:h-[100dvh] lg:min-h-0 lg:overflow-hidden bg-ink-50 dark:bg-navy-950 text-ink-900 dark:text-white relative"
     >
       {/* Decorative backdrop */}
       <div aria-hidden className="pointer-events-none absolute -top-40 -left-40 h-[640px] w-[640px] rounded-full bg-token/15 dark:bg-token/20 blur-3xl" />
@@ -171,7 +172,7 @@ export function TvDisplay() {
           On mobile: clinic + doctor + toggle on row 1, time centred row 2. */}
       {/* z-30 (above main's z-10) so header dropdowns — voice language picker —
           paint over the queue panels instead of being clipped behind them. */}
-      <header className="relative z-30 px-4 sm:px-6 md:px-10 lg:px-14 py-3 sm:py-4 lg:py-5 grid grid-cols-[1fr_auto] lg:grid-cols-3 lg:items-center gap-x-3 gap-y-2 sm:gap-y-3 lg:gap-6 border-b border-ink-200 dark:border-white/10">
+      <header className="relative z-30 px-4 sm:px-6 md:px-10 lg:px-14 py-3 sm:py-4 lg:py-5 grid grid-cols-1 sm:grid-cols-[1fr_auto] lg:grid-cols-3 lg:items-center gap-x-3 gap-y-2 sm:gap-y-3 lg:gap-6 border-b border-ink-200 dark:border-white/10">
         {/* LEFT — logo + clinic name + city. No truncation: names always wrap
             in full so nothing is hidden behind "…". `title` gives a hover/long-
             press tooltip on every device. */}
@@ -193,9 +194,10 @@ export function TvDisplay() {
           </div>
         </div>
 
-        {/* RIGHT (mobile order 2) — doctor + theme toggle */}
-        <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0 lg:order-3 lg:justify-end">
-          <div className="text-right min-w-0">
+        {/* RIGHT (mobile order 2) — doctor + theme toggle. On phones this is
+            its own full-width row: doctor info left, controls right. */}
+        <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 lg:gap-4 min-w-0 lg:order-3">
+          <div className="text-left sm:text-right min-w-0">
             <div
               title={data.doctor}
               className="text-sm sm:text-base lg:text-lg xl:text-xl font-bold text-token leading-tight break-words"
@@ -209,13 +211,15 @@ export function TvDisplay() {
               {data.specialization}
             </div>
           </div>
-          <VoiceLangSelect />
-          <SoundToggle />
-          <ThemeToggle />
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <VoiceLangSelect />
+            <SoundToggle />
+            <ThemeToggle />
+          </div>
         </div>
 
         {/* CENTRE (mobile order 3, spans both cols) — time + date */}
-        <div className="col-span-2 lg:col-span-1 lg:order-2 text-center min-w-0">
+        <div className="sm:col-span-2 lg:col-span-1 lg:order-2 text-center min-w-0">
           <div className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-extrabold tabular-nums leading-none font-brand whitespace-nowrap">{time}</div>
           <div className="mt-1 text-[11px] sm:text-xs lg:text-sm text-ink-600 dark:text-white/60 whitespace-nowrap">{date}</div>
         </div>
@@ -224,7 +228,10 @@ export function TvDisplay() {
       {/* Main — Mobile: stack [token-panel | up-next] vertically with token sized
                   to content and up-next filling remaining.
                   Laptop: 2-col grid 1.5fr / 1fr. */}
-      <main className="relative z-10 min-h-0 px-4 sm:px-6 md:px-10 lg:px-14 py-3 sm:py-4 md:py-6 lg:py-8 grid grid-rows-2 lg:grid-rows-1 lg:grid-cols-[1.5fr_1fr] gap-3 sm:gap-4 md:gap-6 lg:gap-8 overflow-hidden">
+      {/* Phones: rows size to content (page scrolls if needed) so the served
+          panel never paints over the doctor-sitting box; lg+ keeps the locked
+          two-column TV layout. */}
+      <main className="relative z-10 min-h-0 px-4 sm:px-6 md:px-10 lg:px-14 py-3 sm:py-4 md:py-6 lg:py-8 grid grid-rows-[auto_auto] lg:grid-rows-1 lg:grid-cols-[1.5fr_1fr] gap-3 sm:gap-4 md:gap-6 lg:gap-8 lg:overflow-hidden">
         {/* TOKEN PANEL: Now serving + Doctor sitting. Tints warm-yellow when
             the current patient was previously skipped + called back, so the
             audit trail is visible on the wall display too. */}
@@ -253,7 +260,7 @@ export function TvDisplay() {
             {current?.wasSkipped ? 'Called back · Now serving' : 'Now serving'}
           </div>
 
-          <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-center">
+          <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-center py-4 lg:py-0">
             <AnimatePresence mode="wait">
               {current ? (
                 <motion.div
@@ -332,7 +339,9 @@ export function TvDisplay() {
           <div
             ref={listRef}
             style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
-            className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1"
+            // Phones cap the list height (internal scroll); lg+ lets flex fill
+            // the locked panel and the auto-fit row count takes over.
+            className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1 max-h-[44dvh] lg:max-h-none"
           >
             <AnimatePresence initial={false}>
               {upNext.map((e, idx) => {
@@ -407,28 +416,28 @@ export function TvDisplay() {
       {/* Page footer — 2-col rows (brand left, contact right) + centred © below */}
       <footer className="relative z-10 border-t border-ink-200 dark:border-white/10 bg-white/70 dark:bg-black/30 backdrop-blur">
         <div className="px-4 sm:px-6 md:px-10 lg:px-14 py-2 sm:py-3 text-[11px] lg:text-xs text-ink-600 dark:text-white/60">
-          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-            <div className="whitespace-nowrap text-left">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5 text-center sm:text-left">
+            <div className="whitespace-nowrap">
               Powered by{' '}
               <span className="font-bold text-ink-800 dark:text-white/85">Dalan Health</span>
             </div>
             <a
-              href="https://dalansoft.com"
+              href="https://dalanhealth.com"
               target="_blank"
               rel="noreferrer"
-              className="text-right whitespace-nowrap hover:text-brand-600 dark:hover:text-brand-300 transition-colors"
+              className="sm:text-right whitespace-nowrap hover:text-brand-600 dark:hover:text-brand-300 transition-colors"
             >
-              dalansoft.com
+              dalanhealth.com
             </a>
-            <div className="whitespace-nowrap text-left">
+            <div className="whitespace-nowrap">
               A Product of{' '}
               <span className="font-bold text-ink-800 dark:text-white/85">Dalansoft Technologies</span>
             </div>
             <a
-              href="mailto:info@dalansoft.com"
-              className="text-right whitespace-nowrap hover:text-brand-600 dark:hover:text-brand-300 transition-colors"
+              href="mailto:info@dalanhealth.com"
+              className="sm:text-right whitespace-nowrap hover:text-brand-600 dark:hover:text-brand-300 transition-colors"
             >
-              info@dalansoft.com
+              info@dalanhealth.com
             </a>
           </div>
           <div className="mt-1 text-center whitespace-nowrap">
