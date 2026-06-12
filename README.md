@@ -1,7 +1,7 @@
 # DalanHealth
 
 > Hybrid clinic management + patient queue platform.
-> A product of **Dalansoft Technologies Pvt Ltd**, built for Indian Tier-2/Tier-3 clinics (Bihar-first).
+> A product of **Dalansoft Technologies Pvt Ltd**, built for Indian Tier-2/Tier-3 clinics.
 
 DalanHealth merges **offline walk-ins**, **online bookings**, and **QR queue joins** into a single unified queue, with realtime token tracking, billing, prescription, wallet recharge and cashback rewards.
 

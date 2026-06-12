@@ -1,7 +1,7 @@
 import type { QueueEntry, QueueSource } from '@/store/queue';
 
 // --- 30-patient demo queue -------------------------------------------------
-// Realistic Bihar/Hindi-belt names with a mix of sources (offline majority,
+// Realistic Hindi-belt names with a mix of sources (offline majority,
 // online ~30%, QR ~20%) and joined-at timestamps spread across the doctor's
 // morning + early-afternoon session. Status is intentionally set to the
 // initial state — the queue store re-derives Consultation / Queue / Waiting
@@ -54,7 +54,7 @@ export const demoClinic = {
   name: 'Sharma ENT Clinic',
   doctor: 'Dr. Anil Sharma',
   specialization: 'ENT Specialist',
-  city: 'Patna, Bihar',
+  city: 'Patna, India',
   walletBalance: 12540,
   todayRevenue: 8600,
   todayPatients: 24,
@@ -286,7 +286,7 @@ export const demoAllRecharges = [
 export const demoCashbackCampaigns = [
   { id: 'cb1', name: 'Welcome Reward', type: 'first_booking', amount: 1.0, scope: 'All patients', active: true, claimed: 1820 },
   { id: 'cb2', name: 'Holi Special', type: 'festival', amount: 0.25, scope: 'All clinics', active: true, claimed: 642 },
-  { id: 'cb3', name: 'Chhath Pooja', type: 'festival', amount: 0.25, scope: 'Bihar clinics', active: false, claimed: 510 },
+  { id: 'cb3', name: 'Chhath Pooja', type: 'festival', amount: 0.25, scope: 'Regional clinics', active: false, claimed: 510 },
   { id: 'cb4', name: 'Dr. Sharma Boost', type: 'doctor_promo', amount: 0.50, scope: 'Sharma ENT', active: true, claimed: 88 },
   { id: 'cb5', name: 'Default', type: 'normal', amount: 0.10, scope: 'All bookings', active: true, claimed: 14820 },
 ];

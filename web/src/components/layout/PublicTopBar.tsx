@@ -7,12 +7,14 @@ import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/cn';
 
 const links = [
-  { to: '/#features', label: 'Features' },
-  { to: '/#pricing', label: 'Pricing' },
-  { to: '/#how-it-works', label: 'How It Works' },
-  { to: '/#tv-display', label: 'TV Display' },
-  { to: '/#faq', label: 'FAQ' },
-  { to: '/#contact', label: 'Contact' },
+  { to: '/features', label: 'Features' },
+  { to: '/pricing', label: 'Pricing' },
+  { to: '/how-it-works', label: 'How It Works' },
+  { to: '/tv-display', label: 'TV Display' },
+  { to: '/about', label: 'About Us' },
+  { to: '/careers', label: 'Careers' },
+  { to: '/faq', label: 'FAQ' },
+  { to: '/contact', label: 'Contact' },
 ];
 
 export function PublicTopBar() {
@@ -39,15 +41,22 @@ export function PublicTopBar() {
       />
       <div className="mx-auto max-w-7xl px-4 sm:px-8 h-16 flex items-center justify-between gap-3 sm:gap-4">
         <Logo />
-        <nav className="hidden lg:flex items-center" aria-label="Main">
+        <nav className="hidden xl:flex items-center" aria-label="Main">
           {links.map((l) => (
-            <a
+            <NavLink
               key={l.to}
-              href={l.to}
-              className="nav-underline px-3 py-2 text-sm font-medium text-ink-600 hover:text-ink-900 dark:text-ink-300 dark:hover:text-ink-50 transition-colors"
+              to={l.to}
+              className={({ isActive }) =>
+                cn(
+                  'nav-underline px-2.5 2xl:px-3 py-2 text-[13px] 2xl:text-sm font-medium transition-colors',
+                  isActive
+                    ? 'text-ink-900 dark:text-ink-50'
+                    : 'text-ink-600 hover:text-ink-900 dark:text-ink-300 dark:hover:text-ink-50',
+                )
+              }
             >
               {l.label}
-            </a>
+            </NavLink>
           ))}
         </nav>
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -62,7 +71,7 @@ export function PublicTopBar() {
             <Button size="md" variant="primary" className="h-9 px-3 text-[13px] sm:h-10 sm:px-4 sm:text-sm">Get Started</Button>
           </Link>
           <button
-            className="lg:hidden inline-flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl border hairline"
+            className="xl:hidden inline-flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl border hairline"
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? 'Close menu' : 'Open menu'}
             aria-expanded={open}
@@ -71,10 +80,10 @@ export function PublicTopBar() {
           </button>
         </div>
       </div>
-      <div className={cn('lg:hidden overflow-hidden transition-all duration-300', open ? 'max-h-[420px]' : 'max-h-0')}>
+      <div className={cn('xl:hidden overflow-hidden transition-all duration-300', open ? 'max-h-[520px]' : 'max-h-0')}>
         <div className="px-5 pb-4 pt-2 space-y-1 border-b hairline bg-white/90 dark:bg-ink-950/90 backdrop-blur-xl">
           {links.map((l) => (
-            <a key={l.to} href={l.to} className="block rounded-lg px-3 py-2 text-sm font-medium text-ink-700 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-800" onClick={() => setOpen(false)}>{l.label}</a>
+            <NavLink key={l.to} to={l.to} className="block rounded-lg px-3 py-2 text-sm font-medium text-ink-700 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-800" onClick={() => setOpen(false)}>{l.label}</NavLink>
           ))}
           <NavLink to="/demo" className="block rounded-lg px-3 py-2 text-sm font-medium text-ink-700 dark:text-ink-200" onClick={() => setOpen(false)}>Book Demo</NavLink>
           <NavLink to="/login" className="block rounded-lg px-3 py-2 text-sm font-medium text-ink-700 dark:text-ink-200" onClick={() => setOpen(false)}>Sign in</NavLink>

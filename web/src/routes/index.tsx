@@ -3,6 +3,10 @@ import { ScrollToTop } from './ScrollToTop';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { LandingPage } from '@/pages/landing';
+import { AboutPage } from '@/pages/site/AboutPage';
+import { CareersPage } from '@/pages/site/CareersPage';
+import { ContactPage } from '@/pages/site/ContactPage';
+import { FeaturesPage, PricingPage, HowItWorksPage, TvDisplayPage, FaqPage } from '@/pages/site/SectionPages';
 import { LoginPage } from '@/pages/auth/Login';
 import { SignupPage } from '@/pages/auth/Signup';
 import { DemoSelector } from '@/pages/demo/DemoSelector';
@@ -73,6 +77,14 @@ export const router = createBrowserRouter([
     element: <PublicLayout />,
     children: [
       { path: '/', element: <LandingPage /> },
+      { path: '/features', element: <FeaturesPage /> },
+      { path: '/pricing', element: <PricingPage /> },
+      { path: '/how-it-works', element: <HowItWorksPage /> },
+      { path: '/tv-display', element: <TvDisplayPage /> },
+      { path: '/faq', element: <FaqPage /> },
+      { path: '/about', element: <AboutPage /> },
+      { path: '/careers', element: <CareersPage /> },
+      { path: '/contact', element: <ContactPage /> },
     ],
   },
   {

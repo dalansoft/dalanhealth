@@ -6,20 +6,21 @@ const cols = [
   {
     title: 'Product',
     links: [
-      { to: '/#features', label: 'Features' },
-      { to: '/#pricing', label: 'Pricing' },
-      { to: '/#how-it-works', label: 'How It Works' },
-      { to: '/#tv-display', label: 'TV Display' },
+      { to: '/features', label: 'Features' },
+      { to: '/pricing', label: 'Pricing' },
+      { to: '/how-it-works', label: 'How It Works' },
+      { to: '/tv-display', label: 'TV Display' },
       { to: '/demo', label: 'Live Demo' },
     ],
   },
   {
     title: 'Company',
     links: [
-      { to: '/#faq', label: 'FAQ' },
+      { to: '/about', label: 'About Us' },
+      { to: '/careers', label: 'Careers' },
+      { to: '/contact', label: 'Contact' },
+      { to: '/faq', label: 'FAQ' },
       { to: '/signup', label: 'Get Started' },
-      { to: 'mailto:info@dalanhealth.com', label: 'Contact', external: true },
-      { to: 'https://dalanhealth.com', label: 'Website', external: true },
     ],
   },
   {
@@ -52,7 +53,7 @@ export function PublicFooter() {
           <div className="mt-6 space-y-2 text-sm text-muted">
             <a href="mailto:info@dalanhealth.com" className="flex items-center gap-2 hover:text-brand-600 dark:hover:text-brand-300"><Mail size={14} /> info@dalanhealth.com</a>
             <a href="https://dalanhealth.com" className="flex items-center gap-2 hover:text-brand-600 dark:hover:text-brand-300"><Globe size={14} /> dalanhealth.com</a>
-            <div className="flex items-center gap-2"><MapPin size={14} /> Patna, Bihar — India</div>
+            <div className="flex items-center gap-2"><MapPin size={14} /> Patna, India</div>
           </div>
           <div className="mt-6 flex items-center gap-3">
             {socials.map(({ href, label, Icon }) => (

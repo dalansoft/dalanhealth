@@ -3,7 +3,7 @@
  * in to the browser, free, offline. Used by the TV display to call patients
  * aloud in English, Hindi, or both.
  *
- * Accent strategy (Bihar-first product — Indian accent is non-negotiable):
+ * Accent strategy (Indian accent is non-negotiable):
  *   - Hindi text   → hi-IN voice (MS "Kalpana", Google हिन्दी, …)
  *   - English text → en-IN voice if installed; otherwise we PREFER the hi-IN
  *     voice reading the English sentence (it comes out with a natural Indian

@@ -92,7 +92,7 @@ adapter, no sticky sessions needed at one replica.
    - Name: `dalanhealth`
    - Postgres version: 16 (default)
    - Region: **AWS ap-southeast-1 (Singapore)** — Neon has no Mumbai region;
-     Singapore is the closest (~60 ms from Bihar, fine for an API).
+     Singapore is the closest (~60 ms from India, fine for an API).
 2. The project comes with a default database (`neondb`) and role. Optionally
    rename the database to `dalanhealth` (Databases → New database).
 3. **Connection string:** dashboard → Connect → select **Pooled connection**

@@ -279,7 +279,7 @@ export function ClinicProfile() {
               label="Clinic address"
               value={form.address}
               onChange={(v) => set('address', v)}
-              placeholder="Boring Road, Patna, Bihar"
+              placeholder="Boring Road, Patna"
             />
           </div>
         </div>
@@ -294,7 +294,7 @@ export function ClinicProfile() {
             <textarea
               value={form.aboutMe}
               onChange={(e) => set('aboutMe', e.target.value)}
-              placeholder="e.g. 12+ years experience treating chronic ENT conditions in Bihar. Trained at AIIMS Delhi, ex-Apollo Hyderabad."
+              placeholder="e.g. 12+ years experience treating chronic ENT conditions. Trained at AIIMS Delhi, ex-Apollo Hyderabad."
               rows={4}
               className="w-full bg-transparent outline-none text-sm text-ink-900 dark:text-ink-50 placeholder:text-ink-400 resize-y"
             />
