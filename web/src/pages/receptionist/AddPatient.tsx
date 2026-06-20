@@ -1,7 +1,7 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Phone, User, Calendar, Check, Ticket, UserPlus, Users, ChevronRight,
+  Phone, User, Calendar, Check, Ticket, UserPlus, Users, Search,
   ChevronDown, Weight, Ruler, Droplet, Home, AlertCircle, Stethoscope,
   ShieldAlert, AlertTriangle,
 } from 'lucide-react';
@@ -110,7 +110,7 @@ const lookupHistory = (
   return merged;
 };
 
-type Step = 'lookup' | 'select' | 'new' | 'done';
+type Step = 'form' | 'done';
 
 interface AddPatientProps {
   /** Hide the wrapping Card so the form can live inside a modal/drawer. */
@@ -138,10 +138,16 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
   const [emergencyName, setEmergencyName] = useState('');
   const [emergencyMobile, setEmergencyMobile] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
-  const [step, setStep] = useState<Step>('lookup');
+  const [step, setStep] = useState<Step>('form');
   const [family, setFamily] = useState<PatientRecord[]>([]);
   const [generatedToken, setGeneratedToken] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  // Search state — runs against the patient table on demand from the mobile
+  // field, fills the form from any matching record, and surfaces in-queue.
+  const [searching, setSearching] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | undefined>(undefined);
+  const [inQueueToken, setInQueueToken] = useState<number | undefined>(undefined);
   const { entries, setEntries, addEntry, mode } = useQueue();
   const navigate = useNavigate();
 
@@ -161,16 +167,30 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
   const formatStoredMobile = (digits: string): string =>
     digits.length === 10 ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : `+91 ${digits}`;
 
-  const submitLookup = async (e: FormEvent) => {
-    e.preventDefault();
+  /** Fill the form fields from a matched patient record (returning patient or
+   *  a chosen family member). Keeps the real patient id so live-mode reuses it
+   *  instead of creating a duplicate, and surfaces today's token if booked. */
+  const fillFromRecord = (p: PatientRecord) => {
+    setName(p.name);
+    setAge(p.age != null ? String(p.age) : '');
+    if (p.gender) setGender(p.gender);
+    setSelectedPatientId(p.id && !p.id.startsWith('queue-') ? p.id : undefined);
+    setInQueueToken(p.inQueueToken);
+    setFormError(null);
+  };
+
+  /** Search the patient table for this mobile and fill the form. A single
+   *  match auto-fills; multiple (a family) render a picker to choose from. */
+  const runSearch = async () => {
     if (mobile.length !== 10) return;
     setFormError(null);
+    setSearched(false);
+    setSelectedPatientId(undefined);
+    setInQueueToken(undefined);
     const formatted = formatStoredMobile(mobile);
 
     if (mode === 'live') {
-      // Real lookup against the clinic's patient table; anyone already in
-      // today's live queue with this mobile is surfaced with their token.
-      setBusy(true);
+      setSearching(true);
       try {
         const resp = await patientsApi.lookup(formatted);
         const inQueue = entries.find(
@@ -187,18 +207,20 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
             }]
           : [];
         setFamily(found);
-        setStep(found.length > 0 ? 'select' : 'new');
+        setSearched(true);
+        if (found.length === 1) fillFromRecord(found[0]);
       } catch {
         setFormError('Could not reach the server — try again.');
       } finally {
-        setBusy(false);
+        setSearching(false);
       }
       return;
     }
 
     const found = lookupHistory(formatted, entries);
     setFamily(found);
-    setStep(found.length > 0 ? 'select' : 'new');
+    setSearched(true);
+    if (found.length === 1) fillFromRecord(found[0]);
   };
 
   const generateTokenFor = async (
@@ -259,8 +281,8 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
     setStep('done');
   };
 
-  // Validate + build details object from new-patient form, then submit.
-  const handleSaveNewPatient = () => {
+  // Validate + build details object from the form, then generate a token.
+  const handleGenerate = () => {
     setFormError(null);
     if (!name.trim()) {
       setFormError('Full name is required');
@@ -272,6 +294,10 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
     }
     if (emergencyMobile && emergencyMobile.length !== 10) {
       setFormError('Emergency mobile must be exactly 10 digits');
+      return;
+    }
+    if (inQueueToken != null) {
+      setFormError(`${name.trim()} is already in today's queue (token #${inQueueToken}).`);
       return;
     }
     const details: PatientDetails = {
@@ -286,11 +312,11 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
       emergencyName: emergencyName.trim() || undefined,
       emergencyMobile: emergencyMobile ? formatStoredMobile(emergencyMobile) : undefined,
     };
-    generateTokenFor({ name: name.trim(), age: details.age, gender }, details);
+    generateTokenFor({ id: selectedPatientId, name: name.trim(), age: details.age, gender }, details);
   };
 
   const reset = () => {
-    setStep('lookup');
+    setStep('form');
     setMobile('');
     setName('');
     setAge('');
@@ -306,6 +332,10 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
     setFormError(null);
     setFamily([]);
     setGeneratedToken(null);
+    setSearching(false);
+    setSearched(false);
+    setSelectedPatientId(undefined);
+    setInQueueToken(undefined);
   };
 
   // ⚠ Don't define `Wrapper` as a component inside this function — React
@@ -318,150 +348,105 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
           <CardHeader>
             <div>
               <CardTitle>Add patient</CardTitle>
-              <CardSubtitle>Mobile-first. 5 seconds to generate a token.</CardSubtitle>
+              <CardSubtitle>Enter details or search the mobile to auto-fill, then generate a token.</CardSubtitle>
             </div>
             <Badge tone="brand">Offline source</Badge>
           </CardHeader>
         )}
 
         <AnimatePresence mode="wait">
-          {/* ─── Step 1: lookup by mobile ─────────────────────────── */}
-          {step === 'lookup' && (
-            <motion.form key="lookup" onSubmit={submitLookup} className="space-y-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <MobileInput
-                label="Mobile number"
-                required
-                value={mobile}
-                onChange={handleMobileChange}
-                autoFocus
-              />
-              {mode === 'demo' && (
+          {/* ─── Full-detail form: enter/search mobile → fill → generate ── */}
+          {step === 'form' && (
+            <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+              {/* Mobile + search button — search fills the rest from records */}
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <MobileInput
+                    label="Mobile number"
+                    required
+                    value={mobile}
+                    onChange={(v) => { handleMobileChange(v); setSearched(false); setSelectedPatientId(undefined); setInQueueToken(undefined); }}
+                    autoFocus
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  onClick={runSearch}
+                  disabled={mobile.length !== 10}
+                  loading={searching}
+                  leftIcon={<Search size={16} />}
+                >
+                  Search
+                </Button>
+              </div>
+
+              {mode === 'demo' && !searched && (
                 <div className="text-xs text-muted">
-                  Try <code className="font-mono">9876543210</code> for a family with 3 patients,
+                  Search <code className="font-mono">9876543210</code> for a family with 3 patients,
                   or <code className="font-mono">9876543100</code> for a single returning patient.
                 </div>
               )}
-              {formError && (
-                <div className="rounded-xl border border-danger-500/40 bg-danger-500/5 px-3 py-2 text-xs text-danger-600 dark:text-danger-500 flex items-center gap-1.5">
-                  <AlertCircle size={12} /> {formError}
+
+              {/* Search results — tap a record to fill the form */}
+              {searched && family.length > 1 && (
+                <div className="rounded-xl border hairline bg-ink-50/60 dark:bg-ink-900/40 p-3 space-y-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
+                    <Users size={12} className="text-brand-600 dark:text-brand-300" />
+                    {family.length} patients on this mobile — tap to fill
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-2">
+                    {family.map((p) => {
+                      const booked = p.inQueueToken != null;
+                      const filled = name.trim().toLowerCase() === p.name.trim().toLowerCase();
+                      const meta = [
+                        p.relation,
+                        p.age != null && p.gender ? `${p.age} · ${p.gender}` : null,
+                        booked ? `in queue #${p.inQueueToken}` : null,
+                      ].filter(Boolean).join(' · ');
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => fillFromRecord(p)}
+                          className={`flex items-center gap-2 rounded-lg border p-2 text-left transition-colors ${
+                            filled
+                              ? 'border-brand-500/60 bg-brand-50/60 dark:bg-brand-500/10'
+                              : 'hairline hover:border-brand-500/40 hover:bg-white dark:hover:bg-ink-900/60'
+                          }`}
+                        >
+                          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-accent-500 text-white text-xs font-semibold">
+                            {p.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-semibold text-ink-900 dark:text-ink-50 truncate">{p.name}</div>
+                            {meta && <div className="text-[10px] text-muted truncate">{meta}</div>}
+                          </div>
+                          {filled && <Check size={14} className="text-brand-600 dark:text-brand-300 shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
-              <Button type="submit" size="lg" fullWidth disabled={mobile.length !== 10} loading={busy}>
-                Continue
-              </Button>
-            </motion.form>
-          )}
-
-          {/* ─── Step 2: select which patient on this mobile ──────── */}
-          {step === 'select' && (
-            <motion.div key="select" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Users size={14} className="text-brand-600 dark:text-brand-300 shrink-0" />
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-ink-900 dark:text-ink-50">
-                      {family.length === 1 ? 'Returning patient' : `${family.length} patients on this mobile`}
-                    </div>
-                    <div className="text-[11px] text-muted truncate">{mobile} · select who's visiting today</div>
-                  </div>
+              {searched && family.length === 1 && (
+                <div className="rounded-xl border border-brand-500/30 bg-brand-500/5 px-3 py-2 text-xs text-brand-700 dark:text-brand-300 flex items-center gap-1.5">
+                  <Check size={12} /> Returning patient — details filled below.
                 </div>
-                <Badge tone="brand" size="sm">{family.length} record{family.length === 1 ? '' : 's'}</Badge>
-              </div>
-
-              <div className="space-y-2">
-                {family.map((p) => {
-                  const alreadyBooked = p.inQueueToken != null;
-                  // Build the meta line conditionally so we never show
-                  // "undefined · undefined" for queue-only patients with
-                  // no demo history.
-                  const meta = [
-                    p.age != null && p.gender ? `${p.age} · ${p.gender}` : null,
-                    p.visits != null ? `${p.visits} visit${p.visits === 1 ? '' : 's'}` : null,
-                    p.lastSeen ? `last ${p.lastSeen}` : null,
-                  ].filter(Boolean).join(' · ');
-                  return (
-                    <motion.button
-                      key={p.id}
-                      type="button"
-                      initial={{ opacity: 0, x: 8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      onClick={() => generateTokenFor(p)}
-                      disabled={alreadyBooked}
-                      className={`w-full group flex items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
-                        alreadyBooked
-                          ? 'hairline bg-success-500/5 dark:bg-success-500/10 border-success-500/30 cursor-not-allowed'
-                          : 'hairline bg-white/60 dark:bg-ink-900/40 hover:border-brand-500/40 hover:bg-brand-50/60 dark:hover:bg-brand-500/10'
-                      }`}
-                    >
-                      <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-accent-500 text-white text-sm font-semibold">
-                        {p.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-semibold text-ink-900 dark:text-ink-50 truncate">{p.name}</span>
-                          {p.relation && (
-                            <Badge tone="neutral" size="sm">{p.relation}</Badge>
-                          )}
-                          {alreadyBooked && (
-                            <Badge tone="success" size="sm" pulse>
-                              In queue · #{p.inQueueToken}
-                            </Badge>
-                          )}
-                        </div>
-                        {meta && (
-                          <div className="text-[11px] text-muted">{meta}</div>
-                        )}
-                        {alreadyBooked && (
-                          <div className="text-[11px] text-success-600 dark:text-success-500 font-medium mt-0.5">
-                            Already booked today — token #{p.inQueueToken}
-                          </div>
-                        )}
-                      </div>
-                      {!alreadyBooked && (
-                        <ChevronRight size={16} className="text-ink-400 group-hover:text-brand-600 dark:group-hover:text-brand-300 shrink-0" />
-                      )}
-                    </motion.button>
-                  );
-                })}
-
-                {/* Add new family member on same mobile */}
-                <button
-                  type="button"
-                  onClick={() => setStep('new')}
-                  className="w-full flex items-center gap-3 rounded-xl border-2 border-dashed border-ink-300 dark:border-ink-700 p-3 text-left hover:border-brand-500/60 hover:bg-brand-50/40 dark:hover:bg-brand-500/5 transition-colors"
-                >
-                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-500/15 text-brand-600 dark:text-brand-300">
-                    <UserPlus size={16} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold text-brand-700 dark:text-brand-300">Add new family member</div>
-                    <div className="text-[11px] text-muted">Different person, same mobile</div>
-                  </div>
-                  <ChevronRight size={16} className="text-brand-500 shrink-0" />
-                </button>
-              </div>
-
-              <Button size="lg" variant="outline" fullWidth onClick={reset}>Back</Button>
-            </motion.div>
-          )}
-
-          {/* ─── Step 3: register new patient ─────────────────────── */}
-          {step === 'new' && (
-            <motion.div key="new" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-              <div className="rounded-xl border hairline bg-ink-50/60 dark:bg-ink-900/60 p-3 text-xs text-muted">
-                {family.length > 0 ? (
-                  <>Registering an additional patient on <span className="font-semibold text-ink-700 dark:text-ink-200">{mobile}</span>.</>
-                ) : (
-                  <>No record found for <span className="font-semibold text-ink-700 dark:text-ink-200">{mobile}</span>. Quick add below.</>
-                )}
-              </div>
+              )}
+              {searched && family.length === 0 && (
+                <div className="rounded-xl border hairline bg-ink-50/60 dark:bg-ink-900/60 px-3 py-2 text-xs text-muted flex items-center gap-1.5">
+                  <UserPlus size={12} className="text-brand-600 dark:text-brand-300" /> No record found — new patient. Fill the details below.
+                </div>
+              )}
 
               {/* Required + basic */}
               <Input
                 label={renderRequiredLabel('Full name')}
                 leftIcon={<User size={14} />}
                 value={name}
-                onChange={(e) => { setName(e.target.value); if (formError) setFormError(null); }}
+                onChange={(e) => { setName(e.target.value); setSelectedPatientId(undefined); setInQueueToken(undefined); if (formError) setFormError(null); }}
                 required
                 hint="Required"
               />
@@ -608,20 +593,22 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
                 </div>
               )}
 
-              <div className="flex gap-2">
-                <Button
-                  size="lg"
-                  fullWidth
-                  leftIcon={<Ticket size={16} />}
-                  onClick={handleSaveNewPatient}
-                  loading={busy}
-                >
-                  Save & generate token
-                </Button>
-                <Button size="lg" variant="outline" onClick={() => setStep(family.length > 0 ? 'select' : 'lookup')}>
-                  Back
-                </Button>
-              </div>
+              {inQueueToken != null && (
+                <div className="rounded-xl border border-warning-500/40 bg-warning-500/5 px-3 py-2 text-xs text-warning-700 dark:text-warning-300 flex items-center gap-1.5">
+                  <AlertTriangle size={12} /> {name || 'This patient'} is already in today's queue (token #{inQueueToken}).
+                </div>
+              )}
+
+              <Button
+                size="lg"
+                fullWidth
+                leftIcon={<Ticket size={16} />}
+                onClick={handleGenerate}
+                loading={busy}
+                disabled={inQueueToken != null}
+              >
+                Generate token
+              </Button>
             </motion.div>
           )}
 
