@@ -1,71 +1,41 @@
+import { lazy, Suspense, type ComponentType } from 'react';
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { ScrollToTop } from './ScrollToTop';
+import { ProtectedRoute } from './ProtectedRoute';
+
+// Eager — needed for first paint of the public/auth entry points.
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { LandingPage } from '@/pages/landing';
-import { AboutPage } from '@/pages/site/AboutPage';
-import { CareersPage } from '@/pages/site/CareersPage';
-import { ContactPage } from '@/pages/site/ContactPage';
-import { FeaturesPage, PricingPage, HowItWorksPage, TvDisplayPage, FaqPage } from '@/pages/site/SectionPages';
-import { PrivacyPage, TermsPage, CompliancePage } from '@/pages/site/LegalPages';
 import { LoginPage } from '@/pages/auth/Login';
 import { SignupPage } from '@/pages/auth/Signup';
 import { DemoSelector } from '@/pages/demo/DemoSelector';
 import { NotFound } from '@/pages/NotFound';
-import { ProtectedRoute } from './ProtectedRoute';
 
-import { AdminLayout } from '@/pages/admin/AdminLayout';
-import { AdminDashboard } from '@/pages/admin/AdminDashboard';
-import { AdminClinics } from '@/pages/admin/AdminClinics';
-import { AdminRevenue } from '@/pages/admin/AdminRevenue';
-import { AdminWallet } from '@/pages/admin/AdminWallet';
-import { AdminPlans } from '@/pages/admin/AdminPlans';
-import { AdminCashback } from '@/pages/admin/AdminCashback';
-import { AdminNotifications } from '@/pages/admin/AdminNotifications';
-import { AdminSupport } from '@/pages/admin/AdminSupport';
-import { AdminTeam } from '@/pages/admin/AdminTeam';
-import { AdminReports } from '@/pages/admin/AdminReports';
-import { AdminSystem } from '@/pages/admin/AdminSystem';
-import { AdminSettings } from '@/pages/admin/AdminSettings';
+/* Lazy route helper: code-splits each page into its own chunk so the heavy
+   dashboards (and recharts) never load with the public landing site. Works
+   with the project's named exports. */
+function lz<M extends Record<string, unknown>>(factory: () => Promise<M>, name: keyof M) {
+  const C = lazy(() => factory().then((m) => ({ default: m[name] as ComponentType })));
+  return <C />;
+}
 
-import { ClinicLayout } from '@/pages/clinic/ClinicLayout';
-import { ClinicDashboard } from '@/pages/clinic/ClinicDashboard';
-import { ClinicQueue } from '@/pages/clinic/ClinicQueue';
-import { ClinicWallet } from '@/pages/clinic/ClinicWallet';
-import { ClinicQR } from '@/pages/clinic/ClinicQR';
-import { ClinicPatients } from '@/pages/clinic/ClinicPatients';
-import { ClinicAppointments } from '@/pages/clinic/ClinicAppointments';
-import { ClinicReports } from '@/pages/clinic/ClinicReports';
-import { ClinicStaff } from '@/pages/clinic/ClinicStaff';
-import { ClinicNotifications } from '@/pages/clinic/ClinicNotifications';
-import { ClinicSettings } from '@/pages/clinic/ClinicSettings';
-import { ClinicProfile } from '@/pages/clinic/ClinicProfile';
-import { ClinicBranches } from '@/pages/clinic/ClinicBranches';
-import { ClinicTvDisplays } from '@/pages/clinic/ClinicTvDisplays';
-import { TvPair } from '@/pages/display/TvPair';
+function RouteLoader() {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center" role="status" aria-label="Loading">
+      <span className="h-8 w-8 rounded-full border-2 border-brand-500/30 border-t-brand-500 animate-spin" />
+    </div>
+  );
+}
 
-import { ReceptionistLayout } from '@/pages/receptionist/ReceptionistLayout';
-import { ReceptionistDashboard } from '@/pages/receptionist/ReceptionistDashboard';
-import { AddPatient } from '@/pages/receptionist/AddPatient';
-
-import { PatientLayout } from '@/pages/patient/PatientLayout';
-import { PatientHome } from '@/pages/patient/PatientHome';
-import { PatientSearch } from '@/pages/patient/PatientSearch';
-import { DoctorProfile } from '@/pages/patient/DoctorProfile';
-import { TokenTracking } from '@/pages/patient/TokenTracking';
-import { PatientWallet } from '@/pages/patient/PatientWallet';
-import { PatientProfile } from '@/pages/patient/PatientProfile';
-
-import { BillingScreen } from '@/pages/billing/BillingScreen';
-import { PrescriptionScreen } from '@/pages/prescription/PrescriptionScreen';
-import { TvDisplay } from '@/pages/display/TvDisplay';
-
-/** Root shell: resets window scroll on every route change app-wide. */
+/** Root shell: resets scroll on route change + Suspense for lazy chunks. */
 function RootLayout() {
   return (
     <>
       <ScrollToTop />
-      <Outlet />
+      <Suspense fallback={<RouteLoader />}>
+        <Outlet />
+      </Suspense>
     </>
   );
 }
@@ -74,104 +44,104 @@ export const router = createBrowserRouter([
   {
     element: <RootLayout />,
     children: [
-  {
-    element: <PublicLayout />,
-    children: [
-      { path: '/', element: <LandingPage /> },
-      { path: '/features', element: <FeaturesPage /> },
-      { path: '/pricing', element: <PricingPage /> },
-      { path: '/how-it-works', element: <HowItWorksPage /> },
-      { path: '/tv-display', element: <TvDisplayPage /> },
-      { path: '/faq', element: <FaqPage /> },
-      { path: '/about', element: <AboutPage /> },
-      { path: '/careers', element: <CareersPage /> },
-      { path: '/contact', element: <ContactPage /> },
-      { path: '/privacy', element: <PrivacyPage /> },
-      { path: '/terms', element: <TermsPage /> },
-      { path: '/compliance', element: <CompliancePage /> },
-    ],
-  },
-  {
-    element: <AuthLayout />,
-    children: [
-      { path: '/login', element: <LoginPage /> },
-      { path: '/signup', element: <SignupPage /> },
-    ],
-  },
-  { path: '/demo', element: <DemoSelector /> },
-  { path: '/display/clinic', element: <TvDisplay /> },
-  { path: '/tv/pair', element: <TvPair /> },
-  { path: '/tv', element: <TvPair /> },
+      {
+        element: <PublicLayout />,
+        children: [
+          { path: '/', element: <LandingPage /> },
+          { path: '/features', element: lz(() => import('@/pages/site/SectionPages'), 'FeaturesPage') },
+          { path: '/pricing', element: lz(() => import('@/pages/site/SectionPages'), 'PricingPage') },
+          { path: '/how-it-works', element: lz(() => import('@/pages/site/SectionPages'), 'HowItWorksPage') },
+          { path: '/tv-display', element: lz(() => import('@/pages/site/SectionPages'), 'TvDisplayPage') },
+          { path: '/faq', element: lz(() => import('@/pages/site/SectionPages'), 'FaqPage') },
+          { path: '/about', element: lz(() => import('@/pages/site/AboutPage'), 'AboutPage') },
+          { path: '/careers', element: lz(() => import('@/pages/site/CareersPage'), 'CareersPage') },
+          { path: '/contact', element: lz(() => import('@/pages/site/ContactPage'), 'ContactPage') },
+          { path: '/privacy', element: lz(() => import('@/pages/site/LegalPages'), 'PrivacyPage') },
+          { path: '/terms', element: lz(() => import('@/pages/site/LegalPages'), 'TermsPage') },
+          { path: '/compliance', element: lz(() => import('@/pages/site/LegalPages'), 'CompliancePage') },
+        ],
+      },
+      {
+        element: <AuthLayout />,
+        children: [
+          { path: '/login', element: <LoginPage /> },
+          { path: '/signup', element: <SignupPage /> },
+        ],
+      },
+      { path: '/demo', element: <DemoSelector /> },
+      { path: '/display/clinic', element: lz(() => import('@/pages/display/TvDisplay'), 'TvDisplay') },
+      { path: '/tv/pair', element: lz(() => import('@/pages/display/TvPair'), 'TvPair') },
+      { path: '/tv', element: lz(() => import('@/pages/display/TvPair'), 'TvPair') },
 
-  {
-    path: '/admin',
-    element: <ProtectedRoute allow={['super_admin']}><AdminLayout /></ProtectedRoute>,
-    children: [
-      { index: true, element: <AdminDashboard /> },
-      { path: 'clinics', element: <AdminClinics /> },
-      { path: 'revenue', element: <AdminRevenue /> },
-      { path: 'wallet', element: <AdminWallet /> },
-      { path: 'plans', element: <AdminPlans /> },
-      { path: 'cashback', element: <AdminCashback /> },
-      { path: 'notifications', element: <AdminNotifications /> },
-      { path: 'support', element: <AdminSupport /> },
-      { path: 'team', element: <AdminTeam /> },
-      { path: 'reports', element: <AdminReports /> },
-      { path: 'system', element: <AdminSystem /> },
-      { path: 'settings', element: <AdminSettings /> },
-    ],
-  },
+      {
+        path: '/admin',
+        element: <ProtectedRoute allow={['super_admin']}>{lz(() => import('@/pages/admin/AdminLayout'), 'AdminLayout')}</ProtectedRoute>,
+        children: [
+          { index: true, element: lz(() => import('@/pages/admin/AdminDashboard'), 'AdminDashboard') },
+          { path: 'clinics', element: lz(() => import('@/pages/admin/AdminClinics'), 'AdminClinics') },
+          { path: 'revenue', element: lz(() => import('@/pages/admin/AdminRevenue'), 'AdminRevenue') },
+          { path: 'wallet', element: lz(() => import('@/pages/admin/AdminWallet'), 'AdminWallet') },
+          { path: 'plans', element: lz(() => import('@/pages/admin/AdminPlans'), 'AdminPlans') },
+          { path: 'cashback', element: lz(() => import('@/pages/admin/AdminCashback'), 'AdminCashback') },
+          { path: 'notifications', element: lz(() => import('@/pages/admin/AdminNotifications'), 'AdminNotifications') },
+          { path: 'support', element: lz(() => import('@/pages/admin/AdminSupport'), 'AdminSupport') },
+          { path: 'team', element: lz(() => import('@/pages/admin/AdminTeam'), 'AdminTeam') },
+          { path: 'reports', element: lz(() => import('@/pages/admin/AdminReports'), 'AdminReports') },
+          { path: 'system', element: lz(() => import('@/pages/admin/AdminSystem'), 'AdminSystem') },
+          { path: 'settings', element: lz(() => import('@/pages/admin/AdminSettings'), 'AdminSettings') },
+        ],
+      },
 
-  {
-    path: '/clinic',
-    element: <ProtectedRoute allow={['clinic_admin']}><ClinicLayout /></ProtectedRoute>,
-    children: [
-      { index: true, element: <ClinicDashboard /> },
-      { path: 'queue', element: <ClinicQueue /> },
-      { path: 'patients', element: <ClinicPatients /> },
-      { path: 'appointments', element: <ClinicAppointments /> },
-      { path: 'billing', element: <BillingScreen /> },
-      { path: 'prescription', element: <PrescriptionScreen /> },
-      { path: 'reports', element: <ClinicReports /> },
-      { path: 'wallet', element: <ClinicWallet /> },
-      { path: 'profile', element: <ClinicProfile /> },
-      { path: 'branches', element: <ClinicBranches /> },
-      { path: 'tv-displays', element: <ClinicTvDisplays /> },
-      { path: 'staff', element: <ClinicStaff /> },
-      { path: 'qr', element: <ClinicQR /> },
-      { path: 'notifications', element: <ClinicNotifications /> },
-      { path: 'settings', element: <ClinicSettings /> },
-    ],
-  },
+      {
+        path: '/clinic',
+        element: <ProtectedRoute allow={['clinic_admin']}>{lz(() => import('@/pages/clinic/ClinicLayout'), 'ClinicLayout')}</ProtectedRoute>,
+        children: [
+          { index: true, element: lz(() => import('@/pages/clinic/ClinicDashboard'), 'ClinicDashboard') },
+          { path: 'queue', element: lz(() => import('@/pages/clinic/ClinicQueue'), 'ClinicQueue') },
+          { path: 'patients', element: lz(() => import('@/pages/clinic/ClinicPatients'), 'ClinicPatients') },
+          { path: 'appointments', element: lz(() => import('@/pages/clinic/ClinicAppointments'), 'ClinicAppointments') },
+          { path: 'billing', element: lz(() => import('@/pages/billing/BillingScreen'), 'BillingScreen') },
+          { path: 'prescription', element: lz(() => import('@/pages/prescription/PrescriptionScreen'), 'PrescriptionScreen') },
+          { path: 'reports', element: lz(() => import('@/pages/clinic/ClinicReports'), 'ClinicReports') },
+          { path: 'wallet', element: lz(() => import('@/pages/clinic/ClinicWallet'), 'ClinicWallet') },
+          { path: 'profile', element: lz(() => import('@/pages/clinic/ClinicProfile'), 'ClinicProfile') },
+          { path: 'branches', element: lz(() => import('@/pages/clinic/ClinicBranches'), 'ClinicBranches') },
+          { path: 'tv-displays', element: lz(() => import('@/pages/clinic/ClinicTvDisplays'), 'ClinicTvDisplays') },
+          { path: 'staff', element: lz(() => import('@/pages/clinic/ClinicStaff'), 'ClinicStaff') },
+          { path: 'qr', element: lz(() => import('@/pages/clinic/ClinicQR'), 'ClinicQR') },
+          { path: 'notifications', element: lz(() => import('@/pages/clinic/ClinicNotifications'), 'ClinicNotifications') },
+          { path: 'settings', element: lz(() => import('@/pages/clinic/ClinicSettings'), 'ClinicSettings') },
+        ],
+      },
 
-  {
-    path: '/receptionist',
-    element: <ProtectedRoute allow={['receptionist', 'clinic_admin']}><ReceptionistLayout /></ProtectedRoute>,
-    children: [
-      { index: true, element: <ReceptionistDashboard /> },
-      { path: 'add', element: <AddPatient /> },
-      { path: 'queue', element: <ClinicQueue /> },
-      { path: 'billing', element: <BillingScreen /> },
-      { path: 'prescription', element: <PrescriptionScreen /> },
-    ],
-  },
+      {
+        path: '/receptionist',
+        element: <ProtectedRoute allow={['receptionist', 'clinic_admin']}>{lz(() => import('@/pages/receptionist/ReceptionistLayout'), 'ReceptionistLayout')}</ProtectedRoute>,
+        children: [
+          { index: true, element: lz(() => import('@/pages/receptionist/ReceptionistDashboard'), 'ReceptionistDashboard') },
+          { path: 'add', element: lz(() => import('@/pages/receptionist/AddPatient'), 'AddPatient') },
+          { path: 'queue', element: lz(() => import('@/pages/clinic/ClinicQueue'), 'ClinicQueue') },
+          { path: 'billing', element: lz(() => import('@/pages/billing/BillingScreen'), 'BillingScreen') },
+          { path: 'prescription', element: lz(() => import('@/pages/prescription/PrescriptionScreen'), 'PrescriptionScreen') },
+        ],
+      },
 
-  {
-    path: '/patient',
-    element: <ProtectedRoute allow={['patient']}><PatientLayout /></ProtectedRoute>,
-    children: [
-      { index: true, element: <PatientHome /> },
-      { path: 'search', element: <PatientSearch /> },
-      { path: 'doctor/:id', element: <DoctorProfile /> },
-      { path: 'queue', element: <TokenTracking /> },
-      { path: 'wallet', element: <PatientWallet /> },
-      { path: 'profile', element: <PatientProfile /> },
-      { path: 'bookings', element: <PatientProfile /> },
-    ],
-  },
+      {
+        path: '/patient',
+        element: <ProtectedRoute allow={['patient']}>{lz(() => import('@/pages/patient/PatientLayout'), 'PatientLayout')}</ProtectedRoute>,
+        children: [
+          { index: true, element: lz(() => import('@/pages/patient/PatientHome'), 'PatientHome') },
+          { path: 'search', element: lz(() => import('@/pages/patient/PatientSearch'), 'PatientSearch') },
+          { path: 'doctor/:id', element: lz(() => import('@/pages/patient/DoctorProfile'), 'DoctorProfile') },
+          { path: 'queue', element: lz(() => import('@/pages/patient/TokenTracking'), 'TokenTracking') },
+          { path: 'wallet', element: lz(() => import('@/pages/patient/PatientWallet'), 'PatientWallet') },
+          { path: 'profile', element: lz(() => import('@/pages/patient/PatientProfile'), 'PatientProfile') },
+          { path: 'bookings', element: lz(() => import('@/pages/patient/PatientProfile'), 'PatientProfile') },
+        ],
+      },
 
-  { path: '/dashboard', element: <Navigate to="/clinic" replace /> },
-  { path: '*', element: <NotFound /> },
+      { path: '/dashboard', element: <Navigate to="/clinic" replace /> },
+      { path: '*', element: <NotFound /> },
     ],
   },
 ]);

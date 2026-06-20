@@ -287,7 +287,7 @@ function ProductMovie() {
       initial={{ opacity: 0, scale: 0.96 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.6, delay: 0.15 }}
-      className="relative hidden sm:block"
+      className="relative block mt-2 lg:mt-0"
       style={{ perspective: 1200 }}
       aria-hidden
     >
