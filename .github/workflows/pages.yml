@@ -39,6 +39,11 @@ jobs:
         working-directory: web
     steps:
       - uses: actions/checkout@v4
+      # Auto-enable Pages (build type: GitHub Actions) so no manual toggle in
+      # Settings → Pages is required. Uses the pages: write permission above.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/setup-node@v4
         with:
           node-version: 20
