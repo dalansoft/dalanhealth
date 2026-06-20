@@ -4,7 +4,7 @@ import { Card, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { SourceBadge } from '@/components/ui/SourceBadge';
-import type { QueueEntry } from '@/store/queue';
+import { tokenLabel, type QueueEntry } from '@/store/queue';
 
 interface Props {
   current?: QueueEntry;
@@ -39,9 +39,9 @@ export function CurrentTokenCard({ current, onComplete, onSkip }: Props) {
                 initial={{ scale: 0.92, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: 'spring', stiffness: 240, damping: 18 }}
-                className="text-7xl sm:text-8xl font-extrabold leading-none tracking-tight text-token drop-shadow-[0_0_36px_rgba(34,197,94,0.45)]"
+                className={`text-7xl sm:text-8xl font-extrabold leading-none tracking-tight ${current.emergency ? 'text-danger-500 drop-shadow-[0_0_36px_rgba(239,68,68,0.45)]' : 'text-token drop-shadow-[0_0_36px_rgba(34,197,94,0.45)]'}`}
               >
-                #{current.token}
+                {tokenLabel(current)}
               </motion.div>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                 <span className="text-lg font-semibold text-ink-900 dark:text-ink-50">{current.patientName}</span>

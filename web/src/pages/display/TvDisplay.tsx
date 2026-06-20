@@ -7,7 +7,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { SoundToggle } from '@/components/ui/SoundToggle';
 import { VoiceLangSelect } from '@/components/ui/VoiceLangSelect';
 import { NowServingAnnouncer } from '@/components/feedback/NowServingAnnouncer';
-import { useQueue } from '@/store/queue';
+import { useQueue, tokenLabel } from '@/store/queue';
 import { useQueueBoot } from '@/hooks/useQueueBoot';
 import { useBranch } from '@/store/branch';
 import { getBranchData } from '@/services/demoData';
@@ -273,19 +273,26 @@ export function TvDisplay() {
                 >
                   <div
                     className={`font-extrabold leading-none tracking-tight font-brand ${
-                      current.wasSkipped
+                      current.emergency
+                        ? 'text-danger-500 lg:drop-shadow-[0_0_60px_rgba(239,68,68,0.45)]'
+                        : current.wasSkipped
                         ? 'text-warning-600 dark:text-warning-300 lg:drop-shadow-[0_0_60px_rgba(245,158,11,0.45)]'
                         : 'text-token lg:drop-shadow-[0_0_60px_rgba(34,197,94,0.45)]'
                     }`}
                     style={{ fontSize: 'clamp(2.25rem, 7vh, 14rem)' }}
                   >
-                    #{current.token}
+                    {tokenLabel(current)}
                   </div>
                   <div className="mt-2 sm:mt-3 lg:mt-6 flex flex-wrap items-center justify-center gap-2 sm:gap-3 lg:gap-4">
                     <div className={`text-xl sm:text-2xl lg:text-4xl xl:text-5xl font-bold ${
                       current.wasSkipped ? 'text-warning-700 dark:text-warning-200' : ''
                     }`}>{current.patientName}</div>
                     <SourceBadge source={current.source} />
+                    {current.emergency && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-danger-500/20 text-danger-700 dark:text-danger-300 px-2 py-0.5 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+                        Emergency
+                      </span>
+                    )}
                     {current.wasSkipped && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-warning-500/20 text-warning-700 dark:text-warning-200 px-2 py-0.5 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
                         Skipped
@@ -352,12 +359,16 @@ export function TvDisplay() {
                 // staff and patients in the waiting room can spot a deferred
                 // token at a glance — they need a "they were skipped, watch
                 // for them to come back" cue even from across the room.
-                const rowBg = skipped
+                const rowBg = e.emergency
+                  ? 'border-danger-500/50 bg-danger-500/15 dark:bg-danger-500/20'
+                  : skipped
                   ? 'border-warning-500/50 bg-warning-500/15 dark:bg-warning-500/20'
                   : isLead
                   ? 'border-brand-500/40 bg-brand-500/10 dark:bg-brand-500/15'
                   : 'border-ink-200 dark:border-white/10 bg-ink-50 dark:bg-white/[0.02]';
-                const tokenColor = skipped
+                const tokenColor = e.emergency
+                  ? 'text-danger-600 dark:text-danger-400'
+                  : skipped
                   ? 'text-warning-700 dark:text-warning-300'
                   : isLead
                   ? 'text-brand-600 dark:text-brand-300'
@@ -378,7 +389,7 @@ export function TvDisplay() {
                     className={`flex items-center gap-3 lg:gap-4 rounded-2xl border px-3 lg:px-4 py-2.5 lg:py-3 ${rowBg}`}
                   >
                     <div className={`w-14 lg:w-16 xl:w-20 text-center text-2xl lg:text-3xl xl:text-4xl font-extrabold tabular-nums leading-none font-brand ${tokenColor}`}>
-                      #{e.token}
+                      {tokenLabel(e)}
                     </div>
                     <div className="flex-1 min-w-0 flex items-center gap-2 lg:gap-3">
                       <div className={`text-base lg:text-lg font-semibold truncate min-w-0 ${skipped ? 'text-warning-700 dark:text-warning-200' : ''}`}>

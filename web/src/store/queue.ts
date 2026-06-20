@@ -39,7 +39,19 @@ export interface QueueEntry {
   /** Extended health record captured at booking. All fields optional —
    *  receptionist can skip the "More details" section for a fast flow. */
   details?: PatientDetails;
+  /** Priority/emergency patient — jumps in right after the current
+   *  consultation, ahead of the normal waiting tokens. */
+  emergency?: boolean;
+  /** Daily emergency sequence (1, 2, …). Shown as "E1" etc. instead of the
+   *  normal "#23" token, and resets at the start of each day. */
+  emergencyNo?: number;
 }
+
+/** Display label for a token: "E1" for an emergency (priority) patient,
+ *  "#23" for a normal sequential queue token. */
+export const tokenLabel = (
+  e: Pick<QueueEntry, 'emergency' | 'emergencyNo' | 'token'>,
+): string => (e.emergency ? `E${e.emergencyNo ?? ''}` : `#${e.token}`);
 
 export type QueueMode = 'demo' | 'live';
 
@@ -53,6 +65,10 @@ interface QueueState {
   liveConnected: boolean;
   setEntries: (e: QueueEntry[]) => void;
   addEntry: (e: QueueEntry) => void;
+  /** Add a priority/emergency patient: inserted right after the current
+   *  consultation, numbered E1, E2… (daily reset). Returns the assigned
+   *  emergency number so the caller can show it. */
+  addEmergency: (e: Omit<QueueEntry, 'token' | 'status' | 'order' | 'emergency' | 'emergencyNo'>) => number;
   advance: () => void;
   skipCurrent: () => void;
   /** Bring a previously-skipped patient back to the front (becomes the next
@@ -86,6 +102,23 @@ const sortAndStatus = (list: QueueEntry[]): QueueEntry[] => {
 
 const CHANNEL_NAME = 'dh-queue-sync';
 const STORAGE_KEY = 'dh-queue-entries';
+const EMERGENCY_KEY = 'dh-emergency-counter';
+
+/** Per-day emergency counter: never reuses a number within a day (survives
+ *  completing earlier emergency patients) and resets to 1 each new day. */
+const nextEmergencyNumber = (): number => {
+  if (typeof window === 'undefined') return 1;
+  const day = new Date().toISOString().slice(0, 10);
+  try {
+    const raw = window.localStorage.getItem(EMERGENCY_KEY);
+    const data = raw ? (JSON.parse(raw) as { day: string; n: number }) : null;
+    const n = (data && data.day === day ? data.n : 0) + 1;
+    window.localStorage.setItem(EMERGENCY_KEY, JSON.stringify({ day, n }));
+    return n;
+  } catch {
+    return 1;
+  }
+};
 
 let channel: BroadcastChannel | null = null;
 if (typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined') {
@@ -175,6 +208,30 @@ export const useQueue = create<QueueState>((set, get) => {
       const next = sortAndStatus([...get().entries, e]);
       set({ entries: next });
       publish(next);
+    },
+    addEmergency: (e) => {
+      const list = get().entries;
+      const no = nextEmergencyNumber();
+      // Slot right after the current consultation (smallest order) and before
+      // the next normal token; the tiny `no` nudge keeps E1 before E2.
+      const minOrder = list.reduce((m, x) => Math.min(m, orderOf(x)), Infinity);
+      const order = (isFinite(minOrder) ? minOrder + 0.5 : 1) + no * 0.0001;
+      // Internal token stays unique (so "now serving" change-detection and
+      // React keys never collide). It's never shown — every queue surface
+      // renders tokenLabel(), which prints "E1" for emergencies.
+      const token = list.reduce((m, x) => Math.max(m, x.token), 0) + 1;
+      const entry: QueueEntry = {
+        ...e,
+        token,
+        emergency: true,
+        emergencyNo: no,
+        order,
+        status: 'Waiting',
+      };
+      const next = sortAndStatus([...list, entry]);
+      set({ entries: next });
+      publish(next);
+      return no;
     },
     advance: () => {
       if (get().mode === 'live') {
