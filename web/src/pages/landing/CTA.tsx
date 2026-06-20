@@ -58,7 +58,7 @@ export function CTA() {
             <Button size="lg" variant="outline" leftIcon={<Mail size={15} />}>Contact Sales</Button>
           </a>
         </div>
-        <p className="mt-5 text-xs text-muted">9rs+gst per visit · No setup fee · No contract</p>
+        <p className="mt-5 text-xs text-muted">₹9 + GST per visit · No setup fee · No contract</p>
       </motion.div>
     </Section>
   );

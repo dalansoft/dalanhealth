@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 
 const values = [
   { icon: Users, title: 'Patients first', desc: 'Every feature starts with one question — does this make the patient\'s visit calmer and faster?' },
-  { icon: IndianRupee, title: 'Honest pricing', desc: '9rs+gst per visit. No setup fee, no subscriptions, no contracts, no surprises.' },
+  { icon: IndianRupee, title: 'Honest pricing', desc: '₹9 + GST per visit. No setup fee, no subscriptions, no contracts, no surprises.' },
   { icon: Sparkles, title: 'Radically simple', desc: 'A receptionist learns the panel in five minutes. Patients don\'t need to learn anything at all.' },
   { icon: ShieldCheck, title: 'Trust by design', desc: 'Strict clinic-level data isolation, encrypted at rest, with audit logs on every sensitive action.' },
 ];
@@ -29,7 +29,7 @@ export function AboutPage() {
             We built Dalan Health to fix exactly that. One unified queue for walk-ins, QR scans and online bookings.
             A TV on the wall that shows — and speaks — whose turn it is, in Hindi and English. A dashboard that tells
             the doctor and the owner what's actually happening, live. And a price any clinic can say yes to:
-            <span className="font-semibold text-ink-900 dark:text-ink-50"> 9rs+gst per visit</span>, nothing else.
+            <span className="font-semibold text-ink-900 dark:text-ink-50"> ₹9 + GST per visit</span>, nothing else.
           </p>
           <p>
             We're starting with the clinics big software companies ignore — single-doctor practices and small

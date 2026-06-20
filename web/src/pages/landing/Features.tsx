@@ -25,7 +25,7 @@ const tiles = [
     icon: MonitorPlay, title: 'TV Queue Display', size: 'lg' as const, tone: 'accent' as const,
     desc: 'Waiting-room TV shows the current token, up-next list and voice announcements — patients relax instead of crowding the desk.',
   },
-  { icon: Wallet, title: 'Wallet Billing', size: 'sm' as const, tone: 'token' as const, desc: 'Auto 9rs+gst deduction per completed visit. GST invoices.' },
+  { icon: Wallet, title: 'Wallet Billing', size: 'sm' as const, tone: 'token' as const, desc: 'Auto ₹9 + GST deduction per completed visit. GST invoices.' },
   { icon: BarChart3, title: 'Reports & Analytics', size: 'sm' as const, tone: 'brand' as const, desc: 'Daily, monthly, queue and revenue insights.' },
   { icon: CloudUpload, title: 'Cloud Backup', size: 'sm' as const, tone: 'accent' as const, desc: 'Secure, automatic, nothing to install.' },
   { icon: Headset, title: '24×7 Support', size: 'sm' as const, tone: 'token' as const, desc: 'WhatsApp, phone and email — real humans.' },
