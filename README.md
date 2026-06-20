@@ -70,7 +70,7 @@ Then press `a` for Android, `i` for iOS (Mac), or `w` for web preview.
 - **Design system**: Tailwind theme + tokens, light/dark mode with persisted preference, glassmorphism, gradient accents, premium shadows, Framer Motion animations, custom scrollbar.
 - **UI primitives**: `Button`, `Card`, `Input`, `Badge`, `Modal`, `Skeleton`, `Avatar`, `Tooltip`, `StatCard`, `EmptyState`, `Section`, `SourceBadge`, `StatusPill`, `ThemeToggle`, `Logo`.
 - **Layouts**: `PublicLayout`, `AuthLayout`, `DashboardShell` (collapsible sidebar + topbar), `MobileShell` (bottom-tab patient layout for the web preview).
-- **Landing site (Part A)**: Hero with floating dashboard mockup, problem/solution storytelling, 12-feature grid, live-demo selector, screen showcase, pricing (Starter ₹999/yr + ₹9, Growth ₹12), FAQ accordion, CTA, footer.
+ - **Landing site (Part A)**: Hero with floating dashboard mockup, problem/solution storytelling, 12-feature grid, live-demo selector, screen showcase, pricing (Starter 9rs+gst/yr + 9rs+gst, Growth 9rs+gst), FAQ accordion, CTA, footer.
 - **Auth (Part B)**: Tabbed login (patient OTP, clinic email/password, staff OTP, super-admin), clinic signup with plan selector, one-click demo selector with pre-filled credentials.
 - **Super admin dashboard**: Revenue cards, line + stacked bar charts, top-clinics table, clinics list with filtering, revenue area chart, scaffolded modules for wallet, plans, cashback, notifications, support, team, reports, system, settings.
 - **Clinic admin dashboard**: KPI cards, quick actions, live queue snapshot, revenue line chart, full unified queue view with realtime status transitions (offline / online / QR badges, Consultation / Queue / Waiting pills), wallet recharge + ledger, clinic QR + patient preview.
@@ -132,12 +132,12 @@ The mocked authentication uses local state with realistic demo data, so every da
 
 | Plan | Yearly | Per visit | Notes |
 |---|---|---|---|
-| Starter | ₹999 | ₹9 | 2 staff, basic reports |
-| Growth | — | ₹12 | Unlimited staff, WhatsApp+Push, advanced analytics |
+| Starter | 9rs+gst | 9rs+gst | 2 staff, basic reports |
+| Growth | — | 9rs+gst | Unlimited staff, WhatsApp+Push, advanced analytics |
 
 | Patient action | Fee |
 |---|---|
-| App / home booking | ₹1 |
+| App / home booking | 9rs+gst |
 | QR join (same day) | Free |
 | Offline walk-in | Free |
 

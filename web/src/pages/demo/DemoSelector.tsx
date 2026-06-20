@@ -15,7 +15,7 @@ const demos: { role: Role; title: string; subtitle: string; mobile?: string; ema
     subtitle: 'Mobile-first experience',
     mobile: '+91 98765 43210',
     preset: 'OTP: 123456',
-    features: ['Doctor search', 'QR join queue', 'Live token tracking', '₹1 booking + cashback'],
+    features: ['Doctor search', 'QR join queue', 'Live token tracking', '9rs+gst booking + cashback'],
     icon: Smartphone,
     tone: 'from-brand-500/20 to-brand-500/0',
     color: 'text-brand-600 dark:text-brand-300',

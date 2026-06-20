@@ -99,11 +99,11 @@ with TestClient(main.app) as client:
         str(entries),
     )
 
-    # Complete → wallet deducted at the per-visit rate (₹15)
+    # Complete → wallet deducted at the per-visit rate (9rs+gst)
     r = client.post("/api/v1/queue/complete-current", headers=auth)
     check("POST /queue/complete-current", r.status_code == 200 and r.json()["completed"]["token"] == 1, r.text)
     r = client.get("/api/v1/wallet/balance", headers=auth)
-    check("wallet deducted on completion", r.json()["balance"] == 485, r.text)
+    check("wallet deducted on completion", r.json()["balance"] == 491, r.text)
 
     # Skip semantics: token is patient-visible and NEVER changes; only the
     # queue position moves. Enqueue a 3rd patient so there are two active.
@@ -158,8 +158,8 @@ with TestClient(main.app) as client:
     p_auth = {"Authorization": f"Bearer {r.json()['access_token']}"}
     r = client.post("/api/v1/cashback/earn", json={"campaign_type": "first_booking"}, headers=p_auth)
     check("POST /cashback/earn", r.status_code == 200 and r.json()["earned"] == 1.0, r.text)
-    r = client.post("/api/v1/cashback/preview-use", json={"booking_fee": 1.0}, headers=p_auth)
-    check("cashback 50% cap", r.status_code == 200 and r.json()["applicable"] == 0.5, r.text)
+    r = client.post("/api/v1/cashback/preview-use", json={"booking_fee": 9.0}, headers=p_auth)
+    check("cashback 50% cap", r.status_code == 200 and r.json()["applicable"] == 1.0, r.text)
 
     # Wallet history + transactions recorded
     r = client.get("/api/v1/wallet/history", headers=auth)

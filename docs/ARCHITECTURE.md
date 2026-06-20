@@ -15,7 +15,7 @@ clinic A, date 2026-05-20
 
 When `complete-current` fires:
 1. Top entry moves `Consultation → completed` (removed from active).
-2. Wallet service deducts the plan rate (₹9 Starter / ₹12 Growth).
+2. Wallet service deducts the plan rate (9rs+gst Starter / 9rs+gst Growth).
 3. `_recompute_statuses` re-walks the active list: index 0 → Consultation, index 1 → Queue, rest → Waiting.
 4. WebSocket broadcasts the new active list to every subscriber on `/ws/queue/{clinic_id}`.
 

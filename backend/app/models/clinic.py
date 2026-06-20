@@ -8,8 +8,8 @@ class Plan(str, Enum):
     growth = "growth"
 
 
-# Single advertised price: ₹15 + GST per completed visit (both plans).
-PLAN_RATE = {Plan.starter: 15, Plan.growth: 15}
+# Single advertised price: 9rs+gst per completed visit (both plans).
+PLAN_RATE = {Plan.starter: 9, Plan.growth: 9}
 
 
 class DoctorTiming(BaseDoc):
@@ -29,6 +29,6 @@ class Clinic(BaseDoc):
     plan: Plan = Plan.starter
     wallet_balance: float = 0.0
     consultation_fee: int = 300
-    booking_fee: int = 1
+    booking_fee: int = 9
     timings: list[dict] = Field(default_factory=list)  # [{start, end}]
     is_active: bool = True

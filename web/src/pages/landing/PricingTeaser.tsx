@@ -16,9 +16,8 @@ export function PricingTeaser() {
       >
         <div aria-hidden className="gradient-drift pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-500/10 via-transparent to-token/10" />
         <div className="relative text-center md:text-left">
-          <div className="flex items-baseline justify-center md:justify-start gap-2">
-            <span className="text-4xl sm:text-5xl font-extrabold tracking-tight gradient-text">₹15</span>
-            <span className="text-lg font-semibold text-ink-700 dark:text-ink-200">+ GST</span>
+            <div className="flex items-baseline justify-center md:justify-start gap-2">
+            <span className="text-4xl sm:text-5xl font-extrabold tracking-tight gradient-text">9rs+gst</span>
             <span className="text-sm text-muted">per visit</span>
           </div>
           <p className="mt-1.5 text-sm text-muted">

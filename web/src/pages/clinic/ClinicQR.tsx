@@ -39,7 +39,7 @@ export function ClinicQR() {
           </div>
           <div className="mt-5 grid grid-cols-2 gap-2">
             <Button>Join queue · Free</Button>
-            <Button variant="outline">Book · ₹1</Button>
+            <Button variant="outline">Book · 9rs+gst</Button>
           </div>
         </div>
       </Card>

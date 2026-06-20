@@ -13,7 +13,7 @@ This codebase is a deep foundation. Priorities to get to a production MVP:
 
 ## 3. Payments (Razorpay) (1 day)
 - Backend: add `POST /api/v1/payments/order` to create a Razorpay order, `POST /payments/verify` to verify signature.
-- Frontend: trigger Razorpay Checkout for ₹1 booking + wallet recharges.
+- Frontend: trigger Razorpay Checkout for 9rs+gst booking + wallet recharges.
 
 ## 4. Notification dispatch (2–3 days)
 - Models + endpoint already exist (`POST /notifications/send`).

@@ -24,8 +24,8 @@ export function ClinicWallet() {
           <div className="absolute inset-0 -z-10 bg-gradient-to-br from-brand-500/15 via-transparent to-accent-500/15" />
           <CardHeader>
             <div>
-              <CardTitle>Wallet balance</CardTitle>
-              <CardSubtitle>Auto-deducts ₹12 per completed consultation (Growth plan)</CardSubtitle>
+                <CardTitle>Wallet balance</CardTitle>
+                  <CardSubtitle>Auto-deducts 9rs+gst per completed consultation (Growth plan)</CardSubtitle>
             </div>
             {low && <Badge tone="warning" pulse>Low balance</Badge>}
           </CardHeader>
@@ -43,7 +43,7 @@ export function ClinicWallet() {
           <div className="space-y-3">
             <div className="flex items-center justify-between text-sm"><span className="text-muted">Warning</span><span className="font-semibold">₹1,000</span></div>
             <div className="flex items-center justify-between text-sm"><span className="text-muted">Critical</span><span className="font-semibold text-danger-500">₹200</span></div>
-            <div className="flex items-center justify-between text-sm"><span className="text-muted">Plan</span><Badge tone="brand" size="sm">Growth · ₹12/visit</Badge></div>
+            <div className="flex items-center justify-between text-sm"><span className="text-muted">Plan</span><Badge tone="brand" size="sm">Growth · 9rs+gst/visit</Badge></div>
           </div>
         </Card>
       </div>

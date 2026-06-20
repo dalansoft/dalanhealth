@@ -29,11 +29,11 @@ export default function Doctor() {
       <Card>
         <Text style={[typography.caption, { color: t.muted, textTransform: 'uppercase' }]}>Consultation fee</Text>
         <Text style={s.h1}>₹{d.fee}</Text>
-        <Text style={s.muted}>+ ₹1 booking fee · adjustable with cashback</Text>
+        <Text style={s.muted}>+ 9rs+gst booking fee · adjustable with cashback</Text>
       </Card>
       <View style={{ flexDirection: 'row', gap: spacing.sm }}>
         <View style={{ flex: 1 }}><Button label="Join queue · Free" fullWidth onPress={() => router.replace('/(tabs)/queue')} /></View>
-        <View style={{ flex: 1 }}><Button label="Book · ₹1" variant="outline" fullWidth onPress={() => router.replace('/(tabs)/queue')} /></View>
+        <View style={{ flex: 1 }}><Button label="Book · 9rs+gst" variant="outline" fullWidth onPress={() => router.replace('/(tabs)/queue')} /></View>
       </View>
     </ScrollView>
   );
