@@ -25,7 +25,7 @@ const features = [
 export function AdminPlans() {
   const [starterYearly, setStarterYearly] = useState(999);
   const [starterPerVisit, setStarterPerVisit] = useState(9);
-  const [growthPerVisit, setGrowthPerVisit] = useState(12);
+  const [growthPerVisit, setGrowthPerVisit] = useState(9);
   const [bookingFee, setBookingFee] = useState(1);
   const [saved, setSaved] = useState(false);
 

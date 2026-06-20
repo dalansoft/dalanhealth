@@ -29,7 +29,7 @@ export function ClinicAppointments() {
         <StatCard label="Today" value={todayCount} icon={<Calendar size={16} />} accent="brand" />
         <StatCard label="Tomorrow" value={tomorrowCount} icon={<Calendar size={16} />} accent="accent" />
         <StatCard label="Confirmed rate" value="92%" icon={<CheckCircle size={16} />} accent="success" />
-        <StatCard label="Booking revenue (9rs+gst fee)" value={inr(demoAppointments.length)} accent="warning" />
+        <StatCard label="Booking revenue (₹9 + GST fee)" value={inr(demoAppointments.length)} accent="warning" />
       </div>
 
       <Card padded={false}>

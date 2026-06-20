@@ -7,7 +7,7 @@ const steps = [
   { icon: Ticket, title: 'Token Generated Instantly', desc: 'One sequential number across every entry source — printed, on-screen, or in the app.' },
   { icon: Radar, title: 'Track Queue Live', desc: 'Phone, reception screen and waiting-room TV all show the same live position.' },
   { icon: Stethoscope, title: 'Doctor Consultation', desc: 'Doctor calls next — the TV announces the name, the patient walks in calm.' },
-  { icon: CheckCircle2, title: 'Visit Completed', desc: '9rs+gst auto-deducts from the wallet. History, billing and follow-up saved.' },
+  { icon: CheckCircle2, title: 'Visit Completed', desc: '₹9 + GST auto-deducts from the wallet. History, billing and follow-up saved.' },
 ];
 
 export function HowItWorks() {

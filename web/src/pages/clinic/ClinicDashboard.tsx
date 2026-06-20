@@ -82,7 +82,7 @@ export function ClinicDashboard() {
       <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         <QueuePreview entries={entries} viewAllTo="/clinic/queue" limit={5} />
         <CurrentTokenCard current={current} onComplete={advance} onSkip={skipCurrent} />
-        <WalletMiniCard balance={data.walletBalance} perVisitRate={12} to="/clinic/wallet" />
+        <WalletMiniCard balance={data.walletBalance} perVisitRate={9} to="/clinic/wallet" />
         <ActivityFeed items={clinicActivity} />
       </div>
 
