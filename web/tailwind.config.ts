@@ -6,28 +6,32 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Brand — medical teal. Drives buttons, links, focus, accents app-wide.
         brand: {
-          50: '#eef6ff',
-          100: '#d9eaff',
-          200: '#bcdcff',
-          300: '#8ec5ff',
-          400: '#5ba3ff',
-          500: '#2f7fff',
-          600: '#1a5ff0',
-          700: '#1549c4',
-          800: '#173d99',
-          900: '#173678',
-          950: '#0f2150',
+          50: '#f0fdfa',
+          100: '#cbfbef',
+          200: '#99f6e4',
+          300: '#5eead4',
+          400: '#2dd4bf',
+          500: '#14b8a6',
+          600: '#0d9488',
+          700: '#0f766e',
+          800: '#115e59',
+          900: '#134e4a',
+          950: '#042f2e',
         },
+        // Secondary teal helper (kept for components referencing `teal-*`).
         teal: {
-          400: '#22d3ee',
-          500: '#06b6d4',
-          600: '#0891b2',
+          400: '#2dd4bf',
+          500: '#14b8a6',
+          600: '#0d9488',
         },
+        // Accent — emerald. Pairs with teal for gradients + secondary actions.
         accent: {
-          400: '#a78bfa',
-          500: '#8b5cf6',
-          600: '#7c3aed',
+          300: '#6ee7b7',
+          400: '#34d399',
+          500: '#10b981',
+          600: '#059669',
         },
         success: { 500: '#10b981', 600: '#059669' },
         warning: { 500: '#f59e0b', 600: '#d97706' },
@@ -45,22 +49,22 @@ const config: Config = {
           900: '#0f172a',
           950: '#020617',
         },
-        // Deep navy palette for admin shells — matches reference
+        // Deep teal-tinted navy for admin/clinic shells + TV display.
         navy: {
-          400: '#1c2a52',
-          500: '#152141',
-          600: '#0f1a35',
-          700: '#0b1530',
-          800: '#080f25',
-          900: '#050a1c',
-          950: '#020615',
+          400: '#163e44',
+          500: '#103138',
+          600: '#0b262c',
+          700: '#081e23',
+          800: '#06171b',
+          900: '#041012',
+          950: '#020a0c',
         },
-        // Vivid green used for token numerals in the live queue
+        // Vivid emerald used for token numerals in the live queue.
         token: {
           400: '#34d399',
           500: '#10b981',
-          DEFAULT: '#22c55e',
-          bright: '#4ade80',
+          DEFAULT: '#10b981',
+          bright: '#5eead4',
         },
       },
       fontFamily: {
@@ -70,24 +74,28 @@ const config: Config = {
       },
       boxShadow: {
         soft: '0 2px 10px -2px rgba(15, 23, 42, 0.06), 0 4px 24px -4px rgba(15, 23, 42, 0.05)',
-        glow: '0 0 0 1px rgba(47, 127, 255, 0.15), 0 10px 40px -10px rgba(47, 127, 255, 0.35)',
-        glowAccent: '0 0 0 1px rgba(139, 92, 246, 0.15), 0 10px 40px -10px rgba(139, 92, 246, 0.4)',
-        glowBright: '0 0 0 1px rgba(91, 163, 255, 0.35), 0 8px 24px -4px rgba(91, 163, 255, 0.55), inset 0 1px 0 rgba(255,255,255,0.18)',
+        glow: '0 0 0 1px rgba(20, 184, 166, 0.15), 0 10px 40px -10px rgba(20, 184, 166, 0.4)',
+        glowAccent: '0 0 0 1px rgba(16, 185, 129, 0.15), 0 10px 40px -10px rgba(16, 185, 129, 0.42)',
+        glowBright: '0 0 0 1px rgba(45, 212, 191, 0.35), 0 8px 24px -4px rgba(45, 212, 191, 0.55), inset 0 1px 0 rgba(255,255,255,0.18)',
         card: '0 1px 0 rgba(15, 23, 42, 0.04), 0 8px 32px -12px rgba(15, 23, 42, 0.1)',
         cardDark: '0 1px 0 rgba(255,255,255,0.04), 0 12px 40px -16px rgba(0,0,0,0.6)',
+        lift: '0 20px 50px -20px rgba(13, 148, 136, 0.35), 0 8px 24px -12px rgba(15, 23, 42, 0.15)',
       },
       backgroundImage: {
         'mesh-light':
-          'radial-gradient(at 20% 10%, rgba(47,127,255,0.10) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(139,92,246,0.10) 0px, transparent 50%), radial-gradient(at 0% 90%, rgba(6,182,212,0.08) 0px, transparent 50%)',
+          'radial-gradient(at 18% 8%, rgba(20,184,166,0.14) 0px, transparent 50%), radial-gradient(at 82% 0%, rgba(16,185,129,0.12) 0px, transparent 50%), radial-gradient(at 0% 92%, rgba(45,212,191,0.10) 0px, transparent 50%)',
         'mesh-dark':
-          'radial-gradient(at 20% 10%, rgba(47,127,255,0.16) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(139,92,246,0.18) 0px, transparent 50%), radial-gradient(at 0% 90%, rgba(6,182,212,0.12) 0px, transparent 50%)',
+          'radial-gradient(at 18% 8%, rgba(20,184,166,0.20) 0px, transparent 50%), radial-gradient(at 82% 0%, rgba(16,185,129,0.18) 0px, transparent 50%), radial-gradient(at 0% 92%, rgba(45,212,191,0.14) 0px, transparent 50%)',
         'grid-light':
           'linear-gradient(rgba(15,23,42,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.04) 1px, transparent 1px)',
         'grid-dark':
           'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
+        'shine':
+          'linear-gradient(110deg, transparent 25%, rgba(255,255,255,0.35) 50%, transparent 75%)',
       },
       backgroundSize: {
         grid: '44px 44px',
+        shine: '200% 100%',
       },
       borderRadius: {
         '4xl': '2rem',
@@ -106,11 +114,24 @@ const config: Config = {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
         },
+        // Slow hue/scale drift for aurora gradient blobs.
+        aurora: {
+          '0%, 100%': { transform: 'translate(0,0) scale(1)', opacity: '0.8' },
+          '33%': { transform: 'translate(3%,-4%) scale(1.08)', opacity: '1' },
+          '66%': { transform: 'translate(-4%,3%) scale(0.96)', opacity: '0.7' },
+        },
+        // Diagonal light sweep across buttons/cards.
+        shine: {
+          '0%': { backgroundPosition: '200% 0' },
+          '100%': { backgroundPosition: '-200% 0' },
+        },
       },
       animation: {
         float: 'float 6s ease-in-out infinite',
         pulseSoft: 'pulseSoft 2.4s ease-in-out infinite',
         shimmer: 'shimmer 2s linear infinite',
+        aurora: 'aurora 16s ease-in-out infinite',
+        shine: 'shine 1.1s ease-out',
       },
     },
   },

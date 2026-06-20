@@ -17,8 +17,8 @@ interface Props {
 }
 
 const accents = {
-  brand: { tint: 'from-brand-500/15 to-transparent', color: '#2f7fff', text: 'text-brand-600 dark:text-brand-300' },
-  accent: { tint: 'from-accent-500/15 to-transparent', color: '#8b5cf6', text: 'text-accent-600 dark:text-accent-300' },
+  brand: { tint: 'from-brand-500/15 to-transparent', color: '#14b8a6', text: 'text-brand-600 dark:text-brand-300' },
+  accent: { tint: 'from-accent-500/15 to-transparent', color: '#10b981', text: 'text-accent-600 dark:text-accent-300' },
   teal: { tint: 'from-teal-500/15 to-transparent', color: '#06b6d4', text: 'text-teal-600 dark:text-teal-400' },
   success: { tint: 'from-success-500/15 to-transparent', color: '#10b981', text: 'text-success-600 dark:text-success-500' },
   warning: { tint: 'from-warning-500/15 to-transparent', color: '#f59e0b', text: 'text-warning-600 dark:text-warning-500' },
