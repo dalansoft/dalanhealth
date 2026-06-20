@@ -6,7 +6,7 @@ import { getTheme, radius, spacing, typography } from '@/theme';
 const tx = [
   { date: 'Today', note: 'Doctor promo · Dr. Sharma', amt: 0.5, type: 'earn' as const },
   { date: 'Yesterday', note: 'Normal booking', amt: 0.1, type: 'earn' as const },
-  { date: '12 Jan', note: 'Adjusted on booking ₹1', amt: 0.5, type: 'use' as const },
+  { date: '12 Jan', note: 'Adjusted on booking 9rs+gst', amt: 0.5, type: 'use' as const },
 ];
 
 export default function Wallet() {

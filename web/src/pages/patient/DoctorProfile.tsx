@@ -35,12 +35,12 @@ export function DoctorProfile() {
       <div className="rounded-2xl border hairline bg-white dark:bg-ink-900 p-4">
         <div className="text-xs uppercase tracking-wider text-muted">Consultation fee</div>
         <div className="text-2xl font-semibold text-ink-900 dark:text-ink-50">{inr(d.fee)}</div>
-        <div className="mt-1 text-xs text-muted">+ ₹1 booking fee · adjustable with cashback</div>
+        <div className="mt-1 text-xs text-muted">+ 9rs+gst booking fee · adjustable with cashback</div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <Button size="lg" onClick={() => navigate('/patient/queue')}>Join queue · Free</Button>
-        <Button size="lg" variant="outline" onClick={() => navigate('/patient/queue')}>Book · ₹1</Button>
+        <Button size="lg" variant="outline" onClick={() => navigate('/patient/queue')}>Book · 9rs+gst</Button>
       </div>
 
       <div className="rounded-2xl border hairline bg-white dark:bg-ink-900 p-4">

@@ -45,10 +45,10 @@ export function PrivacyPage() {
       </Block>
 
       <Block heading="Information we collect">
-        <Bullets items={[
+          <Bullets items={[
           <><strong>Clinic account data</strong> — clinic name, address, doctor details, staff accounts, email and mobile numbers used to sign in.</>,
           <><strong>Patient queue data</strong> — name, mobile number, token number, visit source (walk-in / QR / online) and visit timestamps, entered by the clinic or by the patient when booking.</>,
-          <><strong>Billing data</strong> — wallet recharges and per-visit deductions (₹15 + GST per visit), kept as a transaction ledger.</>,
+          <><strong>Billing data</strong> — wallet recharges and per-visit deductions (9rs+gst per visit), kept as a transaction ledger.</>,
           <><strong>Technical data</strong> — device/browser type and service logs used for security and troubleshooting.</>,
         ]} />
       </Block>
@@ -136,8 +136,8 @@ export function TermsPage() {
       </Block>
 
       <Block heading="4. Pricing and wallet">
-        <Bullets items={[
-          <><strong>₹15 + GST per visit</strong> is deducted from the clinic's prepaid wallet when a consultation is marked complete. Charges apply per visit, not per patient — a patient who visits twice is two visits (2 × ₹15 + GST).</>,
+          <Bullets items={[
+          <><strong>9rs+gst per visit</strong> is deducted from the clinic's prepaid wallet when a consultation is marked complete. Charges apply per visit, not per patient — a patient who visits twice is two visits (2 × 9rs+gst).</>,
           'No setup fee, no monthly or annual subscription, no contract lock-in.',
           'Cancellations, no-shows and unconsulted tokens are not charged.',
           'Wallet recharges are non-transferable between clinics. On account closure, any unused balance is settled in accordance with applicable law — write to us.',
@@ -225,7 +225,7 @@ export function CompliancePage() {
 
       <Block heading="Payments and tax">
         <p>
-          Platform fees (₹15 + GST per visit) are GST-compliant, with a full wallet ledger available to
+          Platform fees (9rs+gst per visit) are GST-compliant, with a full wallet ledger available to
           every clinic in its dashboard.
         </p>
       </Block>
