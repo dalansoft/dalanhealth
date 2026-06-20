@@ -294,7 +294,10 @@ export function DashboardShell({ nav, children, title, subtitle, topRight }: Pro
   };
 
   return (
-    <div className="h-screen flex bg-ink-50 dark:bg-ink-950 overflow-hidden">
+    <div className="relative h-screen flex bg-ink-50 dark:bg-ink-950 overflow-hidden">
+      {/* Subtle teal→emerald mesh tint behind the whole shell for depth. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-mesh-light dark:bg-mesh-dark opacity-60" />
+
       {/* Desktop sidebar */}
       <aside className={cn('hidden md:flex sticky top-0 h-screen flex-col transition-[width] duration-300', collapsed ? 'w-[72px]' : 'w-[244px]')}>
         {sidebar('desktop')}
