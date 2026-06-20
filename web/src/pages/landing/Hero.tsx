@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, PlayCircle, Sparkles, Check, BellRing, Link2, MonitorPlay, UserPlus, Volume2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+
+// Real WebGL accent (Three.js) — lazy so it never ships with non-landing routes.
+const HeroCanvas = lazy(() => import('@/components/visual/HeroCanvas'));
 
 const TRUST_TICKS = ['QR Token Booking', 'Walk-In Patients', 'Online Appointments', 'TV Queue Display'];
 
@@ -23,6 +26,11 @@ export function Hero() {
     <section className="relative overflow-hidden min-h-[92vh] flex items-center">
       {/* Drifting gradient + grid backdrop */}
       <div className="pointer-events-none absolute inset-0 -z-10 grid-bg opacity-50" />
+
+      {/* WebGL liquid blob (teal→emerald), behind the glass product frame */}
+      <Suspense fallback={null}>
+        <HeroCanvas />
+      </Suspense>
       <div className="gradient-drift pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 h-[520px] w-[820px] rounded-full bg-brand-500/20 blur-3xl -z-10" />
       <div className="gradient-drift pointer-events-none absolute top-40 -right-24 h-[420px] w-[420px] rounded-full bg-accent-500/20 blur-3xl -z-10" style={{ animationDelay: '-6s' }} />
       <div className="gradient-drift pointer-events-none absolute bottom-0 -left-24 h-[380px] w-[380px] rounded-full bg-token/15 blur-3xl -z-10" style={{ animationDelay: '-12s' }} />
@@ -279,7 +287,7 @@ function ProductMovie() {
       initial={{ opacity: 0, scale: 0.96 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.6, delay: 0.15 }}
-      className="relative hidden sm:block"
+      className="relative block mt-2 lg:mt-0"
       style={{ perspective: 1200 }}
       aria-hidden
     >

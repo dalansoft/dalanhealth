@@ -6,6 +6,7 @@ import { PricingTeaser } from './PricingTeaser';
 import { Stats } from './Stats';
 import { Testimonials } from './Testimonials';
 import { CTA } from './CTA';
+import { Reveal } from '@/components/visual/Reveal';
 
 /**
  * Slim homepage: the animated product story. Deep detail lives on the
@@ -28,13 +29,13 @@ export function LandingPage() {
   return (
     <>
       <Hero />
-      <TokenMergeShowcase />
-      <CompounderShowcase />
-      <PatientJourneyShowcase />
-      <PricingTeaser />
-      <Stats />
-      <Testimonials />
-      <CTA />
+      <Reveal><TokenMergeShowcase /></Reveal>
+      <Reveal><CompounderShowcase /></Reveal>
+      <Reveal><PatientJourneyShowcase /></Reveal>
+      <Reveal><PricingTeaser /></Reveal>
+      <Reveal><Stats /></Reveal>
+      <Reveal><Testimonials /></Reveal>
+      <Reveal><CTA /></Reveal>
     </>
   );
 }

@@ -17,7 +17,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
       className={cn(
         glass ? 'glass rounded-2xl' : 'card',
         padded && 'p-5',
-        hover && 'transition-all duration-300 hover:-translate-y-0.5 hover:shadow-glow',
+        hover && 'card-lift',
         className,
       )}
       {...rest}
