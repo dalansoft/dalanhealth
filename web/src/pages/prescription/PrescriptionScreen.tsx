@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Plus, Trash2, Printer, Download, Share2, Upload, Camera, FileText,
+  Plus, Printer, Download, Share2, Upload, Camera, FileText,
   File as FileIcon, X, Check, RefreshCw, Image as ImageIcon, Search, Save, Loader2,
 } from 'lucide-react';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
@@ -18,25 +18,40 @@ type Medicine = RxMed;
 type Mode = 'digital' | 'upload' | 'camera';
 interface Patient { name: string; mobile: string; when: string }
 
-const DOSE_CHIPS = ['½', '1', '1½', '2'];
-const DAY_CHIPS = ['3 days', '5 days', '7 days'];
 const SLOTS = [
   ['morning', 'Morning'],
   ['afternoon', 'Afternoon'],
   ['evening', 'Evening'],
   ['night', 'Night'],
 ] as const;
+type SlotKey = (typeof SLOTS)[number][0];
 
+// Dropdown options for the medicine entry form.
+const DOSE_OPTIONS: [string, string][] = [
+  ['½', '½ tablet'], ['1', '1 tablet'], ['1½', '1½ tablets'], ['2', '2 tablets'], ['3', '3 tablets'],
+  ['5 ml', '5 ml'], ['10 ml', '10 ml'], ['15 ml', '15 ml'], ['1 drop', '1 drop'], ['2 drops', '2 drops'], ['As directed', 'As directed'],
+];
+const DAY_OPTIONS = ['3 days', '5 days', '7 days', '10 days', '15 days', '1 month', 'Continuous'];
+const WHEN_OPTIONS: { label: string; slots: SlotKey[] }[] = [
+  { label: 'Morning', slots: ['morning'] },
+  { label: 'Afternoon', slots: ['afternoon'] },
+  { label: 'Evening', slots: ['evening'] },
+  { label: 'Night', slots: ['night'] },
+  { label: 'Morning & Night', slots: ['morning', 'night'] },
+  { label: 'Morning & Afternoon', slots: ['morning', 'afternoon'] },
+  { label: 'Afternoon & Night', slots: ['afternoon', 'night'] },
+  { label: 'Morning, Afternoon & Night', slots: ['morning', 'afternoon', 'night'] },
+  { label: 'Morning, Afternoon, Evening & Night', slots: ['morning', 'afternoon', 'evening', 'night'] },
+];
+
+const blankMed = (): Medicine => ({ name: '', dose: '1', morning: false, afternoon: false, evening: false, night: false, days: '' });
 const timingText = (m: Medicine) => SLOTS.filter(([k]) => m[k]).map(([, label]) => label).join(', ');
 const doseLabel = (m: Medicine) => {
   const d = m.dose.trim();
   if (!d) return '—';
   return /^[\d½¼¾.\s]+$/.test(d) ? `${d} tab` : d;
 };
-const chipCls = (active: boolean) =>
-  `rounded-lg px-2.5 py-1 text-xs font-semibold border transition-colors ${
-    active ? 'border-brand-500 bg-brand-500 text-white' : 'hairline text-ink-600 dark:text-ink-300 hover:bg-ink-50 dark:hover:bg-ink-800'
-  }`;
+const selectCls = 'flex-1 min-w-0 rounded-lg border hairline bg-white dark:bg-ink-900 px-2.5 py-2 text-sm text-ink-900 dark:text-ink-50 outline-none focus:border-brand-500';
 const initials = (n: string) => n.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 const fmtSize = (b: number) => (b < 1024 * 1024 ? `${Math.round(b / 1024)} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`);
 const esc = (s: string) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
@@ -58,13 +73,13 @@ const DocField = ({ label, val }: { label: string; val: string }) => (
   </div>
 );
 
-function RxDocument({ doc }: { doc: RxDoc }) {
+function RxDocument({ doc, logo, onRemoveMed }: { doc: RxDoc; logo?: string; onRemoveMed?: (i: number) => void }) {
   const meds = doc.meds.filter((m) => m.name);
   return (
     <div style={{ color: '#0f172a', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <div className="flex items-start justify-between pb-5" style={{ borderBottom: '1px solid #e2e8f0' }}>
         <div>
-          <img src="/logo-full.png" alt="Dalan Health" style={{ height: 30, width: 'auto', display: 'block' }} crossOrigin="anonymous" />
+          <img src={logo || '/logo-full.png'} alt="Dalan Health" style={{ height: 38, width: 'auto', display: 'block' }} />
           <div className="mt-2 text-lg font-semibold">{doc.clinicName}</div>
           <div className="text-xs" style={{ color: '#64748b' }}>{doc.doctor} · {doc.spec}</div>
           <div className="text-xs" style={{ color: '#64748b' }}>{doc.city}</div>
@@ -94,19 +109,27 @@ function RxDocument({ doc }: { doc: RxDoc }) {
                 <th style={{ textAlign: 'left', padding: '8px 14px' }}>Dose</th>
                 <th style={{ textAlign: 'left', padding: '8px 14px' }}>Timing</th>
                 <th style={{ textAlign: 'left', padding: '8px 14px' }}>Duration</th>
+                {onRemoveMed && <th style={{ width: 1 }} />}
               </tr>
             </thead>
             <tbody>
               {meds.map((m, i) => (
-                <tr key={i} style={{ borderTop: '1px solid #eef2f7' }}>
+                <tr key={i} className="group/medrow" style={{ borderTop: '1px solid #eef2f7' }}>
                   <td style={{ padding: '10px 14px', fontWeight: 500 }}>{m.name}</td>
                   <td style={{ padding: '10px 14px', color: '#334155' }}>{doseLabel(m)}</td>
                   <td style={{ padding: '10px 14px', color: '#334155' }}>{timingText(m) || '—'}</td>
                   <td style={{ padding: '10px 14px', color: '#334155' }}>{m.days}</td>
+                  {onRemoveMed && (
+                    <td style={{ padding: '0 10px', width: 1 }}>
+                      <button type="button" onClick={() => onRemoveMed(i)} aria-label="Remove medicine"
+                        className="opacity-0 group-hover/medrow:opacity-100 transition-opacity"
+                        style={{ color: '#ef4444', fontSize: 18, lineHeight: 1, padding: 4 }}>×</button>
+                    </td>
+                  )}
                 </tr>
               ))}
               {meds.length === 0 && (
-                <tr><td colSpan={4} style={{ padding: '10px 14px', color: '#94a3b8' }}>No medicines</td></tr>
+                <tr><td colSpan={onRemoveMed ? 5 : 4} style={{ padding: '10px 14px', color: '#94a3b8' }}>No medicines added yet</td></tr>
               )}
             </tbody>
           </table>
@@ -134,9 +157,30 @@ function RxDocument({ doc }: { doc: RxDoc }) {
   );
 }
 
+// Inline the logo once as a data URL so the captured document never races the
+// image load (which left the logo faded/half-rendered in the PDF).
+let logoDataUrlCache: string | null = null;
+async function getLogoDataUrl(): Promise<string> {
+  if (logoDataUrlCache !== null) return logoDataUrlCache;
+  try {
+    const res = await fetch('/logo-full.png');
+    const blob = await res.blob();
+    logoDataUrlCache = await new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = reject;
+      r.readAsDataURL(blob);
+    });
+  } catch {
+    logoDataUrlCache = '';
+  }
+  return logoDataUrlCache;
+}
+
 // ─── Capture the real document, then print / PDF it (so they always match) ──
 async function renderDocCanvas(doc: RxDoc): Promise<HTMLCanvasElement> {
   const html2canvas = (await import('html2canvas')).default;
+  const logo = await getLogoDataUrl();
   const host = document.createElement('div');
   host.style.cssText = 'position:fixed;left:-10000px;top:0;z-index:-1;background:#ffffff;';
   document.body.appendChild(host);
@@ -144,10 +188,15 @@ async function renderDocCanvas(doc: RxDoc): Promise<HTMLCanvasElement> {
   target.style.cssText = 'width:794px;background:#ffffff;padding:36px;';
   host.appendChild(target);
   const root = createRoot(target);
-  root.render(<RxDocument doc={doc} />);
+  root.render(<RxDocument doc={doc} logo={logo} />);
   try { await (document as unknown as { fonts?: { ready: Promise<unknown> } }).fonts?.ready; } catch { /* ignore */ }
-  await new Promise((r) => setTimeout(r, 350)); // let the logo image paint
-  const canvas = await html2canvas(target, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
+  await new Promise((r) => setTimeout(r, 60));
+  // Make sure every image (the inlined logo) has decoded before capture.
+  const imgs = Array.from(target.querySelectorAll('img')) as HTMLImageElement[];
+  await Promise.all(imgs.map((im) => (im.complete && im.naturalWidth > 0
+    ? Promise.resolve()
+    : new Promise<void>((res) => { im.onload = () => res(); im.onerror = () => res(); }))));
+  const canvas = await html2canvas(target, { scale: 3, backgroundColor: '#ffffff', useCORS: true, logging: false });
   root.unmount();
   host.remove();
   return canvas;
@@ -165,14 +214,15 @@ async function exportDocPdf(doc: RxDoc, filename: string) {
   const pw = pdf.internal.pageSize.getWidth();
   const ph = pdf.internal.pageSize.getHeight();
   const imgH = (canvas.height / canvas.width) * pw;
-  const data = canvas.toDataURL('image/jpeg', 0.95);
+  // PNG (lossless) — JPEG compression was softening the thin logo tagline.
+  const data = canvas.toDataURL('image/png');
   if (imgH <= ph) {
-    pdf.addImage(data, 'JPEG', 0, 0, pw, imgH);
+    pdf.addImage(data, 'PNG', 0, 0, pw, imgH, undefined, 'FAST');
   } else {
     let position = 0;
     let remaining = imgH;
     while (remaining > 0) {
-      pdf.addImage(data, 'JPEG', 0, position, pw, imgH);
+      pdf.addImage(data, 'PNG', 0, position, pw, imgH, undefined, 'FAST');
       remaining -= ph;
       if (remaining > 0) { pdf.addPage(); position -= ph; }
     }
@@ -269,14 +319,29 @@ export function PrescriptionScreen() {
     { name: 'Paracetamol 650mg', dose: '1', morning: true, afternoon: true, evening: false, night: true, days: '3 days' },
     { name: 'Betadine gargle', dose: '15 ml', morning: false, afternoon: true, evening: false, night: true, days: '5 days' },
   ]);
+  const [draft, setDraft] = useState<Medicine>(blankMed());
   const [savedDigital, setSavedDigital] = useState(false);
   const [busy, setBusy] = useState<'print' | 'pdf' | null>(null);
 
-  const addMed = () => setMeds([...meds, { name: '', dose: '1', morning: false, afternoon: false, evening: false, night: false, days: '' }]);
-  const removeMed = (i: number) => setMeds(meds.filter((_, idx) => idx !== i));
-  const updateMed = <K extends keyof Medicine>(i: number, key: K, val: Medicine[K]) => {
-    setMeds(meds.map((m, idx) => idx === i ? { ...m, [key]: val } : m));
+  const updateDraft = <K extends keyof Medicine>(key: K, val: Medicine[K]) => setDraft((d) => ({ ...d, [key]: val }));
+  const activeSlots = SLOTS.filter(([k]) => draft[k]).map(([k]) => k);
+  const whenValue = String(WHEN_OPTIONS.findIndex((o) => o.slots.length === activeSlots.length && o.slots.every((s) => activeSlots.includes(s))));
+  const setWhen = (idx: string) => {
+    const o = WHEN_OPTIONS[Number(idx)];
+    setDraft((d) => ({
+      ...d,
+      morning: !!o?.slots.includes('morning'),
+      afternoon: !!o?.slots.includes('afternoon'),
+      evening: !!o?.slots.includes('evening'),
+      night: !!o?.slots.includes('night'),
+    }));
   };
+  const addMed = () => {
+    if (!draft.name.trim()) return;
+    setMeds((list) => [...list, draft]);
+    setDraft(blankMed());
+  };
+  const removeMed = (i: number) => setMeds(meds.filter((_, idx) => idx !== i));
 
   const currentDoc = (): RxDoc => ({
     clinicName: demoClinic.name, doctor: demoClinic.doctor, spec: demoClinic.specialization, city: demoClinic.city,
@@ -347,39 +412,36 @@ export function PrescriptionScreen() {
               </div>
               <Input label="Follow-up after" value={followUp} onChange={(e) => setFollowUp(e.target.value)} />
               <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="text-xs font-medium text-ink-700 dark:text-ink-300 uppercase tracking-wide">Medicines</div>
-                  <Button size="sm" variant="ghost" leftIcon={<Plus size={12} />} onClick={addMed}>Add</Button>
+                <div className="mb-2 text-xs font-medium text-ink-700 dark:text-ink-300 uppercase tracking-wide">
+                  Add medicine {meds.length > 0 && <span className="text-muted normal-case">· {meds.length} in prescription →</span>}
                 </div>
-                <div className="space-y-2.5">
-                  {meds.map((m, i) => (
-                    <div key={i} className="rounded-xl border hairline p-3 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <input value={m.name} onChange={(e) => updateMed(i, 'name', e.target.value)} placeholder="Medicine name" className="flex-1 bg-transparent text-sm font-medium text-ink-900 dark:text-ink-50 outline-none px-1" />
-                        <button onClick={() => removeMed(i)} className="text-ink-400 hover:text-danger-500 shrink-0"><Trash2 size={14} /></button>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">Dose</span>
-                        {DOSE_CHIPS.map((d) => (
-                          <button key={d} type="button" onClick={() => updateMed(i, 'dose', d)} className={chipCls(m.dose === d)}>{d}</button>
-                        ))}
-                        <input value={m.dose} onChange={(e) => updateMed(i, 'dose', e.target.value)} placeholder="e.g. 15 ml" className="w-20 rounded-lg border hairline bg-white dark:bg-ink-900 px-2 py-1 text-xs outline-none" />
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">When</span>
-                        {SLOTS.map(([k, label]) => (
-                          <button key={k} type="button" onClick={() => updateMed(i, k, !m[k])} className={chipCls(m[k])}>{label}</button>
-                        ))}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">Days</span>
-                        {DAY_CHIPS.map((d) => (
-                          <button key={d} type="button" onClick={() => updateMed(i, 'days', d)} className={chipCls(m.days === d)}>{d}</button>
-                        ))}
-                        <input value={m.days} onChange={(e) => updateMed(i, 'days', e.target.value)} placeholder="custom" className="w-20 rounded-lg border hairline bg-white dark:bg-ink-900 px-2 py-1 text-xs outline-none" />
-                      </div>
-                    </div>
-                  ))}
+
+                {/* One entry form — fill it, then Add. Added medicines appear in the preview only. */}
+                <div className="rounded-xl border hairline p-3 space-y-2.5 bg-ink-50/50 dark:bg-ink-900/40">
+                  <input value={draft.name} onChange={(e) => updateDraft('name', e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addMed(); } }} placeholder="Medicine name (e.g. Azithromycin 500mg)" className="w-full rounded-lg border hairline bg-white dark:bg-ink-900 px-3 py-2 text-sm font-medium text-ink-900 dark:text-ink-50 outline-none" />
+                  <label className="flex items-center gap-2">
+                    <span className="w-12 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">Dose</span>
+                    <select value={draft.dose} onChange={(e) => updateDraft('dose', e.target.value)} className={selectCls}>
+                      {DOSE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <span className="w-12 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">When</span>
+                    <select value={whenValue} onChange={(e) => setWhen(e.target.value)} className={selectCls}>
+                      <option value="-1" disabled>Select timing…</option>
+                      {WHEN_OPTIONS.map((o, idx) => <option key={idx} value={idx}>{o.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <span className="w-12 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">Days</span>
+                    <select value={draft.days} onChange={(e) => updateDraft('days', e.target.value)} className={selectCls}>
+                      <option value="" disabled>Select duration…</option>
+                      {DAY_OPTIONS.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </label>
+                  <Button size="sm" variant="outline" leftIcon={<Plus size={12} />} onClick={addMed} disabled={!draft.name.trim()} className="w-full justify-center">
+                    Add medicine
+                  </Button>
                 </div>
               </div>
             </div>
@@ -387,7 +449,7 @@ export function PrescriptionScreen() {
 
           <div className="lg:col-span-3 space-y-4">
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border hairline shadow-card p-8" style={{ background: '#ffffff' }}>
-              <RxDocument doc={currentDoc()} />
+              <RxDocument doc={currentDoc()} onRemoveMed={removeMed} />
             </motion.div>
             <div className="flex flex-wrap gap-2 justify-end">
               <Button variant={savedDigital ? 'success' : 'primary'} leftIcon={savedDigital ? <Check size={14} /> : <Save size={14} />} onClick={saveDigital}>
