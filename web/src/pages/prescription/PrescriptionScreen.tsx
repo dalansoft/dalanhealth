@@ -18,14 +18,31 @@ type Medicine = RxMed;
 type Mode = 'digital' | 'upload' | 'camera';
 interface Patient { name: string; mobile: string; when: string }
 
-const DOSE_CHIPS = ['½', '1', '1½', '2'];
-const DAY_CHIPS = ['3 days', '5 days', '7 days'];
 const SLOTS = [
   ['morning', 'Morning'],
   ['afternoon', 'Afternoon'],
   ['evening', 'Evening'],
   ['night', 'Night'],
 ] as const;
+type SlotKey = (typeof SLOTS)[number][0];
+
+// Dropdown options for the medicine entry form.
+const DOSE_OPTIONS: [string, string][] = [
+  ['½', '½ tablet'], ['1', '1 tablet'], ['1½', '1½ tablets'], ['2', '2 tablets'], ['3', '3 tablets'],
+  ['5 ml', '5 ml'], ['10 ml', '10 ml'], ['15 ml', '15 ml'], ['1 drop', '1 drop'], ['2 drops', '2 drops'], ['As directed', 'As directed'],
+];
+const DAY_OPTIONS = ['3 days', '5 days', '7 days', '10 days', '15 days', '1 month', 'Continuous'];
+const WHEN_OPTIONS: { label: string; slots: SlotKey[] }[] = [
+  { label: 'Morning', slots: ['morning'] },
+  { label: 'Afternoon', slots: ['afternoon'] },
+  { label: 'Evening', slots: ['evening'] },
+  { label: 'Night', slots: ['night'] },
+  { label: 'Morning & Night', slots: ['morning', 'night'] },
+  { label: 'Morning & Afternoon', slots: ['morning', 'afternoon'] },
+  { label: 'Afternoon & Night', slots: ['afternoon', 'night'] },
+  { label: 'Morning, Afternoon & Night', slots: ['morning', 'afternoon', 'night'] },
+  { label: 'Morning, Afternoon, Evening & Night', slots: ['morning', 'afternoon', 'evening', 'night'] },
+];
 
 const blankMed = (): Medicine => ({ name: '', dose: '1', morning: false, afternoon: false, evening: false, night: false, days: '' });
 const timingText = (m: Medicine) => SLOTS.filter(([k]) => m[k]).map(([, label]) => label).join(', ');
@@ -34,10 +51,7 @@ const doseLabel = (m: Medicine) => {
   if (!d) return '—';
   return /^[\d½¼¾.\s]+$/.test(d) ? `${d} tab` : d;
 };
-const chipCls = (active: boolean) =>
-  `rounded-lg px-2.5 py-1 text-xs font-semibold border transition-colors ${
-    active ? 'border-brand-500 bg-brand-500 text-white' : 'hairline text-ink-600 dark:text-ink-300 hover:bg-ink-50 dark:hover:bg-ink-800'
-  }`;
+const selectCls = 'flex-1 min-w-0 rounded-lg border hairline bg-white dark:bg-ink-900 px-2.5 py-2 text-sm text-ink-900 dark:text-ink-50 outline-none focus:border-brand-500';
 const initials = (n: string) => n.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 const fmtSize = (b: number) => (b < 1024 * 1024 ? `${Math.round(b / 1024)} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`);
 const esc = (s: string) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
@@ -310,6 +324,18 @@ export function PrescriptionScreen() {
   const [busy, setBusy] = useState<'print' | 'pdf' | null>(null);
 
   const updateDraft = <K extends keyof Medicine>(key: K, val: Medicine[K]) => setDraft((d) => ({ ...d, [key]: val }));
+  const activeSlots = SLOTS.filter(([k]) => draft[k]).map(([k]) => k);
+  const whenValue = String(WHEN_OPTIONS.findIndex((o) => o.slots.length === activeSlots.length && o.slots.every((s) => activeSlots.includes(s))));
+  const setWhen = (idx: string) => {
+    const o = WHEN_OPTIONS[Number(idx)];
+    setDraft((d) => ({
+      ...d,
+      morning: !!o?.slots.includes('morning'),
+      afternoon: !!o?.slots.includes('afternoon'),
+      evening: !!o?.slots.includes('evening'),
+      night: !!o?.slots.includes('night'),
+    }));
+  };
   const addMed = () => {
     if (!draft.name.trim()) return;
     setMeds((list) => [...list, draft]);
@@ -391,28 +417,28 @@ export function PrescriptionScreen() {
                 </div>
 
                 {/* One entry form — fill it, then Add. Added medicines appear in the preview only. */}
-                <div className="rounded-xl border hairline p-3 space-y-3 bg-ink-50/50 dark:bg-ink-900/40">
-                  <input value={draft.name} onChange={(e) => updateDraft('name', e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addMed(); } }} placeholder="Medicine name (e.g. Azithromycin 500mg)" className="w-full bg-transparent text-sm font-medium text-ink-900 dark:text-ink-50 outline-none px-1" />
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">Dose</span>
-                    {DOSE_CHIPS.map((d) => (
-                      <button key={d} type="button" onClick={() => updateDraft('dose', d)} className={chipCls(draft.dose === d)}>{d}</button>
-                    ))}
-                    <input value={draft.dose} onChange={(e) => updateDraft('dose', e.target.value)} placeholder="e.g. 15 ml" className="w-20 rounded-lg border hairline bg-white dark:bg-ink-900 px-2 py-1 text-xs outline-none" />
-                  </div>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">When</span>
-                    {SLOTS.map(([k, label]) => (
-                      <button key={k} type="button" onClick={() => updateDraft(k, !draft[k])} className={chipCls(draft[k])}>{label}</button>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">Days</span>
-                    {DAY_CHIPS.map((d) => (
-                      <button key={d} type="button" onClick={() => updateDraft('days', d)} className={chipCls(draft.days === d)}>{d}</button>
-                    ))}
-                    <input value={draft.days} onChange={(e) => updateDraft('days', e.target.value)} placeholder="custom" className="w-20 rounded-lg border hairline bg-white dark:bg-ink-900 px-2 py-1 text-xs outline-none" />
-                  </div>
+                <div className="rounded-xl border hairline p-3 space-y-2.5 bg-ink-50/50 dark:bg-ink-900/40">
+                  <input value={draft.name} onChange={(e) => updateDraft('name', e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addMed(); } }} placeholder="Medicine name (e.g. Azithromycin 500mg)" className="w-full rounded-lg border hairline bg-white dark:bg-ink-900 px-3 py-2 text-sm font-medium text-ink-900 dark:text-ink-50 outline-none" />
+                  <label className="flex items-center gap-2">
+                    <span className="w-12 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">Dose</span>
+                    <select value={draft.dose} onChange={(e) => updateDraft('dose', e.target.value)} className={selectCls}>
+                      {DOSE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <span className="w-12 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">When</span>
+                    <select value={whenValue} onChange={(e) => setWhen(e.target.value)} className={selectCls}>
+                      <option value="-1" disabled>Select timing…</option>
+                      {WHEN_OPTIONS.map((o, idx) => <option key={idx} value={idx}>{o.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <span className="w-12 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">Days</span>
+                    <select value={draft.days} onChange={(e) => updateDraft('days', e.target.value)} className={selectCls}>
+                      <option value="" disabled>Select duration…</option>
+                      {DAY_OPTIONS.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </label>
                   <Button size="sm" variant="outline" leftIcon={<Plus size={12} />} onClick={addMed} disabled={!draft.name.trim()} className="w-full justify-center">
                     Add medicine
                   </Button>
