@@ -9,6 +9,7 @@ import { VoiceLangSelect } from '@/components/ui/VoiceLangSelect';
 import { NowServingAnnouncer } from '@/components/feedback/NowServingAnnouncer';
 import { useQueue, tokenLabel } from '@/store/queue';
 import { useQueueBoot } from '@/hooks/useQueueBoot';
+import { useEta } from '@/hooks/useEta';
 import { useBranch } from '@/store/branch';
 import { getBranchData } from '@/services/demoData';
 import { useAuth } from '@/store/auth';
@@ -98,6 +99,7 @@ export function TvDisplay() {
   }, []);
 
   const current = entries[0];
+  const eta = useEta();
 
   // Auto-fit row count for the up-next list.
   const listRef = useRef<HTMLDivElement>(null);
@@ -405,8 +407,11 @@ export function TvDisplay() {
                       </div>
                       <SourceBadge source={e.source} />
                     </div>
-                    <div className={`text-[10px] lg:text-xs uppercase tracking-wider font-bold shrink-0 ${statusToneClass}`}>
-                      {statusLabel}
+                    <div className="shrink-0 text-right">
+                      <div className={`text-[10px] lg:text-xs uppercase tracking-wider font-bold ${statusToneClass}`}>
+                        {statusLabel}
+                      </div>
+                      <div className="text-[10px] lg:text-xs text-ink-500 dark:text-white/55 mt-0.5">{eta.waitLabel(idx + 1)}</div>
                     </div>
                   </motion.div>
                 );
