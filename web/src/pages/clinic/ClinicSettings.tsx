@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Save, Clock, Palette, Bell, MessageCircle, MessageSquare, Mail, Smartphone } from 'lucide-react';
+import { Save, Clock, Palette, Bell, MessageCircle, MessageSquare, Mail, Smartphone, Sparkles } from 'lucide-react';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useTheme } from '@/store/theme';
+import { useEstimate } from '@/store/estimate';
+import { useEta } from '@/hooks/useEta';
 import { cn } from '@/lib/cn';
 import { demoClinic } from '@/services/demoData';
 
@@ -48,6 +50,8 @@ export function ClinicSettings() {
   const [email, setEmail] = useState(false);
 
   const { theme, set } = useTheme();
+  const { mode, clinicMinutes, setMode, setClinicMinutes } = useEstimate();
+  const { avg } = useEta();
   const [saved, setSaved] = useState(false);
 
   const save = () => {
@@ -96,6 +100,58 @@ export function ClinicSettings() {
               <Input label="To" type="time" value={t2End} onChange={(e) => setT2End(e.target.value)} />
             </div>
           </div>
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div>
+            <CardTitle>Wait-time estimate</CardTitle>
+            <CardSubtitle>How each token's estimated wait is calculated and shown to patients</CardSubtitle>
+          </div>
+          <Clock size={16} className="text-muted" />
+        </CardHeader>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setMode('ai')}
+            className={cn('rounded-xl border-2 p-4 text-left transition-all', mode === 'ai' ? 'border-brand-500 bg-brand-500/5' : 'border-transparent bg-ink-50 dark:bg-ink-900')}
+          >
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-2 text-sm font-semibold text-ink-900 dark:text-ink-50">
+                <Sparkles size={15} className="text-brand-600 dark:text-brand-300" /> AI auto-estimate
+              </span>
+              {mode === 'ai' && <Badge tone="brand" size="sm">On</Badge>}
+            </div>
+            <div className="mt-1 text-xs text-muted">Analyses real consultation times and updates itself — currently ~{avg} min/patient.</div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('clinic')}
+            className={cn('rounded-xl border-2 p-4 text-left transition-all', mode === 'clinic' ? 'border-brand-500 bg-brand-500/5' : 'border-transparent bg-ink-50 dark:bg-ink-900')}
+          >
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-2 text-sm font-semibold text-ink-900 dark:text-ink-50">
+                <Clock size={15} className="text-brand-600 dark:text-brand-300" /> Clinic-set
+              </span>
+              {mode === 'clinic' && <Badge tone="brand" size="sm">On</Badge>}
+            </div>
+            <div className="mt-1 text-xs text-muted">You set a fixed average minutes per patient.</div>
+          </button>
+        </div>
+        {mode === 'clinic' && (
+          <div className="mt-3 max-w-xs">
+            <Input
+              label="Minutes per patient"
+              type="number"
+              inputMode="numeric"
+              value={String(clinicMinutes)}
+              onChange={(e) => setClinicMinutes(Math.max(1, Number(e.target.value) || 0))}
+            />
+          </div>
+        )}
+        <div className="mt-3 rounded-xl border hairline bg-ink-50/60 dark:bg-ink-900/40 px-4 py-3 text-xs text-muted">
+          Shown everywhere a token appears — the queue, the TV display and the patient's tracking screen. Estimated wait = position in queue × {avg} min.
         </div>
       </Card>
 

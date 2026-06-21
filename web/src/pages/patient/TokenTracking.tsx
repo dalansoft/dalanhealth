@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Clock, MapPin, ChevronUp, ChevronDown, Bell } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { useEta } from '@/hooks/useEta';
 import { demoPatient } from '@/services/demoData';
 
 export function TokenTracking() {
@@ -10,6 +11,7 @@ export function TokenTracking() {
   const yours = demoPatient.currentToken;
   const remaining = Math.max(0, yours - running);
   const status: 'Waiting' | 'Queue' | 'Consultation' = remaining > 1 ? 'Waiting' : remaining === 1 ? 'Queue' : 'Consultation';
+  const eta = useEta();
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -46,7 +48,7 @@ export function TokenTracking() {
         <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
           <div className="rounded-2xl bg-white/15 p-3">
             <div className="text-[10px] uppercase tracking-wider opacity-90">Approx wait</div>
-            <div className="font-semibold">~{Math.max(0, remaining * 4)} min</div>
+            <div className="font-semibold">{eta.waitLabel(remaining)}</div>
           </div>
           <div className="rounded-2xl bg-white/15 p-3">
             <div className="text-[10px] uppercase tracking-wider opacity-90">Doctor till</div>

@@ -9,6 +9,7 @@ import { SourceBadge } from '@/components/ui/SourceBadge';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { useQueue, type QueueEntry, tokenLabel } from '@/store/queue';
 import { useQueueBoot } from '@/hooks/useQueueBoot';
+import { useEta } from '@/hooks/useEta';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useSearchParams } from 'react-router-dom';
 import { PatientDetailsDrawer } from '@/components/dashboard/PatientDetailsDrawer';
@@ -19,6 +20,7 @@ export function ClinicQueue() {
   const { entries, advance, skipCurrent, callBack } = useQueue();
   // Live mode (real login) or demo seeding — one hook decides.
   useQueueBoot();
+  const eta = useEta();
   const [selectedEntry, setSelectedEntry] = useState<QueueEntry | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -99,7 +101,10 @@ export function ClinicQueue() {
                     <span className={upNext.emergency ? 'text-danger-500' : ''}>{tokenLabel(upNext)}</span> · {upNext.patientName}
                   </div>
                   <div className="text-xs text-muted">{upNext.patientMobile}</div>
-                  <div className="mt-3"><SourceBadge source={upNext.source} /></div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <SourceBadge source={upNext.source} />
+                    <span className="text-xs text-muted">Est. wait <span className="font-semibold text-ink-700 dark:text-ink-200">{eta.waitLabel(1)}</span> · by {eta.etaClock(1)}</span>
+                  </div>
                 </>
               ) : (
                 <div className="mt-3 text-sm text-muted">No one queued.</div>
@@ -146,6 +151,7 @@ export function ClinicQueue() {
                 <th className="px-5 py-3">Patient</th>
                 <th className="px-5 py-3">Mobile</th>
                 <th className="px-5 py-3">Source</th>
+                <th className="px-5 py-3">Est. wait</th>
                 <th className="px-5 py-3">Status</th>
               </tr>
             </thead>
@@ -174,6 +180,7 @@ export function ClinicQueue() {
                     </td>
                     <td className="px-5 py-3.5 text-muted">{q.patientMobile}</td>
                     <td className="px-5 py-3.5"><SourceBadge source={q.source} /></td>
+                    <td className="px-5 py-3.5 text-muted whitespace-nowrap">{eta.waitLabel(entries.findIndex((e) => e.id === q.id))}</td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2">
                         {q.wasSkipped ? (
@@ -198,7 +205,7 @@ export function ClinicQueue() {
               </AnimatePresence>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-10 text-center text-sm text-muted">
+                  <td colSpan={6} className="px-5 py-10 text-center text-sm text-muted">
                     {nq ? 'No patients match your search.' : 'Queue is empty.'}
                   </td>
                 </tr>
