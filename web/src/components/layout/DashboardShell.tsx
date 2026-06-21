@@ -209,7 +209,7 @@ export function DashboardShell({ nav, children, title, subtitle, topRight }: Pro
                                   ? 'flex flex-col items-center justify-center gap-1 h-14 w-14 mx-auto'
                                   : 'flex items-center gap-3 px-3 py-2.5',
                                 isActive
-                                  ? 'bg-gradient-to-r from-brand-500/90 via-brand-500/80 to-brand-400/70 text-white shadow-glowBright'
+                                  ? 'bg-brand-600 text-white'
                                   : 'text-ink-700 dark:text-white/65 hover:text-ink-900 dark:hover:text-white hover:bg-ink-100 dark:hover:bg-white/[0.05]',
                               )
                             }
@@ -239,7 +239,7 @@ export function DashboardShell({ nav, children, title, subtitle, topRight }: Pro
                                     {n.badge !== undefined && (
                                       <span className={cn(
                                         'rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
-                                        isActive ? 'bg-white/25 text-white' : 'bg-brand-500/15 text-brand-700 dark:bg-brand-500/25 dark:text-brand-200',
+                                        isActive ? 'bg-white/25 text-white' : 'bg-brand-600 text-white',
                                       )}>{n.badge}</span>
                                     )}
                                   </>
