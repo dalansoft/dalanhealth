@@ -389,6 +389,9 @@ export function PrescriptionScreen() {
         ))}
       </div>
 
+      {/* Every prescription, all patients — visible up top regardless of mode */}
+      <PrescriptionHistory />
+
       {mode === 'upload' && <UploadCard patient={patient} onAttach={(s, extra) => record('upload', s, extra)} />}
       {mode === 'camera' && <CameraCard patient={patient} onAttach={(s, extra) => record('photo', s, extra)} />}
 
@@ -462,8 +465,6 @@ export function PrescriptionScreen() {
           </div>
         </div>
       )}
-
-      <PrescriptionHistory />
     </div>
   );
 }
