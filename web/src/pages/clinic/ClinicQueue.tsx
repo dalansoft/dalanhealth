@@ -153,24 +153,25 @@ export function ClinicQueue() {
                         {q.emergency && (
                           <Badge tone="danger" size="sm">Emergency</Badge>
                         )}
-                        {q.wasSkipped && (
-                          <Badge tone="warning" size="sm">Skipped</Badge>
-                        )}
                       </div>
                     </td>
                     <td className="px-5 py-3.5 text-muted">{q.patientMobile}</td>
                     <td className="px-5 py-3.5"><SourceBadge source={q.source} /></td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2">
-                        <StatusPill status={q.status} />
+                        {q.wasSkipped ? (
+                          <Badge tone="warning" size="sm">Skipped</Badge>
+                        ) : (
+                          <StatusPill status={q.status} />
+                        )}
                         {q.wasSkipped && (
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); callBack(q.id); }}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold text-brand-600 dark:text-brand-300 hover:bg-brand-500/10 transition-colors"
-                            title="Bring this patient back to the front of the queue"
+                            className="inline-flex items-center gap-1 rounded-lg border border-brand-500/40 bg-brand-500/10 px-2.5 py-1 text-[11px] font-semibold text-brand-600 dark:text-brand-300 hover:bg-brand-500/20 transition-colors"
+                            title="Recall this patient to the front of the queue"
                           >
-                            <RotateCcw size={11} /> Call back
+                            <RotateCcw size={11} /> Recall
                           </button>
                         )}
                       </div>
