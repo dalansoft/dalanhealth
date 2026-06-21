@@ -45,6 +45,9 @@ export interface QueueEntry {
   /** Daily emergency sequence (1, 2, …). Shown as "E1" etc. instead of the
    *  normal "#23" token, and resets at the start of each day. */
   emergencyNo?: number;
+  /** Set when the consultation is completed — the patient leaves the live
+   *  queue but stays in today's history (Patients section). */
+  completedAt?: string;
 }
 
 /** Display label for a token: "E1" for an emergency (priority) patient,
@@ -57,6 +60,9 @@ export type QueueMode = 'demo' | 'live';
 
 interface QueueState {
   entries: QueueEntry[];
+  /** Today's completed patients (most-recent first) — left the live queue
+   *  after their consultation, but kept for the Patients-section history. */
+  completed: QueueEntry[];
   /** demo → browser-local data + BroadcastChannel tab sync (the /demo flow).
    *  live → the FastAPI backend owns the queue; actions are REST calls and a
    *  WebSocket keeps every device in sync. */
@@ -103,6 +109,27 @@ const sortAndStatus = (list: QueueEntry[]): QueueEntry[] => {
 const CHANNEL_NAME = 'dh-queue-sync';
 const STORAGE_KEY = 'dh-queue-entries';
 const EMERGENCY_KEY = 'dh-emergency-counter';
+const COMPLETED_KEY = 'dh-queue-completed';
+
+/** Today's completed patients, persisted so the Patients-section history
+ *  survives reloads. Resets at the start of each new day. */
+const readCompleted = (): QueueEntry[] => {
+  if (typeof window === 'undefined') return [];
+  const day = new Date().toISOString().slice(0, 10);
+  try {
+    const raw = window.localStorage.getItem(COMPLETED_KEY);
+    const data = raw ? (JSON.parse(raw) as { day: string; list: QueueEntry[] }) : null;
+    return data && data.day === day && Array.isArray(data.list) ? data.list : [];
+  } catch {
+    return [];
+  }
+};
+
+const persistCompleted = (list: QueueEntry[]) => {
+  if (typeof window === 'undefined') return;
+  const day = new Date().toISOString().slice(0, 10);
+  try { window.localStorage.setItem(COMPLETED_KEY, JSON.stringify({ day, list })); } catch {}
+};
 
 /** Per-day emergency counter: never reuses a number within a day (survives
  *  completing earlier emergency patients) and resets to 1 each new day. */
@@ -197,6 +224,7 @@ export const useQueue = create<QueueState>((set, get) => {
 
   return {
     entries: initial,
+    completed: readCompleted(),
     mode: 'demo',
     liveConnected: false,
     setEntries: (e) => {
@@ -234,18 +262,36 @@ export const useQueue = create<QueueState>((set, get) => {
       return no;
     },
     advance: () => {
+      // Record the patient leaving consultation in today's history so the
+      // Patients section can show completed patients, while the live queue
+      // and TV keep showing only who's still queued.
+      const markCompleted = (done?: QueueEntry) => {
+        if (!done) return;
+        const rec: QueueEntry = {
+          ...done,
+          completedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        };
+        const completed = [rec, ...get().completed].slice(0, 200);
+        set({ completed });
+        persistCompleted(completed);
+      };
       if (get().mode === 'live') {
+        const done = get().entries[0];
         import('@/services/api').then(({ queueApi }) =>
           queueApi.completeCurrent().then(({ entries }) =>
-            import('@/services/liveQueue').then(({ mapApiEntries }) =>
-              set({ entries: mapApiEntries(entries) }),
-            ),
+            import('@/services/liveQueue').then(({ mapApiEntries }) => {
+              set({ entries: mapApiEntries(entries) });
+              markCompleted(done);
+            }),
           ),
         ).catch(() => {/* WS will reconcile */});
         return;
       }
-      const next = sortAndStatus(get().entries.slice(1));
+      const list = get().entries;
+      const done = list[0];
+      const next = sortAndStatus(list.slice(1));
       set({ entries: next });
+      markCompleted(done);
       publish(next);
     },
     skipCurrent: () => {
