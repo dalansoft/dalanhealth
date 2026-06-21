@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react';
-import { Search, Users, AlertCircle, CheckCircle2, Clock, Calendar, X } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Users, AlertCircle, CheckCircle2, Clock, Calendar, X, Phone } from 'lucide-react';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard } from '@/components/ui/StatCard';
 import { SourceBadge } from '@/components/ui/SourceBadge';
-import { useQueue, tokenLabel, type QueueEntry, type QueueSource } from '@/store/queue';
+import { Avatar } from '@/components/ui/Avatar';
+import { useQueue, tokenLabel, type QueueEntry, type QueueSource, type PatientDetails } from '@/store/queue';
 import { demoPatients } from '@/services/demoData';
 
 type Tone = 'brand' | 'accent' | 'success' | 'neutral';
@@ -22,6 +24,13 @@ interface Row {
   time: string;
   status: string;      // In consultation / Up next / Waiting / Completed
   tone: Tone;
+  // Extra detail for the "show all" panel.
+  age?: number;
+  gender?: string;
+  diagnosis?: string;
+  fee?: number;
+  doctor?: string;
+  details?: PatientDetails;
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -31,8 +40,8 @@ const fmtDate = (d: Date) => d.toLocaleDateString('en-IN', { day: '2-digit', mon
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 
 const SOURCES: QueueSource[] = ['OFFLINE', 'ONLINE', 'QR'];
+const DOCTORS = ['Dr. Anil Sharma', 'Dr. Priya Gupta', 'Dr. Ravi Kumar'];
 
-// Display status + badge tone for a today's-queue record.
 function statusOf(e: QueueEntry): { label: string; tone: Tone } {
   if (e.completedAt) return { label: 'Completed', tone: 'success' };
   if (e.status === 'Consultation') return { label: 'In consultation', tone: 'brand' };
@@ -40,7 +49,7 @@ function statusOf(e: QueueEntry): { label: string; tone: Tone } {
   return { label: 'Waiting', tone: 'neutral' };
 }
 
-// Deterministic past visits so the date search has multi-day data to find.
+// Deterministic past visits so the date search + history have multi-day data.
 function buildPastVisits(): Row[] {
   const out: Row[] = [];
   demoPatients.forEach((p, pi) => {
@@ -60,22 +69,46 @@ function buildPastVisits(): Row[] {
         time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
         status: 'Completed',
         tone: 'success',
+        age: p.age,
+        gender: p.gender,
+        diagnosis: p.lastDx,
+        fee: 200 + ((pi * 5 + v * 3) % 5) * 50,
+        doctor: DOCTORS[pi % DOCTORS.length],
       });
     }
   });
   return out;
 }
 
+// One label/value line in the detail panel; renders nothing if empty.
+function Field({ label, value }: { label: string; value?: ReactNode }) {
+  if (value === undefined || value === null || value === '') return null;
+  return (
+    <div className="flex justify-between gap-4 py-1.5">
+      <span className="text-xs text-muted">{label}</span>
+      <span className="text-sm font-medium text-ink-900 dark:text-ink-50 text-right">{value}</span>
+    </div>
+  );
+}
+
 export function ClinicPatients() {
   const { entries, completed } = useQueue();
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
-  const [dateFilter, setDateFilter] = useState(''); // yyyy-mm-dd from the calendar
+  const [dateFilter, setDateFilter] = useState('');
+  const [selected, setSelected] = useState<Row | null>(null);
+
+  // Esc closes the detail panel.
+  useEffect(() => {
+    if (!selected) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelected(null); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [selected]);
 
   const past = useMemo(buildPastVisits, []);
 
   const rows = useMemo(() => {
-    // Today: still-in-queue (active) + completed, from the live store.
     const today: Row[] = [...entries, ...completed].map((e) => {
       const st = statusOf(e);
       const d = new Date();
@@ -90,6 +123,9 @@ export function ClinicPatients() {
         time: e.completedAt ?? e.joinedAt,
         status: st.label,
         tone: st.tone,
+        age: e.details?.age,
+        gender: e.details?.gender,
+        details: e.details,
       };
     });
     const all = [...today, ...[...past].sort((a, b) => b.date.getTime() - a.date.getTime())];
@@ -109,6 +145,7 @@ export function ClinicPatients() {
   const inQueueCount = entries.length;
   const seenCount = completed.length;
   const followUps = demoPatients.filter((p) => p.status === 'Follow-up due').length;
+  const d = selected?.details;
 
   return (
     <div className="space-y-5">
@@ -124,7 +161,7 @@ export function ClinicPatients() {
           <CardHeader className="mb-0">
             <div>
               <CardTitle>Patient history</CardTitle>
-              <CardSubtitle>Every visit — in queue and completed, normal &amp; emergency. Search by name, mobile, visit ID or token.</CardSubtitle>
+              <CardSubtitle>Every visit — in queue and completed, normal &amp; emergency. Click a visit ID to see everything.</CardSubtitle>
             </div>
             <Badge tone="neutral">{rows.length} shown</Badge>
           </CardHeader>
@@ -139,7 +176,6 @@ export function ClinicPatients() {
               />
             </div>
 
-            {/* Calendar: pick a date, or type it. Plus clear. */}
             <div className="relative shrink-0">
               <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400 pointer-events-none" />
               <input
@@ -194,7 +230,11 @@ export function ClinicPatients() {
             </thead>
             <tbody className="divide-y hairline">
               {rows.map((r) => (
-                <tr key={r.id} className={`transition-colors hover:bg-ink-50 dark:hover:bg-ink-900/40 ${r.emergency ? 'bg-danger-500/5' : ''}`}>
+                <tr
+                  key={r.id}
+                  onClick={() => setSelected(r)}
+                  className={`cursor-pointer transition-colors hover:bg-ink-50 dark:hover:bg-ink-900/40 ${r.emergency ? 'bg-danger-500/5' : ''}`}
+                >
                   <td className={`px-5 py-3.5 font-semibold ${r.emergency ? 'text-danger-500' : ''}`}>{r.token}</td>
                   <td className="px-5 py-3.5 font-medium text-ink-900 dark:text-ink-50">
                     <div className="flex items-center gap-2">
@@ -203,7 +243,16 @@ export function ClinicPatients() {
                     </div>
                   </td>
                   <td className="px-5 py-3.5 text-muted">{r.mobile}</td>
-                  <td className="px-5 py-3.5 font-mono text-[11px] text-muted">{r.id}</td>
+                  <td className="px-5 py-3.5">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setSelected(r); }}
+                      className="font-mono text-[11px] text-brand-600 dark:text-brand-300 hover:underline"
+                      title="Show full visit details"
+                    >
+                      {r.id}
+                    </button>
+                  </td>
                   <td className="px-5 py-3.5"><SourceBadge source={r.source} /></td>
                   <td className="px-5 py-3.5 text-muted whitespace-nowrap">{fmtDate(r.date)} · {r.time}</td>
                   <td className="px-5 py-3.5"><Badge tone={r.tone} size="sm" pulse={r.status === 'In consultation'}>{r.status}</Badge></td>
@@ -218,6 +267,89 @@ export function ClinicPatients() {
           </table>
         </div>
       </Card>
+
+      {/* ─── Visit detail panel — "show all" ─────────────────────────────── */}
+      <AnimatePresence>
+        {selected && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-[60] bg-ink-950/60 backdrop-blur-sm"
+              onClick={() => setSelected(null)}
+              aria-hidden
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+              className="fixed inset-0 z-[70] flex items-start sm:items-center justify-center p-4 sm:p-6 pointer-events-none overflow-y-auto"
+              role="dialog" aria-modal="true"
+            >
+              <div className="w-full max-w-lg pointer-events-auto rounded-2xl bg-white dark:bg-ink-900 border hairline shadow-2xl my-auto">
+                <div className="flex items-center justify-between gap-3 px-5 py-4 border-b hairline">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar name={selected.name} size="sm" />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-ink-900 dark:text-ink-50 truncate">{selected.name}</span>
+                        <span className={`text-sm font-bold ${selected.emergency ? 'text-danger-500' : 'text-brand-600 dark:text-brand-300'}`}>{selected.token}</span>
+                        {selected.emergency && <Badge tone="danger" size="sm">Emergency</Badge>}
+                      </div>
+                      <div className="text-[11px] text-muted inline-flex items-center gap-1"><Phone size={10} /> {selected.mobile}</div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelected(null)}
+                    className="shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-xl text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800"
+                    aria-label="Close"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div className="p-5 max-h-[70vh] overflow-y-auto">
+                  <div className="rounded-xl border hairline divide-y hairline px-4">
+                    <div className="py-2 text-[11px] font-semibold uppercase tracking-wider text-muted">Visit</div>
+                    <Field label="Visit ID" value={<span className="font-mono">{selected.id}</span>} />
+                    <Field label="Token" value={selected.token} />
+                    <Field label="Status" value={<Badge tone={selected.tone} size="sm">{selected.status}</Badge>} />
+                    <Field label="Date" value={fmtDate(selected.date)} />
+                    <Field label="Time" value={selected.time} />
+                    <Field label="Source" value={<SourceBadge source={selected.source} />} />
+                    <Field label="Doctor" value={selected.doctor} />
+                    <Field label="Diagnosis" value={selected.diagnosis} />
+                    <Field label="Consultation fee" value={selected.fee !== undefined ? `₹${selected.fee}` : undefined} />
+                  </div>
+
+                  <div className="mt-4 rounded-xl border hairline divide-y hairline px-4">
+                    <div className="py-2 text-[11px] font-semibold uppercase tracking-wider text-muted">Patient</div>
+                    <Field label="Name" value={selected.name} />
+                    <Field label="Mobile" value={selected.mobile} />
+                    <Field label="Age" value={selected.age} />
+                    <Field label="Gender" value={selected.gender} />
+                  </div>
+
+                  {d && (d.weight || d.height || d.bloodGroup || d.address || d.allergies || d.conditions || d.emergencyName) && (
+                    <div className="mt-4 rounded-xl border hairline divide-y hairline px-4">
+                      <div className="py-2 text-[11px] font-semibold uppercase tracking-wider text-muted">Health record</div>
+                      <Field label="Weight" value={d.weight !== undefined ? `${d.weight} kg` : undefined} />
+                      <Field label="Height" value={d.height !== undefined ? `${d.height} cm` : undefined} />
+                      <Field label="Blood group" value={d.bloodGroup} />
+                      <Field label="Address" value={d.address} />
+                      <Field label="Allergies" value={d.allergies} />
+                      <Field label="Conditions" value={d.conditions} />
+                      <Field label="Emergency contact" value={d.emergencyName ? `${d.emergencyName}${d.emergencyMobile ? ` · ${d.emergencyMobile}` : ''}` : undefined} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
