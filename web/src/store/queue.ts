@@ -75,6 +75,8 @@ interface QueueState {
    *  consultation, numbered E1, E2… (daily reset). Returns the assigned
    *  emergency number so the caller can show it. */
   addEmergency: (e: Omit<QueueEntry, 'token' | 'status' | 'order' | 'emergency' | 'emergencyNo'>) => number;
+  /** Edit a patient's name / details in place (mobile + token stay fixed). */
+  updateEntry: (id: string, patch: Partial<Pick<QueueEntry, 'patientName' | 'details'>>) => void;
   advance: () => void;
   skipCurrent: () => void;
   /** Bring a previously-skipped patient back to the front (becomes the next
@@ -260,6 +262,15 @@ export const useQueue = create<QueueState>((set, get) => {
       set({ entries: next });
       publish(next);
       return no;
+    },
+    updateEntry: (id, patch) => {
+      const next = sortAndStatus(get().entries.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+      set({ entries: next });
+      publish(next);
+      // Keep today's history in sync if this patient is already there.
+      const comp = get().completed.map((e) => (e.id === id ? { ...e, ...patch } : e));
+      set({ completed: comp });
+      persistCompleted(comp);
     },
     advance: () => {
       // Record the patient leaving consultation in today's history so the

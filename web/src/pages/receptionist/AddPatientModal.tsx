@@ -2,10 +2,13 @@ import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { AddPatient } from './AddPatient';
+import type { QueueEntry } from '@/store/queue';
 
 interface Props {
   open: boolean;
   onClose: () => void;
+  /** When set, the modal opens in EDIT mode for this patient (mobile locked). */
+  editEntry?: QueueEntry;
 }
 
 /**
@@ -17,7 +20,7 @@ interface Props {
  * Triggered from: ClinicQueue "Add patient" CTA, ClinicDashboard hero,
  * Receptionist dashboard quick action, etc.
  */
-export function AddPatientModal({ open, onClose }: Props) {
+export function AddPatientModal({ open, onClose, editEntry }: Props) {
   // Esc to close.
   useEffect(() => {
     if (!open) return;
@@ -54,7 +57,7 @@ export function AddPatientModal({ open, onClose }: Props) {
             <div className="w-full max-w-md pointer-events-auto rounded-2xl bg-white dark:bg-ink-900 border hairline shadow-2xl my-auto">
               <div className="flex items-center justify-between px-5 py-3 border-b hairline">
                 <div id="add-patient-modal-title" className="text-sm font-semibold text-ink-900 dark:text-ink-50">
-                  Add patient
+                  {editEntry ? 'Edit patient' : 'Add patient'}
                 </div>
                 <button
                   type="button"
@@ -66,7 +69,7 @@ export function AddPatientModal({ open, onClose }: Props) {
                 </button>
               </div>
               <div className="p-5 max-h-[80vh] overflow-y-auto">
-                <AddPatient embedded onClose={onClose} />
+                <AddPatient key={editEntry?.id ?? 'add'} embedded editEntry={editEntry} onClose={onClose} />
               </div>
             </div>
           </motion.div>

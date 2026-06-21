@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, User, Phone, MapPin, Calendar, Activity, Droplet, Weight, Ruler,
   ShieldAlert, AlertTriangle, Clock, History, Receipt, FileText, Ticket,
-  Users as UsersIcon,
+  Users as UsersIcon, Pencil,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
@@ -18,6 +18,8 @@ interface Props {
   open: boolean;
   entry: QueueEntry | null;
   onClose: () => void;
+  /** When provided, an "Edit" button opens the edit form for this patient. */
+  onEdit?: (entry: QueueEntry) => void;
 }
 
 interface VisitRecord {
@@ -72,7 +74,7 @@ const formatBookedAt = (joinedAt: string): string => {
   return `${today} · ${joinedAt}`;
 };
 
-export function PatientDetailsDrawer({ open, entry, onClose }: Props) {
+export function PatientDetailsDrawer({ open, entry, onClose, onEdit }: Props) {
   // Close on Esc.
   useEffect(() => {
     if (!open) return;
@@ -138,14 +140,25 @@ export function PatientDetailsDrawer({ open, entry, onClose }: Props) {
                   </div>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-xl text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
-                aria-label="Close"
-              >
-                <X size={16} />
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {onEdit && (
+                  <button
+                    type="button"
+                    onClick={() => onEdit(entry)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border hairline px-3 h-9 text-xs font-semibold text-ink-700 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
+                  >
+                    <Pencil size={13} /> Edit
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
+                  aria-label="Close"
+                >
+                  <X size={16} />
+                </button>
+              </div>
             </div>
 
             {/* Scrollable body */}

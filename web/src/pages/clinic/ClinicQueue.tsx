@@ -23,6 +23,7 @@ export function ClinicQueue() {
   const eta = useEta();
   const [selectedEntry, setSelectedEntry] = useState<QueueEntry | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [editEntry, setEditEntry] = useState<QueueEntry | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Deep-link support: navigating here as `?patient=<id>` (from the header
@@ -220,11 +221,15 @@ export function ClinicQueue() {
         open={!!selectedEntry}
         entry={selectedEntry}
         onClose={closeDrawer}
+        onEdit={(e) => { closeDrawer(); setEditEntry(e); }}
       />
 
       {/* Inline Add patient modal — keeps the receptionist on the same page,
           no route switch into /receptionist/add */}
       <AddPatientModal open={addOpen} onClose={() => setAddOpen(false)} />
+
+      {/* Edit patient modal — same form, mobile locked */}
+      <AddPatientModal open={!!editEntry} editEntry={editEntry ?? undefined} onClose={() => setEditEntry(null)} />
     </div>
   );
 }
