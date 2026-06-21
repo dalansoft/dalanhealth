@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Plus, Trash2, Printer, Download, Share2, Upload, Camera, FileText,
-  File as FileIcon, X, Check, RefreshCw, Image as ImageIcon, Search, Save,
+  File as FileIcon, X, Check, RefreshCw, Image as ImageIcon, Search, Save, Loader2,
 } from 'lucide-react';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { Logo } from '@/components/ui/Logo';
 import { useQueue } from '@/store/queue';
 import { usePrescriptions, type RxKind, type Rx, type RxMed, type RxDoc } from '@/store/prescriptions';
 import { demoClinic, demoPatients } from '@/services/demoData';
@@ -39,65 +39,162 @@ const chipCls = (active: boolean) =>
   }`;
 const initials = (n: string) => n.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 const fmtSize = (b: number) => (b < 1024 * 1024 ? `${Math.round(b / 1024)} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`);
-
-// ─── Printable prescription document (standalone HTML) ──────────────────────
 const esc = (s: string) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+const pdfName = (n: string) => `prescription-${n.replace(/\s+/g, '-')}.pdf`;
 
-function buildRxHtml(d: RxDoc): string {
-  const rows = d.meds.filter((m) => m.name).map((m) =>
-    `<tr><td>${esc(m.name)}</td><td>${esc(doseLabel(m))}</td><td>${esc(timingText(m) || '—')}</td><td>${esc(m.days)}</td></tr>`,
-  ).join('') || '<tr><td colspan="4" style="color:#94a3b8">No medicines</td></tr>';
-  const field = (l: string, v: string) => `<div><div class="lbl">${esc(l)}</div><div class="val">${esc(v || '—')}</div></div>`;
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Prescription — ${esc(d.patient)}</title>
-<style>
-  *{box-sizing:border-box}
-  body{font-family:'Inter',Arial,sans-serif;color:#0f172a;margin:0;padding:28px}
-  .rx{max-width:720px;margin:0 auto}
-  .hdr{display:flex;justify-content:space-between;border-bottom:1px solid #e2e8f0;padding-bottom:16px}
-  .brand{font-size:20px;font-weight:800;color:#2563eb;letter-spacing:-.02em}
-  .clinic{font-size:16px;font-weight:700;margin-top:6px}
-  .muted{color:#64748b;font-size:12px}
-  .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8}
-  .val{font-size:14px}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
-  h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin:22px 0 8px}
-  table{width:100%;border-collapse:collapse;border:1px solid #e2e8f0}
-  th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;background:#f8fafc;padding:8px 12px}
-  td{padding:9px 12px;border-top:1px solid #eef2f7;font-size:13px}
-  .ftr{display:flex;justify-content:space-between;align-items:flex-end;margin-top:48px;padding-top:16px;border-top:1px solid #e2e8f0}
-  .sign{border-bottom:1px solid #cbd5e1;width:160px;margin-bottom:4px}
-  @media print{body{padding:0}}
-</style></head><body>
-<div class="rx">
-  <div class="hdr">
-    <div>
-      <div class="brand">DALAN HEALTH</div>
-      <div class="clinic">${esc(d.clinicName)}</div>
-      <div class="muted">${esc(d.doctor)} · ${esc(d.spec)}</div>
-      <div class="muted">${esc(d.city)}</div>
-    </div>
-    <div style="text-align:right">
-      <div class="lbl">Date</div><div class="val">${esc(d.date)}</div>
-      <div class="lbl" style="margin-top:8px">Patient</div><div class="val">${esc(d.patient)}</div>
-    </div>
+// A blank-ish doc from a record that has no structured content (seeded rows).
+const docFromRx = (rx: Rx): RxDoc => ({
+  clinicName: demoClinic.name, doctor: demoClinic.doctor, spec: demoClinic.specialization, city: demoClinic.city,
+  patient: rx.patientName, date: rx.date,
+  symptoms: '', diagnosis: rx.summary, tests: '', followUp: '', notes: '', meds: [],
+});
+
+// ─── The printable prescription "paper" — one source of truth for screen,
+//     PDF and print, so they all look identical. Always light. ──────────────
+const DocField = ({ label, val }: { label: string; val: string }) => (
+  <div>
+    <div className="text-[11px] uppercase tracking-wider" style={{ color: '#94a3b8' }}>{label}</div>
+    <div className="text-sm" style={{ color: '#0f172a' }}>{val || '—'}</div>
   </div>
-  <div class="grid">${field('Symptoms', d.symptoms)}${field('Diagnosis', d.diagnosis)}${field('Tests', d.tests)}${field('Follow-up', d.followUp)}</div>
-  <h3>℞ Medicines</h3>
-  <table><thead><tr><th>Medicine</th><th>Dose</th><th>Timing</th><th>Duration</th></tr></thead><tbody>${rows}</tbody></table>
-  ${d.notes ? `<h3>Doctor's notes</h3><div class="val">${esc(d.notes)}</div>` : ''}
-  <div class="ftr">
-    <div class="muted">Powered by <b>Dalan Health</b><br/>A Product of <b>Dalansoft Technologies</b></div>
-    <div style="text-align:right"><div class="sign"></div><div class="muted">Doctor signature</div></div>
-  </div>
-</div></body></html>`;
+);
+
+function RxDocument({ doc }: { doc: RxDoc }) {
+  const meds = doc.meds.filter((m) => m.name);
+  return (
+    <div style={{ color: '#0f172a', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      <div className="flex items-start justify-between pb-5" style={{ borderBottom: '1px solid #e2e8f0' }}>
+        <div>
+          <img src="/logo-full.png" alt="Dalan Health" style={{ height: 30, width: 'auto', display: 'block' }} crossOrigin="anonymous" />
+          <div className="mt-2 text-lg font-semibold">{doc.clinicName}</div>
+          <div className="text-xs" style={{ color: '#64748b' }}>{doc.doctor} · {doc.spec}</div>
+          <div className="text-xs" style={{ color: '#64748b' }}>{doc.city}</div>
+        </div>
+        <div className="text-right">
+          <div className="text-xs uppercase tracking-wider" style={{ color: '#94a3b8' }}>Date</div>
+          <div className="text-sm font-semibold">{doc.date}</div>
+          <div className="mt-2 text-xs uppercase tracking-wider" style={{ color: '#94a3b8' }}>Patient</div>
+          <div className="text-sm font-semibold">{doc.patient}</div>
+        </div>
+      </div>
+
+      <div className="mt-5 grid grid-cols-2 gap-4">
+        <DocField label="Symptoms" val={doc.symptoms} />
+        <DocField label="Diagnosis" val={doc.diagnosis} />
+        <DocField label="Tests" val={doc.tests} />
+        <DocField label="Follow-up" val={doc.followUp} />
+      </div>
+
+      <div className="mt-6">
+        <div className="text-xs uppercase tracking-wider mb-2" style={{ color: '#64748b' }}>℞ Medicines</div>
+        <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
+          <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: '#f8fafc', color: '#64748b', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                <th style={{ textAlign: 'left', padding: '8px 14px' }}>Medicine</th>
+                <th style={{ textAlign: 'left', padding: '8px 14px' }}>Dose</th>
+                <th style={{ textAlign: 'left', padding: '8px 14px' }}>Timing</th>
+                <th style={{ textAlign: 'left', padding: '8px 14px' }}>Duration</th>
+              </tr>
+            </thead>
+            <tbody>
+              {meds.map((m, i) => (
+                <tr key={i} style={{ borderTop: '1px solid #eef2f7' }}>
+                  <td style={{ padding: '10px 14px', fontWeight: 500 }}>{m.name}</td>
+                  <td style={{ padding: '10px 14px', color: '#334155' }}>{doseLabel(m)}</td>
+                  <td style={{ padding: '10px 14px', color: '#334155' }}>{timingText(m) || '—'}</td>
+                  <td style={{ padding: '10px 14px', color: '#334155' }}>{m.days}</td>
+                </tr>
+              ))}
+              {meds.length === 0 && (
+                <tr><td colSpan={4} style={{ padding: '10px 14px', color: '#94a3b8' }}>No medicines</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {doc.notes && (
+        <div className="mt-5">
+          <div className="text-xs uppercase tracking-wider mb-1" style={{ color: '#64748b' }}>Doctor's notes</div>
+          <p className="text-sm" style={{ color: '#334155' }}>{doc.notes}</p>
+        </div>
+      )}
+
+      <div className="mt-10 pt-5 flex items-end justify-between gap-4" style={{ borderTop: '1px solid #e2e8f0' }}>
+        <div className="text-[11px]" style={{ color: '#64748b' }}>
+          <div>Powered by <b style={{ color: '#1e293b' }}>Dalan Health</b></div>
+          <div>A Product of <b style={{ color: '#1e293b' }}>Dalansoft Technologies</b></div>
+        </div>
+        <div className="text-right">
+          <div style={{ borderBottom: '1px solid #cbd5e1', width: 160, marginBottom: 4 }} />
+          <div className="text-xs" style={{ color: '#64748b' }}>Doctor signature</div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-function simpleRxHtml(rx: Rx): string {
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Prescription — ${esc(rx.patientName)}</title>
-<style>body{font-family:Inter,Arial,sans-serif;color:#0f172a;padding:28px;max-width:720px;margin:auto}.brand{font-size:20px;font-weight:800;color:#2563eb}.muted{color:#64748b;font-size:12px}h2{margin:8px 0}</style></head>
-<body><div class="brand">DALAN HEALTH</div><h2>Prescription</h2>
-<div>Patient: <b>${esc(rx.patientName)}</b> · ${esc(rx.patientMobile)}</div>
-<div class="muted">Date: ${esc(rx.date)} · ${esc(rx.kind)}</div><p>${esc(rx.summary)}</p></body></html>`;
+// ─── Capture the real document, then print / PDF it (so they always match) ──
+async function renderDocCanvas(doc: RxDoc): Promise<HTMLCanvasElement> {
+  const html2canvas = (await import('html2canvas')).default;
+  const host = document.createElement('div');
+  host.style.cssText = 'position:fixed;left:-10000px;top:0;z-index:-1;background:#ffffff;';
+  document.body.appendChild(host);
+  const target = document.createElement('div');
+  target.style.cssText = 'width:794px;background:#ffffff;padding:36px;';
+  host.appendChild(target);
+  const root = createRoot(target);
+  root.render(<RxDocument doc={doc} />);
+  try { await (document as unknown as { fonts?: { ready: Promise<unknown> } }).fonts?.ready; } catch { /* ignore */ }
+  await new Promise((r) => setTimeout(r, 350)); // let the logo image paint
+  const canvas = await html2canvas(target, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
+  root.unmount();
+  host.remove();
+  return canvas;
+}
+
+async function loadJsPdf() {
+  const { jsPDF } = await import('jspdf');
+  return { jsPDF };
+}
+
+async function exportDocPdf(doc: RxDoc, filename: string) {
+  const canvas = await renderDocCanvas(doc);
+  const { jsPDF } = await loadJsPdf();
+  const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
+  const pw = pdf.internal.pageSize.getWidth();
+  const ph = pdf.internal.pageSize.getHeight();
+  const imgH = (canvas.height / canvas.width) * pw;
+  const data = canvas.toDataURL('image/jpeg', 0.95);
+  if (imgH <= ph) {
+    pdf.addImage(data, 'JPEG', 0, 0, pw, imgH);
+  } else {
+    let position = 0;
+    let remaining = imgH;
+    while (remaining > 0) {
+      pdf.addImage(data, 'JPEG', 0, position, pw, imgH);
+      remaining -= ph;
+      if (remaining > 0) { pdf.addPage(); position -= ph; }
+    }
+  }
+  pdf.save(filename);
+}
+
+async function exportDocPrint(doc: RxDoc) {
+  const canvas = await renderDocCanvas(doc);
+  printHtml(`<!doctype html><html><head><meta charset="utf-8"><style>@page{margin:12mm}html,body{margin:0}img{width:100%;display:block}</style></head><body><img src="${canvas.toDataURL('image/png')}"></body></html>`);
+}
+
+async function imagePdf(dataUrl: string, filename: string) {
+  const { jsPDF } = await loadJsPdf();
+  const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
+  const W = pdf.internal.pageSize.getWidth();
+  const H = pdf.internal.pageSize.getHeight();
+  const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = dataUrl; });
+  const ratio = Math.min((W - 60) / img.width, (H - 60) / img.height, 1);
+  const w = img.width * ratio, h = img.height * ratio;
+  pdf.addImage(dataUrl, dataUrl.includes('image/png') ? 'PNG' : 'JPEG', (W - w) / 2, 30, w, h);
+  pdf.save(filename);
 }
 
 function fileRxHtml(rx: Rx): string {
@@ -109,7 +206,17 @@ function fileRxHtml(rx: Rx): string {
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(rx.fileName ?? 'Prescription')}</title><style>body{margin:0;padding:12px}</style></head><body>${body}</body></html>`;
 }
 
-const rxHtml = (rx: Rx): string => (rx.doc ? buildRxHtml(rx.doc) : rx.fileUrl ? fileRxHtml(rx) : simpleRxHtml(rx));
+async function downloadFilePdf(rx: Rx) {
+  const name = pdfName(rx.patientName);
+  const fn = (rx.fileName ?? '').toLowerCase();
+  if (!rx.fileUrl) return;
+  if (fn.endsWith('.pdf') || rx.fileUrl.startsWith('data:application/pdf')) { downloadUrl(rx.fileUrl, rx.fileName ?? name); return; }
+  if (rx.fileUrl.startsWith('data:image') || /\.(jpe?g|png)$/i.test(fn) || rx.fileUrl.startsWith('blob:')) { await imagePdf(rx.fileUrl, name); return; }
+  downloadUrl(rx.fileUrl, rx.fileName ?? name); // e.g. DOCX
+}
+
+const printRx = (rx: Rx) => (rx.fileUrl ? printHtml(fileRxHtml(rx)) : exportDocPrint(rx.doc ?? docFromRx(rx)));
+const downloadRx = (rx: Rx) => (rx.fileUrl ? downloadFilePdf(rx) : exportDocPdf(rx.doc ?? docFromRx(rx), pdfName(rx.patientName)));
 
 function printHtml(html: string) {
   const iframe = document.createElement('iframe');
@@ -121,112 +228,13 @@ function printHtml(html: string) {
   if (!win || !doc) { iframe.remove(); return; }
   doc.open(); doc.write(html); doc.close();
   const run = () => { try { win.focus(); win.print(); } finally { setTimeout(() => iframe.remove(), 1000); } };
-  if (doc.readyState === 'complete') setTimeout(run, 250);
-  else win.onload = () => setTimeout(run, 250);
+  if (doc.readyState === 'complete') setTimeout(run, 350);
+  else win.onload = () => setTimeout(run, 350);
 }
 
 function downloadUrl(url: string, filename: string) {
   const a = document.createElement('a');
   a.href = url; a.download = filename; a.click();
-}
-
-// ─── PDF export (jsPDF, lazy-loaded on demand) ──────────────────────────────
-async function loadJsPdf() {
-  const { jsPDF } = await import('jspdf');
-  const autoTable = (await import('jspdf-autotable')).default;
-  return { jsPDF, autoTable };
-}
-
-async function digitalPdf(d: RxDoc) {
-  const { jsPDF, autoTable } = await loadJsPdf();
-  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-  const W = doc.internal.pageSize.getWidth();
-  const H = doc.internal.pageSize.getHeight();
-  let y = 52;
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(37, 99, 235);
-  doc.text('DALAN HEALTH', 40, y);
-  doc.setTextColor(15, 23, 42); doc.setFontSize(13);
-  doc.text(d.clinicName, 40, y + 20);
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(100, 116, 139);
-  doc.text(`${d.doctor} · ${d.spec}`, 40, y + 35);
-  doc.text(d.city, 40, y + 48);
-  doc.setFontSize(8); doc.setTextColor(148, 163, 184);
-  doc.text('DATE', W - 40, y, { align: 'right' });
-  doc.setFontSize(11); doc.setTextColor(15, 23, 42);
-  doc.text(d.date, W - 40, y + 14, { align: 'right' });
-  doc.setFontSize(8); doc.setTextColor(148, 163, 184);
-  doc.text('PATIENT', W - 40, y + 32, { align: 'right' });
-  doc.setFontSize(11); doc.setTextColor(15, 23, 42);
-  doc.text(d.patient, W - 40, y + 46, { align: 'right' });
-  y += 66;
-  doc.setDrawColor(226, 232, 240); doc.line(40, y, W - 40, y); y += 22;
-  const field = (label: string, val: string, x: number, yy: number) => {
-    doc.setFontSize(8); doc.setTextColor(148, 163, 184); doc.text(label.toUpperCase(), x, yy);
-    doc.setFontSize(11); doc.setTextColor(15, 23, 42);
-    doc.text(doc.splitTextToSize(val || '—', (W - 80) / 2 - 12), x, yy + 14);
-  };
-  field('Symptoms', d.symptoms, 40, y); field('Diagnosis', d.diagnosis, W / 2, y); y += 42;
-  field('Tests', d.tests, 40, y); field('Follow-up', d.followUp, W / 2, y); y += 46;
-  autoTable(doc, {
-    startY: y,
-    head: [['Medicine', 'Dose', 'Timing', 'Duration']],
-    body: d.meds.filter((m) => m.name).map((m) => [m.name, doseLabel(m), timingText(m) || '—', m.days]),
-    theme: 'grid',
-    headStyles: { fillColor: [248, 250, 252], textColor: [100, 116, 139], fontSize: 9, fontStyle: 'bold' },
-    styles: { fontSize: 10, cellPadding: 6, textColor: [15, 23, 42], lineColor: [226, 232, 240] },
-    margin: { left: 40, right: 40 },
-  });
-  let after = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 24;
-  if (d.notes) {
-    doc.setFontSize(8); doc.setTextColor(100, 116, 139); doc.text("DOCTOR'S NOTES", 40, after); after += 14;
-    doc.setFontSize(10); doc.setTextColor(15, 23, 42);
-    doc.text(doc.splitTextToSize(d.notes, W - 80), 40, after);
-  }
-  doc.setDrawColor(203, 213, 225); doc.line(W - 200, H - 64, W - 40, H - 64);
-  doc.setFontSize(9); doc.setTextColor(100, 116, 139); doc.text('Doctor signature', W - 40, H - 50, { align: 'right' });
-  doc.setFontSize(8); doc.text('Powered by Dalan Health · Dalansoft Technologies', 40, H - 50);
-  return doc;
-}
-
-async function imagePdf(dataUrl: string) {
-  const { jsPDF } = await loadJsPdf();
-  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-  const W = doc.internal.pageSize.getWidth();
-  const H = doc.internal.pageSize.getHeight();
-  const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = dataUrl; });
-  const ratio = Math.min((W - 80) / img.width, (H - 80) / img.height, 1);
-  const w = img.width * ratio, h = img.height * ratio;
-  doc.addImage(dataUrl, dataUrl.includes('image/png') ? 'PNG' : 'JPEG', (W - w) / 2, 40, w, h);
-  return doc;
-}
-
-async function summaryPdf(rx: Rx) {
-  const { jsPDF } = await loadJsPdf();
-  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(37, 99, 235);
-  doc.text('DALAN HEALTH', 40, 56);
-  doc.setTextColor(15, 23, 42); doc.setFontSize(14); doc.text('Prescription', 40, 84);
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
-  doc.text(`Patient: ${rx.patientName}  ·  ${rx.patientMobile}`, 40, 112);
-  doc.setTextColor(100, 116, 139); doc.setFontSize(10);
-  doc.text(`Date: ${rx.date}    Type: ${rx.kind}`, 40, 130);
-  doc.setTextColor(15, 23, 42); doc.setFontSize(11);
-  doc.text(doc.splitTextToSize(rx.summary, 500), 40, 158);
-  return doc;
-}
-
-/** Download any prescription as a PDF — digital, attached file, or photo. */
-async function downloadRxPdf(rx: Rx) {
-  const name = `prescription-${rx.patientName.replace(/\s+/g, '-')}.pdf`;
-  if (rx.doc) { (await digitalPdf(rx.doc)).save(name); return; }
-  if (rx.fileUrl) {
-    const fn = (rx.fileName ?? '').toLowerCase();
-    if (fn.endsWith('.pdf') || rx.fileUrl.startsWith('data:application/pdf')) { downloadUrl(rx.fileUrl, rx.fileName ?? name); return; }
-    if (rx.fileUrl.startsWith('data:image') || /\.(jpe?g|png)$/i.test(fn) || rx.fileUrl.startsWith('blob:')) { (await imagePdf(rx.fileUrl)).save(name); return; }
-    downloadUrl(rx.fileUrl, rx.fileName ?? name); // e.g. DOCX — keep original
-    return;
-  }
-  (await summaryPdf(rx)).save(name);
 }
 
 export function PrescriptionScreen() {
@@ -235,7 +243,6 @@ export function PrescriptionScreen() {
   const completed = useQueue((s) => s.completed);
   const addRx = usePrescriptions((s) => s.add);
 
-  // Only patients who have finished a visit — they're the ones who get an Rx.
   const completedPatients = useMemo<Patient[]>(() => {
     const seen = new Set<string>();
     const out: Patient[] = [];
@@ -263,6 +270,7 @@ export function PrescriptionScreen() {
     { name: 'Betadine gargle', dose: '15 ml', morning: false, afternoon: true, evening: false, night: true, days: '5 days' },
   ]);
   const [savedDigital, setSavedDigital] = useState(false);
+  const [busy, setBusy] = useState<'print' | 'pdf' | null>(null);
 
   const addMed = () => setMeds([...meds, { name: '', dose: '1', morning: false, afternoon: false, evening: false, night: false, days: '' }]);
   const removeMed = (i: number) => setMeds(meds.filter((_, idx) => idx !== i));
@@ -286,6 +294,9 @@ export function PrescriptionScreen() {
     setTimeout(() => setSavedDigital(false), 2000);
   };
 
+  const doPrint = async () => { setBusy('print'); try { await exportDocPrint(currentDoc()); } finally { setBusy(null); } };
+  const doPdf = async () => { setBusy('pdf'); try { await exportDocPdf(currentDoc(), pdfName(patient.name)); } finally { setBusy(null); } };
+
   const tabs = [
     { key: 'digital', label: 'Create digitally', icon: <FileText size={15} /> },
     { key: 'upload', label: 'Upload file', icon: <Upload size={15} /> },
@@ -296,7 +307,6 @@ export function PrescriptionScreen() {
     <div className="space-y-5">
       <PatientPicker patients={completedPatients} value={patient} onChange={setPatient} />
 
-      {/* Mode switcher */}
       <div className="flex flex-wrap gap-2">
         {tabs.map((t) => (
           <button
@@ -375,83 +385,18 @@ export function PrescriptionScreen() {
             </div>
           </Card>
 
-          <div className="lg:col-span-3">
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl bg-white dark:bg-ink-900 border hairline shadow-card p-8 print:shadow-none print:border-none">
-              <div className="flex items-start justify-between border-b hairline pb-5">
-                <div>
-                  <Logo size="md" asLink={false} />
-                  <div className="mt-2 text-lg font-semibold text-ink-900 dark:text-ink-50">{demoClinic.name}</div>
-                  <div className="text-xs text-muted">{demoClinic.doctor} · {demoClinic.specialization}</div>
-                  <div className="text-xs text-muted">{demoClinic.city}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs uppercase tracking-wider text-muted">Date</div>
-                  <div className="text-sm font-semibold text-ink-900 dark:text-ink-50">{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
-                  <div className="mt-2 text-xs uppercase tracking-wider text-muted">Patient</div>
-                  <div className="text-sm font-semibold text-ink-900 dark:text-ink-50">{patient.name}</div>
-                </div>
-              </div>
-
-              <div className="mt-5 grid sm:grid-cols-2 gap-4 text-sm">
-                <Field label="Symptoms" val={symptoms} />
-                <Field label="Diagnosis" val={diagnosis} />
-                <Field label="Tests" val={tests} />
-                <Field label="Follow-up" val={followUp} />
-              </div>
-
-              <div className="mt-6">
-                <div className="text-xs uppercase tracking-wider text-muted mb-2">℞ Medicines</div>
-                <div className="rounded-2xl border hairline overflow-x-auto">
-                  <table className="w-full min-w-[640px] text-sm">
-                    <thead className="bg-ink-50 dark:bg-ink-900/60 text-[11px] uppercase tracking-wider text-muted">
-                      <tr>
-                        <th className="text-left px-4 py-2">Medicine</th>
-                        <th className="text-left px-4 py-2">Dose</th>
-                        <th className="text-left px-4 py-2">Timing</th>
-                        <th className="text-left px-4 py-2">Duration</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y hairline">
-                      {meds.filter((m) => m.name).map((m, i) => (
-                        <tr key={i}>
-                          <td className="px-4 py-2.5 font-medium text-ink-900 dark:text-ink-50">{m.name}</td>
-                          <td className="px-4 py-2.5 text-ink-700 dark:text-ink-200">{doseLabel(m)}</td>
-                          <td className="px-4 py-2.5 text-ink-700 dark:text-ink-200">{timingText(m) || '—'}</td>
-                          <td className="px-4 py-2.5 text-ink-700 dark:text-ink-200">{m.days}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {notes && (
-                <div className="mt-5 text-sm">
-                  <div className="text-xs uppercase tracking-wider text-muted mb-1">Doctor's notes</div>
-                  <p className="text-ink-700 dark:text-ink-200">{notes}</p>
-                </div>
-              )}
-
-              <div className="mt-10 pt-5 border-t hairline flex items-end justify-between gap-4">
-                <div className="text-[11px] text-muted space-y-0.5">
-                  <div className="whitespace-nowrap">Powered by <span className="font-bold text-ink-800 dark:text-ink-100">Dalan Health</span></div>
-                  <div className="whitespace-nowrap">A Product of <span className="font-bold text-ink-800 dark:text-ink-100">Dalansoft Technologies</span></div>
-                </div>
-                <div className="text-right">
-                  <div className="border-b border-ink-300 dark:border-ink-700 w-40 mb-1" />
-                  <div className="text-xs text-muted">Doctor signature</div>
-                </div>
-              </div>
-
-              <div className="no-print mt-6 flex flex-wrap gap-2 justify-end">
-                <Button variant={savedDigital ? 'success' : 'primary'} leftIcon={savedDigital ? <Check size={14} /> : <Save size={14} />} onClick={saveDigital}>
-                  {savedDigital ? 'Saved' : 'Save prescription'}
-                </Button>
-                <Button variant="outline" leftIcon={<Printer size={14} />} onClick={() => printHtml(buildRxHtml(currentDoc()))}>Print</Button>
-                <Button variant="outline" leftIcon={<Download size={14} />} onClick={() => { void digitalPdf(currentDoc()).then((pdf) => pdf.save(`prescription-${patient.name.replace(/\s+/g, '-')}.pdf`)); }}>Download PDF</Button>
-                <Button variant="outline" leftIcon={<Share2 size={14} />}>Share WhatsApp</Button>
-              </div>
+          <div className="lg:col-span-3 space-y-4">
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border hairline shadow-card p-8" style={{ background: '#ffffff' }}>
+              <RxDocument doc={currentDoc()} />
             </motion.div>
+            <div className="flex flex-wrap gap-2 justify-end">
+              <Button variant={savedDigital ? 'success' : 'primary'} leftIcon={savedDigital ? <Check size={14} /> : <Save size={14} />} onClick={saveDigital}>
+                {savedDigital ? 'Saved' : 'Save prescription'}
+              </Button>
+              <Button variant="outline" leftIcon={busy === 'print' ? <Loader2 size={14} className="animate-spin" /> : <Printer size={14} />} onClick={doPrint} disabled={!!busy}>Print</Button>
+              <Button variant="outline" leftIcon={busy === 'pdf' ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} onClick={doPdf} disabled={!!busy}>Download PDF</Button>
+              <Button variant="outline" leftIcon={<Share2 size={14} />}>Share WhatsApp</Button>
+            </div>
           </div>
         </div>
       )}
@@ -460,13 +405,6 @@ export function PrescriptionScreen() {
     </div>
   );
 }
-
-const Field = ({ label, val }: { label: string; val: string }) => (
-  <div>
-    <div className="text-[11px] uppercase tracking-wider text-muted">{label}</div>
-    <div className="text-sm text-ink-900 dark:text-ink-50">{val || '—'}</div>
-  </div>
-);
 
 // ─── Completed-patient picker ───────────────────────────────────────────────
 function PatientPicker({ patients, value, onChange }: { patients: Patient[]; value: Patient; onChange: (p: Patient) => void }) {
@@ -520,9 +458,7 @@ function PatientPicker({ patients, value, onChange }: { patients: Patient[]; val
                   </div>
                 </button>
               ))}
-              {filtered.length === 0 && (
-                <div className="px-3 py-4 text-center text-sm text-muted">No completed patient found.</div>
-              )}
+              {filtered.length === 0 && <div className="px-3 py-4 text-center text-sm text-muted">No completed patient found.</div>}
             </div>
           )}
         </div>
@@ -537,7 +473,6 @@ const KIND_META: Record<RxKind, { label: string; tone: 'brand' | 'accent' | 'suc
   photo: { label: 'Photo', tone: 'success' },
 };
 
-// ─── Prescription history — every Rx, all patients ──────────────────────────
 function PrescriptionHistory() {
   const list = usePrescriptions((s) => s.list);
   const [q, setQ] = useState('');
@@ -581,15 +516,10 @@ function PrescriptionHistory() {
                 <td className="px-5 py-3"><Badge tone={KIND_META[r.kind].tone} size="sm">{KIND_META[r.kind].label}</Badge></td>
                 <td className="px-5 py-3 text-ink-700 dark:text-ink-200">{r.summary}</td>
                 <td className="px-5 py-3 text-right whitespace-nowrap">
-                  <button type="button" onClick={() => printHtml(rxHtml(r))} title="Print prescription" className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 hover:text-brand-600 dark:hover:text-brand-300">
+                  <button type="button" onClick={() => { void printRx(r); }} title="Print prescription" className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 hover:text-brand-600 dark:hover:text-brand-300">
                     <Printer size={14} />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => { void downloadRxPdf(r); }}
-                    title="Download PDF"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 hover:text-brand-600 dark:hover:text-brand-300"
-                  >
+                  <button type="button" onClick={() => { void downloadRx(r); }} title="Download PDF" className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 hover:text-brand-600 dark:hover:text-brand-300">
                     <Download size={14} />
                   </button>
                 </td>
@@ -755,9 +685,7 @@ function CameraCard({ patient, onAttach }: { patient: Patient; onAttach: (summar
           )}
         </div>
 
-        {error && (
-          <div className="rounded-xl border border-warning-500/40 bg-warning-500/5 px-3 py-2 text-xs text-warning-700 dark:text-warning-300">{error}</div>
-        )}
+        {error && <div className="rounded-xl border border-warning-500/40 bg-warning-500/5 px-3 py-2 text-xs text-warning-700 dark:text-warning-300">{error}</div>}
 
         <div className="flex flex-wrap gap-2 justify-between">
           <div className="flex gap-2">
@@ -771,13 +699,7 @@ function CameraCard({ patient, onAttach }: { patient: Patient; onAttach: (summar
             {photo && <Button variant="outline" leftIcon={<RefreshCw size={14} />} onClick={start}>Retake</Button>}
             <label className="inline-flex items-center gap-1.5 rounded-xl border hairline px-3 h-10 text-sm font-medium text-ink-700 dark:text-ink-200 hover:bg-ink-50 dark:hover:bg-ink-800 cursor-pointer">
               <ImageIcon size={14} /> Use device camera
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) { stop(); setError(null); setAttached(false); setPhoto(URL.createObjectURL(f)); } }}
-              />
+              <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) { stop(); setError(null); setAttached(false); setPhoto(URL.createObjectURL(f)); } }} />
             </label>
           </div>
           {photo && (
