@@ -4,9 +4,10 @@ import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Plus, Printer, Download, Share2, Upload, Camera, FileText,
-  File as FileIcon, X, Check, RefreshCw, Image as ImageIcon, Search, Save, Loader2,
+  File as FileIcon, X, Check, RefreshCw, Image as ImageIcon, Search, Save, Loader2, History,
 } from 'lucide-react';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
+import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -290,6 +291,7 @@ function downloadUrl(url: string, filename: string) {
 export function PrescriptionScreen() {
   const [params] = useSearchParams();
   const [mode, setMode] = useState<Mode>(params.get('upload') ? 'upload' : 'digital');
+  const [historyOpen, setHistoryOpen] = useState(false);
   const completed = useQueue((s) => s.completed);
   const addRx = usePrescriptions((s) => s.add);
 
@@ -387,10 +389,19 @@ export function PrescriptionScreen() {
             {t.icon} {t.label}
           </button>
         ))}
+        {/* Opens the full history — every prescription, all patients */}
+        <button
+          type="button"
+          onClick={() => setHistoryOpen(true)}
+          className="inline-flex items-center gap-2 rounded-xl border hairline px-4 py-2.5 text-sm font-semibold text-ink-700 dark:text-ink-200 hover:bg-ink-50 dark:hover:bg-ink-800 transition-colors sm:ml-auto"
+        >
+          <History size={15} /> Prescription history
+        </button>
       </div>
 
-      {/* Every prescription, all patients — visible up top regardless of mode */}
-      <PrescriptionHistory />
+      <Modal open={historyOpen} onClose={() => setHistoryOpen(false)} size="xl">
+        <PrescriptionHistory embedded />
+      </Modal>
 
       {mode === 'upload' && <UploadCard patient={patient} onAttach={(s, extra) => record('upload', s, extra)} />}
       {mode === 'camera' && <CameraCard patient={patient} onAttach={(s, extra) => record('photo', s, extra)} />}
@@ -536,7 +547,7 @@ const KIND_META: Record<RxKind, { label: string; tone: 'brand' | 'accent' | 'suc
   photo: { label: 'Photo', tone: 'success' },
 };
 
-function PrescriptionHistory() {
+function PrescriptionHistory({ embedded = false }: { embedded?: boolean }) {
   const list = usePrescriptions((s) => s.list);
   const [q, setQ] = useState('');
   const filtered = useMemo(() => {
@@ -544,21 +555,23 @@ function PrescriptionHistory() {
     return !n ? list : list.filter((r) => `${r.patientName}${r.patientMobile}${r.summary}`.toLowerCase().replace(/\s/g, '').includes(n));
   }, [list, q]);
 
-  return (
-    <Card padded={false}>
-      <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <CardTitle>Prescription history</CardTitle>
-          <CardSubtitle>Every prescription, all patients</CardSubtitle>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="w-full sm:w-64">
-            <Input leftIcon={<Search size={14} />} placeholder="Search patient or summary…" value={q} onChange={(e) => setQ(e.target.value)} />
-          </div>
-          <Badge tone="neutral">{filtered.length}</Badge>
-        </div>
+  const header = (
+    <div className={embedded ? 'flex flex-col sm:flex-row sm:items-center justify-between gap-3 pr-8' : 'p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3'}>
+      <div>
+        <CardTitle>Prescription history</CardTitle>
+        <CardSubtitle>Every prescription, all patients</CardSubtitle>
       </div>
-      <div className="overflow-x-auto border-t hairline">
+      <div className="flex items-center gap-3">
+        <div className="w-full sm:w-64">
+          <Input leftIcon={<Search size={14} />} placeholder="Search patient or summary…" value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        <Badge tone="neutral">{filtered.length}</Badge>
+      </div>
+    </div>
+  );
+
+  const table = (
+    <div className={embedded ? 'mt-4 overflow-x-auto rounded-2xl border hairline max-h-[60vh] overflow-y-auto' : 'overflow-x-auto border-t hairline'}>
         <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-ink-50 dark:bg-ink-900/60">
             <tr className="text-left text-[11px] uppercase tracking-wider text-muted">
@@ -593,7 +606,16 @@ function PrescriptionHistory() {
             )}
           </tbody>
         </table>
-      </div>
+    </div>
+  );
+
+  if (embedded) {
+    return <div>{header}{table}</div>;
+  }
+  return (
+    <Card padded={false}>
+      {header}
+      {table}
     </Card>
   );
 }
