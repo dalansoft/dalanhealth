@@ -27,7 +27,10 @@ const SLOTS = [
   ['night', 'Night'],
 ] as const;
 
+const blankMed = (): Medicine => ({ name: '', dose: '1', morning: false, afternoon: false, evening: false, night: false, days: '' });
 const timingText = (m: Medicine) => SLOTS.filter(([k]) => m[k]).map(([, label]) => label).join(', ');
+const summaryLine = (m: Medicine) =>
+  [doseLabel(m), timingText(m) || 'as needed', m.days].filter(Boolean).join(' · ');
 const doseLabel = (m: Medicine) => {
   const d = m.dose.trim();
   if (!d) return '—';
@@ -296,14 +299,17 @@ export function PrescriptionScreen() {
     { name: 'Paracetamol 650mg', dose: '1', morning: true, afternoon: true, evening: false, night: true, days: '3 days' },
     { name: 'Betadine gargle', dose: '15 ml', morning: false, afternoon: true, evening: false, night: true, days: '5 days' },
   ]);
+  const [draft, setDraft] = useState<Medicine>(blankMed());
   const [savedDigital, setSavedDigital] = useState(false);
   const [busy, setBusy] = useState<'print' | 'pdf' | null>(null);
 
-  const addMed = () => setMeds([...meds, { name: '', dose: '1', morning: false, afternoon: false, evening: false, night: false, days: '' }]);
-  const removeMed = (i: number) => setMeds(meds.filter((_, idx) => idx !== i));
-  const updateMed = <K extends keyof Medicine>(i: number, key: K, val: Medicine[K]) => {
-    setMeds(meds.map((m, idx) => idx === i ? { ...m, [key]: val } : m));
+  const updateDraft = <K extends keyof Medicine>(key: K, val: Medicine[K]) => setDraft((d) => ({ ...d, [key]: val }));
+  const addMed = () => {
+    if (!draft.name.trim()) return;
+    setMeds((list) => [...list, draft]);
+    setDraft(blankMed());
   };
+  const removeMed = (i: number) => setMeds(meds.filter((_, idx) => idx !== i));
 
   const currentDoc = (): RxDoc => ({
     clinicName: demoClinic.name, doctor: demoClinic.doctor, spec: demoClinic.specialization, city: demoClinic.city,
@@ -374,39 +380,51 @@ export function PrescriptionScreen() {
               </div>
               <Input label="Follow-up after" value={followUp} onChange={(e) => setFollowUp(e.target.value)} />
               <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="text-xs font-medium text-ink-700 dark:text-ink-300 uppercase tracking-wide">Medicines</div>
-                  <Button size="sm" variant="ghost" leftIcon={<Plus size={12} />} onClick={addMed}>Add</Button>
+                <div className="mb-2 text-xs font-medium text-ink-700 dark:text-ink-300 uppercase tracking-wide">
+                  Medicines {meds.length > 0 && <span className="text-muted normal-case">· {meds.length} added</span>}
                 </div>
-                <div className="space-y-2.5">
-                  {meds.map((m, i) => (
-                    <div key={i} className="rounded-xl border hairline p-3 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <input value={m.name} onChange={(e) => updateMed(i, 'name', e.target.value)} placeholder="Medicine name" className="flex-1 bg-transparent text-sm font-medium text-ink-900 dark:text-ink-50 outline-none px-1" />
-                        <button onClick={() => removeMed(i)} className="text-ink-400 hover:text-danger-500 shrink-0"><Trash2 size={14} /></button>
+
+                {/* Medicines already added to the prescription */}
+                {meds.length > 0 && (
+                  <div className="space-y-1.5 mb-3">
+                    {meds.map((m, i) => (
+                      <div key={i} className="flex items-center gap-2 rounded-xl border hairline px-3 py-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-medium text-ink-900 dark:text-ink-50 truncate">{m.name}</div>
+                          <div className="text-[11px] text-muted truncate">{summaryLine(m)}</div>
+                        </div>
+                        <button onClick={() => removeMed(i)} className="text-ink-400 hover:text-danger-500 shrink-0" aria-label="Remove medicine"><Trash2 size={14} /></button>
                       </div>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">Dose</span>
-                        {DOSE_CHIPS.map((d) => (
-                          <button key={d} type="button" onClick={() => updateMed(i, 'dose', d)} className={chipCls(m.dose === d)}>{d}</button>
-                        ))}
-                        <input value={m.dose} onChange={(e) => updateMed(i, 'dose', e.target.value)} placeholder="e.g. 15 ml" className="w-20 rounded-lg border hairline bg-white dark:bg-ink-900 px-2 py-1 text-xs outline-none" />
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">When</span>
-                        {SLOTS.map(([k, label]) => (
-                          <button key={k} type="button" onClick={() => updateMed(i, k, !m[k])} className={chipCls(m[k])}>{label}</button>
-                        ))}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">Days</span>
-                        {DAY_CHIPS.map((d) => (
-                          <button key={d} type="button" onClick={() => updateMed(i, 'days', d)} className={chipCls(m.days === d)}>{d}</button>
-                        ))}
-                        <input value={m.days} onChange={(e) => updateMed(i, 'days', e.target.value)} placeholder="custom" className="w-20 rounded-lg border hairline bg-white dark:bg-ink-900 px-2 py-1 text-xs outline-none" />
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                )}
+
+                {/* One entry form — fill it, then Add to the list above */}
+                <div className="rounded-xl border hairline p-3 space-y-3 bg-ink-50/50 dark:bg-ink-900/40">
+                  <input value={draft.name} onChange={(e) => updateDraft('name', e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addMed(); } }} placeholder="Medicine name (e.g. Azithromycin 500mg)" className="w-full bg-transparent text-sm font-medium text-ink-900 dark:text-ink-50 outline-none px-1" />
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">Dose</span>
+                    {DOSE_CHIPS.map((d) => (
+                      <button key={d} type="button" onClick={() => updateDraft('dose', d)} className={chipCls(draft.dose === d)}>{d}</button>
+                    ))}
+                    <input value={draft.dose} onChange={(e) => updateDraft('dose', e.target.value)} placeholder="e.g. 15 ml" className="w-20 rounded-lg border hairline bg-white dark:bg-ink-900 px-2 py-1 text-xs outline-none" />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">When</span>
+                    {SLOTS.map(([k, label]) => (
+                      <button key={k} type="button" onClick={() => updateDraft(k, !draft[k])} className={chipCls(draft[k])}>{label}</button>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">Days</span>
+                    {DAY_CHIPS.map((d) => (
+                      <button key={d} type="button" onClick={() => updateDraft('days', d)} className={chipCls(draft.days === d)}>{d}</button>
+                    ))}
+                    <input value={draft.days} onChange={(e) => updateDraft('days', e.target.value)} placeholder="custom" className="w-20 rounded-lg border hairline bg-white dark:bg-ink-900 px-2 py-1 text-xs outline-none" />
+                  </div>
+                  <Button size="sm" variant="outline" leftIcon={<Plus size={12} />} onClick={addMed} disabled={!draft.name.trim()} className="w-full justify-center">
+                    Add medicine
+                  </Button>
                 </div>
               </div>
             </div>
