@@ -76,11 +76,19 @@ export function TvDisplay() {
     (authToken && !isDemo ? user?.clinicId ?? null : null);
   const queueMode = useQueueBoot(liveClinicId);
 
-  // Demo only: seed the branch overlay's queue on branch switches.
+  // Demo only: seed this branch's queue, but never clobber a queue that's
+  // already live. The dashboard and TV share one store (BroadcastChannel +
+  // localStorage), so skips, recalls, completes and added patients must flow
+  // through to the TV — we only (re)seed when there's nothing yet, or when the
+  // branch actually changes.
+  const seededBranchRef = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (useQueue.getState().mode !== 'demo') return;
-    const d = getBranchData(effectiveBranchId, branch);
-    setEntries(d.queue);
+    const branchChanged = seededBranchRef.current !== undefined && seededBranchRef.current !== effectiveBranchId;
+    if (useQueue.getState().entries.length === 0 || branchChanged) {
+      setEntries(getBranchData(effectiveBranchId, branch).queue);
+    }
+    seededBranchRef.current = effectiveBranchId;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveBranchId, queueMode]);
 
