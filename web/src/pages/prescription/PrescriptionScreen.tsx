@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Plus, Trash2, Printer, Download, Share2, Upload, Camera, FileText,
+  Plus, Printer, Download, Share2, Upload, Camera, FileText,
   File as FileIcon, X, Check, RefreshCw, Image as ImageIcon, Search, Save, Loader2,
 } from 'lucide-react';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
@@ -29,8 +29,6 @@ const SLOTS = [
 
 const blankMed = (): Medicine => ({ name: '', dose: '1', morning: false, afternoon: false, evening: false, night: false, days: '' });
 const timingText = (m: Medicine) => SLOTS.filter(([k]) => m[k]).map(([, label]) => label).join(', ');
-const summaryLine = (m: Medicine) =>
-  [doseLabel(m), timingText(m) || 'as needed', m.days].filter(Boolean).join(' · ');
 const doseLabel = (m: Medicine) => {
   const d = m.dose.trim();
   if (!d) return '—';
@@ -61,7 +59,7 @@ const DocField = ({ label, val }: { label: string; val: string }) => (
   </div>
 );
 
-function RxDocument({ doc, logo }: { doc: RxDoc; logo?: string }) {
+function RxDocument({ doc, logo, onRemoveMed }: { doc: RxDoc; logo?: string; onRemoveMed?: (i: number) => void }) {
   const meds = doc.meds.filter((m) => m.name);
   return (
     <div style={{ color: '#0f172a', fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -97,19 +95,27 @@ function RxDocument({ doc, logo }: { doc: RxDoc; logo?: string }) {
                 <th style={{ textAlign: 'left', padding: '8px 14px' }}>Dose</th>
                 <th style={{ textAlign: 'left', padding: '8px 14px' }}>Timing</th>
                 <th style={{ textAlign: 'left', padding: '8px 14px' }}>Duration</th>
+                {onRemoveMed && <th style={{ width: 1 }} />}
               </tr>
             </thead>
             <tbody>
               {meds.map((m, i) => (
-                <tr key={i} style={{ borderTop: '1px solid #eef2f7' }}>
+                <tr key={i} className="group/medrow" style={{ borderTop: '1px solid #eef2f7' }}>
                   <td style={{ padding: '10px 14px', fontWeight: 500 }}>{m.name}</td>
                   <td style={{ padding: '10px 14px', color: '#334155' }}>{doseLabel(m)}</td>
                   <td style={{ padding: '10px 14px', color: '#334155' }}>{timingText(m) || '—'}</td>
                   <td style={{ padding: '10px 14px', color: '#334155' }}>{m.days}</td>
+                  {onRemoveMed && (
+                    <td style={{ padding: '0 10px', width: 1 }}>
+                      <button type="button" onClick={() => onRemoveMed(i)} aria-label="Remove medicine"
+                        className="opacity-0 group-hover/medrow:opacity-100 transition-opacity"
+                        style={{ color: '#ef4444', fontSize: 18, lineHeight: 1, padding: 4 }}>×</button>
+                    </td>
+                  )}
                 </tr>
               ))}
               {meds.length === 0 && (
-                <tr><td colSpan={4} style={{ padding: '10px 14px', color: '#94a3b8' }}>No medicines</td></tr>
+                <tr><td colSpan={onRemoveMed ? 5 : 4} style={{ padding: '10px 14px', color: '#94a3b8' }}>No medicines added yet</td></tr>
               )}
             </tbody>
           </table>
@@ -381,25 +387,10 @@ export function PrescriptionScreen() {
               <Input label="Follow-up after" value={followUp} onChange={(e) => setFollowUp(e.target.value)} />
               <div>
                 <div className="mb-2 text-xs font-medium text-ink-700 dark:text-ink-300 uppercase tracking-wide">
-                  Medicines {meds.length > 0 && <span className="text-muted normal-case">· {meds.length} added</span>}
+                  Add medicine {meds.length > 0 && <span className="text-muted normal-case">· {meds.length} in prescription →</span>}
                 </div>
 
-                {/* Medicines already added to the prescription */}
-                {meds.length > 0 && (
-                  <div className="space-y-1.5 mb-3">
-                    {meds.map((m, i) => (
-                      <div key={i} className="flex items-center gap-2 rounded-xl border hairline px-3 py-2">
-                        <div className="min-w-0 flex-1">
-                          <div className="text-sm font-medium text-ink-900 dark:text-ink-50 truncate">{m.name}</div>
-                          <div className="text-[11px] text-muted truncate">{summaryLine(m)}</div>
-                        </div>
-                        <button onClick={() => removeMed(i)} className="text-ink-400 hover:text-danger-500 shrink-0" aria-label="Remove medicine"><Trash2 size={14} /></button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* One entry form — fill it, then Add to the list above */}
+                {/* One entry form — fill it, then Add. Added medicines appear in the preview only. */}
                 <div className="rounded-xl border hairline p-3 space-y-3 bg-ink-50/50 dark:bg-ink-900/40">
                   <input value={draft.name} onChange={(e) => updateDraft('name', e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addMed(); } }} placeholder="Medicine name (e.g. Azithromycin 500mg)" className="w-full bg-transparent text-sm font-medium text-ink-900 dark:text-ink-50 outline-none px-1" />
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -432,7 +423,7 @@ export function PrescriptionScreen() {
 
           <div className="lg:col-span-3 space-y-4">
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border hairline shadow-card p-8" style={{ background: '#ffffff' }}>
-              <RxDocument doc={currentDoc()} />
+              <RxDocument doc={currentDoc()} onRemoveMed={removeMed} />
             </motion.div>
             <div className="flex flex-wrap gap-2 justify-end">
               <Button variant={savedDigital ? 'success' : 'primary'} leftIcon={savedDigital ? <Check size={14} /> : <Save size={14} />} onClick={saveDigital}>
