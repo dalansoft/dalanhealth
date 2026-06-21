@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Users, AlertCircle, CheckCircle2, Clock, Calendar, X, Phone } from 'lucide-react';
+import { Search, Users, AlertCircle, CheckCircle2, Clock, Calendar, X, Phone, Pencil } from 'lucide-react';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
@@ -8,6 +8,7 @@ import { StatCard } from '@/components/ui/StatCard';
 import { SourceBadge } from '@/components/ui/SourceBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import { useQueue, tokenLabel, type QueueEntry, type QueueSource, type PatientDetails } from '@/store/queue';
+import { AddPatientModal } from '@/pages/receptionist/AddPatientModal';
 import { demoPatients } from '@/services/demoData';
 
 type Tone = 'brand' | 'accent' | 'success' | 'neutral' | 'warning';
@@ -31,6 +32,8 @@ interface Row {
   fee?: number;
   doctor?: string;
   details?: PatientDetails;
+  /** The live queue entry behind this row (today's patients) — enables Edit. */
+  entry?: QueueEntry;
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -98,6 +101,7 @@ export function ClinicPatients() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
   const [dateFilter, setDateFilter] = useState('');
   const [selected, setSelected] = useState<Row | null>(null);
+  const [editEntry, setEditEntry] = useState<QueueEntry | null>(null);
 
   // Esc closes the detail panel.
   useEffect(() => {
@@ -127,6 +131,7 @@ export function ClinicPatients() {
         age: e.details?.age,
         gender: e.details?.gender,
         details: e.details,
+        entry: e,
       };
     });
     const all = [...today, ...[...past].sort((a, b) => b.date.getTime() - a.date.getTime())];
@@ -301,14 +306,25 @@ export function ClinicPatients() {
                       <div className="text-[11px] text-muted inline-flex items-center gap-1"><Phone size={10} /> {selected.mobile}</div>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setSelected(null)}
-                    className="shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-xl text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800"
-                    aria-label="Close"
-                  >
-                    <X size={16} />
-                  </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {selected.entry && (
+                      <button
+                        type="button"
+                        onClick={() => { setEditEntry(selected.entry!); setSelected(null); }}
+                        className="inline-flex items-center gap-1.5 rounded-xl border hairline px-3 h-9 text-xs font-semibold text-ink-700 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
+                      >
+                        <Pencil size={13} /> Edit
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setSelected(null)}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800"
+                      aria-label="Close"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="p-5 max-h-[70vh] overflow-y-auto">
@@ -351,6 +367,9 @@ export function ClinicPatients() {
           </>
         )}
       </AnimatePresence>
+
+      {/* Edit patient — same form, mobile locked */}
+      <AddPatientModal open={!!editEntry} editEntry={editEntry ?? undefined} onClose={() => setEditEntry(null)} />
     </div>
   );
 }
