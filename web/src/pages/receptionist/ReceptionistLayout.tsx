@@ -1,14 +1,15 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import { LayoutDashboard, UserPlus, Ticket, Receipt, FileText } from 'lucide-react';
 import { DashboardShell, type NavSection } from '@/components/layout/DashboardShell';
+import { useQueue } from '@/store/queue';
 
-const nav: NavSection[] = [
+const buildNav = (queueCount: number): NavSection[] => [
   {
     title: 'Main',
     accent: 'brand',
     items: [
       { to: '/receptionist', label: 'Dashboard', icon: <LayoutDashboard size={16} />, end: true },
-      { to: '/receptionist/queue', label: 'Queue & Tokens', icon: <Ticket size={16} />, badge: 6 },
+      { to: '/receptionist/queue', label: 'Queue & Tokens', icon: <Ticket size={16} />, badge: queueCount || undefined },
     ],
   },
   {
@@ -33,8 +34,9 @@ const titles: Record<string, { title: string; sub: string }> = {
 export function ReceptionistLayout() {
   const { pathname } = useLocation();
   const meta = titles[pathname] ?? { title: 'Receptionist', sub: 'DalanHealth' };
+  const queueCount = useQueue((s) => s.entries.length);
   return (
-    <DashboardShell nav={nav} title={meta.title} subtitle={meta.sub}>
+    <DashboardShell nav={buildNav(queueCount)} title={meta.title} subtitle={meta.sub}>
       <Outlet />
     </DashboardShell>
   );
