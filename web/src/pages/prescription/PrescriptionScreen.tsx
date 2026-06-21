@@ -13,12 +13,35 @@ import { demoClinic } from '@/services/demoData';
 
 interface Medicine {
   name: string;
-  dose: string;
-  freq: string;
+  dose: string;        // "½", "1", "15 ml", …
+  morning: boolean;
+  afternoon: boolean;
+  evening: boolean;
+  night: boolean;
   days: string;
 }
 
 type Mode = 'digital' | 'upload' | 'camera';
+
+const DOSE_CHIPS = ['½', '1', '1½', '2'];
+const DAY_CHIPS = ['3 days', '5 days', '7 days'];
+const SLOTS = [
+  ['morning', 'Morning'],
+  ['afternoon', 'Afternoon'],
+  ['evening', 'Evening'],
+  ['night', 'Night'],
+] as const;
+
+const timingText = (m: Medicine) => SLOTS.filter(([k]) => m[k]).map(([, label]) => label).join(', ');
+const doseLabel = (m: Medicine) => {
+  const d = m.dose.trim();
+  if (!d) return '—';
+  return /^[\d½¼¾.\s]+$/.test(d) ? `${d} tab` : d;
+};
+const chipCls = (active: boolean) =>
+  `rounded-lg px-2.5 py-1 text-xs font-semibold border transition-colors ${
+    active ? 'border-brand-500 bg-brand-500 text-white' : 'hairline text-ink-600 dark:text-ink-300 hover:bg-ink-50 dark:hover:bg-ink-800'
+  }`;
 
 export function PrescriptionScreen() {
   const [mode, setMode] = useState<Mode>('digital');
@@ -29,14 +52,14 @@ export function PrescriptionScreen() {
   const [notes, setNotes] = useState('Plenty of fluids. Rest. Avoid cold drinks.');
   const [followUp, setFollowUp] = useState('5 days');
   const [meds, setMeds] = useState<Medicine[]>([
-    { name: 'Azithromycin 500mg', dose: '1 tab', freq: '1-0-0', days: '5 days' },
-    { name: 'Paracetamol 650mg', dose: '1 tab', freq: '1-1-1', days: '3 days' },
-    { name: 'Betadine gargle', dose: '15 ml', freq: '0-1-1', days: '5 days' },
+    { name: 'Azithromycin 500mg', dose: '1', morning: true, afternoon: false, evening: false, night: false, days: '5 days' },
+    { name: 'Paracetamol 650mg', dose: '1', morning: true, afternoon: true, evening: false, night: true, days: '3 days' },
+    { name: 'Betadine gargle', dose: '15 ml', morning: false, afternoon: true, evening: false, night: true, days: '5 days' },
   ]);
 
-  const addMed = () => setMeds([...meds, { name: '', dose: '', freq: '', days: '' }]);
+  const addMed = () => setMeds([...meds, { name: '', dose: '1', morning: false, afternoon: false, evening: false, night: false, days: '' }]);
   const removeMed = (i: number) => setMeds(meds.filter((_, idx) => idx !== i));
-  const updateMed = (i: number, key: keyof Medicine, val: string) => {
+  const updateMed = <K extends keyof Medicine>(i: number, key: K, val: Medicine[K]) => {
     setMeds(meds.map((m, idx) => idx === i ? { ...m, [key]: val } : m));
   };
 
@@ -93,16 +116,36 @@ export function PrescriptionScreen() {
                   <div className="text-xs font-medium text-ink-700 dark:text-ink-300 uppercase tracking-wide">Medicines</div>
                   <Button size="sm" variant="ghost" leftIcon={<Plus size={12} />} onClick={addMed}>Add</Button>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {meds.map((m, i) => (
-                    <div key={i} className="grid grid-cols-12 gap-2 items-start rounded-xl border hairline p-2.5">
-                      <input value={m.name} onChange={(e) => updateMed(i, 'name', e.target.value)} placeholder="Name" className="col-span-12 sm:col-span-5 bg-transparent text-sm outline-none px-1" />
-                      <input value={m.dose} onChange={(e) => updateMed(i, 'dose', e.target.value)} placeholder="Dose" className="col-span-3 sm:col-span-2 bg-transparent text-sm outline-none px-1" />
-                      <input value={m.freq} onChange={(e) => updateMed(i, 'freq', e.target.value)} placeholder="1-0-1" className="col-span-3 sm:col-span-2 bg-transparent text-sm outline-none px-1" />
-                      <input value={m.days} onChange={(e) => updateMed(i, 'days', e.target.value)} placeholder="Days" className="col-span-4 sm:col-span-2 bg-transparent text-sm outline-none px-1" />
-                      <button onClick={() => removeMed(i)} className="col-span-2 sm:col-span-1 text-ink-400 hover:text-danger-500 flex justify-end items-center">
-                        <Trash2 size={14} />
-                      </button>
+                    <div key={i} className="rounded-xl border hairline p-3 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <input value={m.name} onChange={(e) => updateMed(i, 'name', e.target.value)} placeholder="Medicine name" className="flex-1 bg-transparent text-sm font-medium text-ink-900 dark:text-ink-50 outline-none px-1" />
+                        <button onClick={() => removeMed(i)} className="text-ink-400 hover:text-danger-500 shrink-0"><Trash2 size={14} /></button>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">Dose</span>
+                        {DOSE_CHIPS.map((d) => (
+                          <button key={d} type="button" onClick={() => updateMed(i, 'dose', d)} className={chipCls(m.dose === d)}>{d}</button>
+                        ))}
+                        <input value={m.dose} onChange={(e) => updateMed(i, 'dose', e.target.value)} placeholder="e.g. 15 ml" className="w-20 rounded-lg border hairline bg-white dark:bg-ink-900 px-2 py-1 text-xs outline-none" />
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">When</span>
+                        {SLOTS.map(([k, label]) => (
+                          <button key={k} type="button" onClick={() => updateMed(i, k, !m[k])} className={chipCls(m[k])}>{label}</button>
+                        ))}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">Days</span>
+                        {DAY_CHIPS.map((d) => (
+                          <button key={d} type="button" onClick={() => updateMed(i, 'days', d)} className={chipCls(m.days === d)}>{d}</button>
+                        ))}
+                        <input value={m.days} onChange={(e) => updateMed(i, 'days', e.target.value)} placeholder="custom" className="w-20 rounded-lg border hairline bg-white dark:bg-ink-900 px-2 py-1 text-xs outline-none" />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -142,7 +185,7 @@ export function PrescriptionScreen() {
                       <tr>
                         <th className="text-left px-4 py-2">Medicine</th>
                         <th className="text-left px-4 py-2">Dose</th>
-                        <th className="text-left px-4 py-2">Frequency</th>
+                        <th className="text-left px-4 py-2">Timing</th>
                         <th className="text-left px-4 py-2">Duration</th>
                       </tr>
                     </thead>
@@ -150,8 +193,8 @@ export function PrescriptionScreen() {
                       {meds.filter((m) => m.name).map((m, i) => (
                         <tr key={i}>
                           <td className="px-4 py-2.5 font-medium text-ink-900 dark:text-ink-50">{m.name}</td>
-                          <td className="px-4 py-2.5 text-ink-700 dark:text-ink-200">{m.dose}</td>
-                          <td className="px-4 py-2.5 text-ink-700 dark:text-ink-200">{m.freq}</td>
+                          <td className="px-4 py-2.5 text-ink-700 dark:text-ink-200">{doseLabel(m)}</td>
+                          <td className="px-4 py-2.5 text-ink-700 dark:text-ink-200">{timingText(m) || '—'}</td>
                           <td className="px-4 py-2.5 text-ink-700 dark:text-ink-200">{m.days}</td>
                         </tr>
                       ))}
