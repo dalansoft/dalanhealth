@@ -6,14 +6,15 @@ import {
 } from 'lucide-react';
 import { DashboardShell, type NavSection } from '@/components/layout/DashboardShell';
 import { useCurrentBranch } from '@/store/branch';
+import { useQueue } from '@/store/queue';
 
-const nav: NavSection[] = [
+const buildNav = (queueCount: number): NavSection[] => [
   {
     title: 'Main',
     accent: 'brand',
     items: [
       { to: '/clinic', label: 'Dashboard', icon: <LayoutDashboard size={16} />, end: true },
-      { to: '/clinic/queue', label: 'Queue & Tokens', icon: <Ticket size={16} />, badge: 6 },
+      { to: '/clinic/queue', label: 'Queue & Tokens', icon: <Ticket size={16} />, badge: queueCount || undefined },
       { to: '/clinic/patients', label: 'Patients', icon: <Users size={16} /> },
       { to: '/clinic/appointments', label: 'Appointments', icon: <Calendar size={16} /> },
       { to: '/clinic/prescription', label: 'Prescriptions', icon: <FileText size={16} /> },
@@ -60,11 +61,13 @@ export function ClinicLayout() {
   const { pathname } = useLocation();
   const meta = titles[pathname] ?? { title: 'Clinic', sub: 'DalanHealth' };
   const branch = useCurrentBranch();
+  // Live queue count drives the "Queue & Tokens" nav badge.
+  const queueCount = useQueue((s) => s.entries.length);
   // Subtitle follows the selected branch so it updates instantly when the user
   // switches branches in the BranchSwitcher chip.
   const subtitle = branch ? `${branch.name} · ${meta.sub}` : meta.sub;
   return (
-    <DashboardShell nav={nav} title={meta.title} subtitle={subtitle}>
+    <DashboardShell nav={buildNav(queueCount)} title={meta.title} subtitle={subtitle}>
       <Outlet />
     </DashboardShell>
   );
