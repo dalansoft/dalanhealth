@@ -109,9 +109,9 @@ function Blob() {
     () => ({
       uTime: { value: 0 },
       uMouse: { value: new THREE.Vector2(0, 0) },
-      uColorA: { value: new THREE.Color('#0d9488') }, // teal-600
-      uColorB: { value: new THREE.Color('#14b8a6') }, // teal-500
-      uColorC: { value: new THREE.Color('#34d399') }, // emerald-400
+      uColorA: { value: new THREE.Color('#1d4ed8') }, // blue-700
+      uColorB: { value: new THREE.Color('#3b82f6') }, // blue-500
+      uColorC: { value: new THREE.Color('#38bdf8') }, // sky-400
     }),
     [],
   );

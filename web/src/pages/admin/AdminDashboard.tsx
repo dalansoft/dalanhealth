@@ -51,8 +51,8 @@ export function AdminDashboard() {
                   contentStyle={{ background: 'rgba(15,23,42,0.95)', border: 'none', borderRadius: 12, color: 'white', fontSize: 12 }}
                   formatter={(v: number) => inr(v)}
                 />
-                <Line type="monotone" dataKey="revenue" stroke="rgb(20,184,166)" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
-                <Line type="monotone" dataKey="recharge" stroke="rgb(16,185,129)" strokeWidth={2.5} strokeDasharray="4 4" dot={false} />
+                <Line type="monotone" dataKey="revenue" stroke="rgb(59,130,246)" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="recharge" stroke="rgb(14,165,233)" strokeWidth={2.5} strokeDasharray="4 4" dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -77,9 +77,9 @@ export function AdminDashboard() {
                 <XAxis dataKey="d" stroke="currentColor" opacity={0.6} fontSize={11} />
                 <YAxis stroke="currentColor" opacity={0.6} fontSize={11} />
                 <Tooltip contentStyle={{ background: 'rgba(15,23,42,0.95)', border: 'none', borderRadius: 12, color: 'white', fontSize: 12 }} />
-                <Bar dataKey="online" stackId="a" fill="rgb(20,184,166)" />
-                <Bar dataKey="offline" stackId="a" fill="rgb(16,185,129)" />
-                <Bar dataKey="qr" stackId="a" fill="rgb(16,185,129)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="online" stackId="a" fill="rgb(59,130,246)" />
+                <Bar dataKey="offline" stackId="a" fill="rgb(14,165,233)" />
+                <Bar dataKey="qr" stackId="a" fill="rgb(14,165,233)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

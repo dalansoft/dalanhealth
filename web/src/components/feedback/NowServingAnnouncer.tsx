@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BellRing, Volume2 } from 'lucide-react';
-import { useQueue } from '@/store/queue';
+import { useQueue, tokenLabel } from '@/store/queue';
 import { useSound } from '@/store/sound';
 import { SourceBadge } from '@/components/ui/SourceBadge';
 import { playChime, unlockAudio, isAudioUnlocked } from '@/lib/chime';
@@ -41,7 +41,7 @@ export function NowServingAnnouncer({ placement = 'panel', speak = false }: Prop
   const templateHi = useSound((s) => s.templateHi);
 
   const prevTokenRef = useRef<number | null>(null);
-  const [toast, setToast] = useState<{ token: number; name: string; source: string } | null>(null);
+  const [toast, setToast] = useState<{ token: number; name: string; source: string; emergency?: boolean; emergencyNo?: number } | null>(null);
   const [needsUnlock, setNeedsUnlock] = useState(false);
   const dismissRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -84,7 +84,7 @@ export function NowServingAnnouncer({ placement = 'panel', speak = false }: Prop
     if (token !== prevTokenRef.current) {
       prevTokenRef.current = token;
       if (current) {
-        setToast({ token: current.token, name: current.patientName, source: current.source });
+        setToast({ token: current.token, name: current.patientName, source: current.source, emergency: current.emergency, emergencyNo: current.emergencyNo });
         if (soundEnabled) {
           if (isAudioUnlocked()) {
             playChime();
@@ -176,8 +176,8 @@ export function NowServingAnnouncer({ placement = 'panel', speak = false }: Prop
                   Now serving
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className={cn('font-extrabold tabular-nums font-brand text-ink-900 dark:text-ink-50', isTv ? 'text-2xl' : 'text-lg')}>
-                    #{toast.token}
+                  <span className={cn('font-extrabold tabular-nums font-brand', toast.emergency ? 'text-danger-500' : 'text-ink-900 dark:text-ink-50', isTv ? 'text-2xl' : 'text-lg')}>
+                    {tokenLabel(toast)}
                   </span>
                   <span className={cn('font-semibold text-ink-800 dark:text-ink-100 truncate', isTv ? 'text-lg' : 'text-sm')}>
                     {toast.name}

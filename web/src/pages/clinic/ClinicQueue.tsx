@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { SourceBadge } from '@/components/ui/SourceBadge';
 import { StatusPill } from '@/components/ui/StatusPill';
-import { useQueue, type QueueEntry } from '@/store/queue';
+import { useQueue, type QueueEntry, tokenLabel } from '@/store/queue';
 import { useQueueBoot } from '@/hooks/useQueueBoot';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -65,13 +65,14 @@ export function ClinicQueue() {
             <div className="md:col-span-2 rounded-2xl bg-gradient-to-br from-brand-500/10 via-transparent to-token/10 p-6 border hairline relative overflow-hidden">
               <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-token/15 blur-3xl" />
               <div className="relative flex items-center gap-5">
-                <div className="text-5xl sm:text-6xl font-extrabold leading-none tracking-tight text-token drop-shadow-[0_0_24px_rgba(34,197,94,0.45)]">
-                  #{current.token}
+                <div className={`text-5xl sm:text-6xl font-extrabold leading-none tracking-tight ${current.emergency ? 'text-danger-500 drop-shadow-[0_0_24px_rgba(239,68,68,0.45)]' : 'text-token drop-shadow-[0_0_24px_rgba(59,130,246,0.45)]'}`}>
+                  {tokenLabel(current)}
                 </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xl font-semibold text-ink-900 dark:text-ink-50">{current.patientName}</span>
                     <SourceBadge source={current.source} />
+                    {current.emergency && <Badge tone="danger" size="sm">Emergency</Badge>}
                   </div>
                   <div className="text-sm text-muted mt-1">{current.patientMobile}</div>
                 </div>
@@ -87,7 +88,9 @@ export function ClinicQueue() {
               <div className="text-xs uppercase tracking-wider text-muted">Up next</div>
               {upNext ? (
                 <>
-                  <div className="mt-3 text-lg font-semibold text-ink-900 dark:text-ink-50">#{upNext.token} · {upNext.patientName}</div>
+                  <div className="mt-3 text-lg font-semibold text-ink-900 dark:text-ink-50">
+                    <span className={upNext.emergency ? 'text-danger-500' : ''}>{tokenLabel(upNext)}</span> · {upNext.patientName}
+                  </div>
                   <div className="text-xs text-muted">{upNext.patientMobile}</div>
                   <div className="mt-3"><SourceBadge source={upNext.source} /></div>
                 </>
@@ -140,13 +143,16 @@ export function ClinicQueue() {
                     exit={{ opacity: 0, scale: 0.98 }}
                     transition={{ type: 'spring', stiffness: 280, damping: 26 }}
                     onClick={() => setSelectedEntry(q)}
-                    className={`text-sm cursor-pointer transition-colors hover:bg-ink-50 dark:hover:bg-ink-900/60 ${q.wasSkipped ? 'bg-warning-500/5' : ''}`}
+                    className={`text-sm cursor-pointer transition-colors hover:bg-ink-50 dark:hover:bg-ink-900/60 ${q.emergency ? 'bg-danger-500/5' : q.wasSkipped ? 'bg-warning-500/5' : ''}`}
                     title="Click for full patient details & visit history"
                   >
-                    <td className="px-5 py-3.5 font-semibold">#{q.token}</td>
+                    <td className={`px-5 py-3.5 font-semibold ${q.emergency ? 'text-danger-500' : ''}`}>{tokenLabel(q)}</td>
                     <td className="px-5 py-3.5 font-medium text-ink-900 dark:text-ink-50">
                       <div className="flex items-center gap-2">
                         <span>{q.patientName}</span>
+                        {q.emergency && (
+                          <Badge tone="danger" size="sm">Emergency</Badge>
+                        )}
                         {q.wasSkipped && (
                           <Badge tone="warning" size="sm">Skipped</Badge>
                         )}

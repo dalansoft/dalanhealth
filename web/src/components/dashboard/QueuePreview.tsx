@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Card, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { SourceBadge } from '@/components/ui/SourceBadge';
 import { Badge } from '@/components/ui/Badge';
-import type { QueueEntry } from '@/store/queue';
+import { tokenLabel, type QueueEntry } from '@/store/queue';
 
 interface Props {
   entries: QueueEntry[];
@@ -28,8 +28,8 @@ export function QueuePreview({ entries, title = 'Live queue', viewAllTo = '/clin
         {list.map((e, idx) => (
           <div key={e.id} className="flex items-center justify-between rounded-xl border hairline p-2.5">
             <div className="flex items-center gap-3 min-w-0">
-              <div className={`text-base font-extrabold tracking-tight w-12 text-center ${idx === 0 ? 'text-token' : idx === 1 ? 'text-brand-600 dark:text-brand-300' : 'text-ink-500'}`}>
-                #{e.token}
+              <div className={`text-base font-extrabold tracking-tight w-12 text-center ${e.emergency ? 'text-danger-500' : idx === 0 ? 'text-token' : idx === 1 ? 'text-brand-600 dark:text-brand-300' : 'text-ink-500'}`}>
+                {tokenLabel(e)}
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 min-w-0">

@@ -6,7 +6,7 @@ interface Props {
   className?: string;
 }
 
-export function Sparkline({ data, color = '#14b8a6', className }: Props) {
+export function Sparkline({ data, color = '#3b82f6', className }: Props) {
   const pts = data.map((v, i) => ({ i, v }));
   return (
     <div className={className ?? 'h-10 w-full'}>

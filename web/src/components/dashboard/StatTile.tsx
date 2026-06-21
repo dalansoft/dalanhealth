@@ -17,12 +17,12 @@ interface Props {
 }
 
 const accents = {
-  brand: { tint: 'from-brand-500/15 to-transparent', color: '#14b8a6', text: 'text-brand-600 dark:text-brand-300' },
-  accent: { tint: 'from-accent-500/15 to-transparent', color: '#10b981', text: 'text-accent-600 dark:text-accent-300' },
-  teal: { tint: 'from-teal-500/15 to-transparent', color: '#06b6d4', text: 'text-teal-600 dark:text-teal-400' },
+  brand: { tint: 'from-brand-500/15 to-transparent', color: '#3b82f6', text: 'text-brand-600 dark:text-brand-300' },
+  accent: { tint: 'from-accent-500/15 to-transparent', color: '#0ea5e9', text: 'text-accent-600 dark:text-accent-300' },
+  teal: { tint: 'from-teal-500/15 to-transparent', color: '#0ea5e9', text: 'text-teal-600 dark:text-teal-400' },
   success: { tint: 'from-success-500/15 to-transparent', color: '#10b981', text: 'text-success-600 dark:text-success-500' },
   warning: { tint: 'from-warning-500/15 to-transparent', color: '#f59e0b', text: 'text-warning-600 dark:text-warning-500' },
-  token: { tint: 'from-token/15 to-transparent', color: '#22c55e', text: 'text-token' },
+  token: { tint: 'from-token/15 to-transparent', color: '#3b82f6', text: 'text-token' },
 };
 
 export function StatTile({ label, value, hint, icon, sparkline, accent = 'brand', className, dense }: Props) {

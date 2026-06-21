@@ -26,15 +26,15 @@ export function AdminRevenue() {
             <AreaChart data={demoRevenueSeries}>
               <defs>
                 <linearGradient id="ar" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="rgb(20,184,166)" stopOpacity={0.45} />
-                  <stop offset="100%" stopColor="rgb(20,184,166)" stopOpacity={0} />
+                  <stop offset="0%" stopColor="rgb(59,130,246)" stopOpacity={0.45} />
+                  <stop offset="100%" stopColor="rgb(59,130,246)" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
               <XAxis dataKey="m" stroke="currentColor" opacity={0.6} fontSize={11} />
               <YAxis stroke="currentColor" opacity={0.6} fontSize={11} tickFormatter={(v) => inrCompact(v)} />
               <Tooltip contentStyle={{ background: 'rgba(15,23,42,0.95)', border: 'none', borderRadius: 12, color: 'white', fontSize: 12 }} formatter={(v: number) => inr(v)} />
-              <Area type="monotone" dataKey="revenue" stroke="rgb(20,184,166)" strokeWidth={2.5} fill="url(#ar)" />
+              <Area type="monotone" dataKey="revenue" stroke="rgb(59,130,246)" strokeWidth={2.5} fill="url(#ar)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>

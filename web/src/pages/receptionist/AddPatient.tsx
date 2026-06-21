@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Phone, User, Calendar, Check, Ticket, UserPlus, Users, Search,
+  Phone, User, Calendar, Check, Ticket, UserPlus, Users, Search, Siren,
   ChevronDown, Weight, Ruler, Droplet, Home, AlertCircle, Stethoscope,
   ShieldAlert, AlertTriangle,
 } from 'lucide-react';
@@ -141,6 +141,8 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
   const [step, setStep] = useState<Step>('form');
   const [family, setFamily] = useState<PatientRecord[]>([]);
   const [generatedToken, setGeneratedToken] = useState<number | null>(null);
+  const [emergency, setEmergency] = useState(false);
+  const [generatedEmergencyNo, setGeneratedEmergencyNo] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   // Search state — runs against the patient table on demand from the mobile
   // field, fills the form from any matching record, and surfaces in-queue.
@@ -148,7 +150,7 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
   const [searched, setSearched] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState<string | undefined>(undefined);
   const [inQueueToken, setInQueueToken] = useState<number | undefined>(undefined);
-  const { entries, setEntries, addEntry, mode } = useQueue();
+  const { entries, setEntries, addEntry, addEmergency, mode } = useQueue();
   const navigate = useNavigate();
 
   // Lookup field accepts only 10 digits — country code is always +91.
@@ -312,6 +314,24 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
       emergencyName: emergencyName.trim() || undefined,
       emergencyMobile: emergencyMobile ? formatStoredMobile(emergencyMobile) : undefined,
     };
+    if (emergency) {
+      // Priority insert — jumps in right after the current consultation with a
+      // daily-reset E-token. Local insert: the deployed demo runs in demo mode
+      // and the live backend doesn't model emergencies yet.
+      if (entries.length === 0) setEntries(demoQueue);
+      const no = addEmergency({
+        id: `q-${Date.now()}`,
+        patientName: name.trim(),
+        patientMobile: formatStoredMobile(mobile),
+        source: 'OFFLINE',
+        joinedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        details,
+      });
+      setGeneratedEmergencyNo(no);
+      setGeneratedToken(null);
+      setStep('done');
+      return;
+    }
     generateTokenFor({ id: selectedPatientId, name: name.trim(), age: details.age, gender }, details);
   };
 
@@ -332,6 +352,8 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
     setFormError(null);
     setFamily([]);
     setGeneratedToken(null);
+    setEmergency(false);
+    setGeneratedEmergencyNo(null);
     setSearching(false);
     setSearched(false);
     setSelectedPatientId(undefined);
@@ -438,6 +460,33 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
               {searched && family.length === 0 && (
                 <div className="rounded-xl border hairline bg-ink-50/60 dark:bg-ink-900/60 px-3 py-2 text-xs text-muted flex items-center gap-1.5">
                   <UserPlus size={12} className="text-brand-600 dark:text-brand-300" /> No record found — new patient. Fill the details below.
+                </div>
+              )}
+
+              {/* Emergency / priority toggle — jumps the patient in right
+                  after the current consultation with a daily E-token. */}
+              <button
+                type="button"
+                onClick={() => setEmergency((v) => !v)}
+                aria-pressed={emergency}
+                className={`w-full flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors ${
+                  emergency
+                    ? 'border-danger-500/50 bg-danger-500/10 text-danger-600 dark:text-danger-400'
+                    : 'hairline text-ink-700 dark:text-ink-200 hover:bg-ink-50 dark:hover:bg-ink-800'
+                }`}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Siren size={15} className="text-danger-500" />
+                  Emergency patient
+                  <span className="text-[10px] uppercase tracking-wider text-muted font-medium ml-1">Priority</span>
+                </span>
+                <span className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${emergency ? 'bg-danger-500' : 'bg-ink-300 dark:bg-ink-700'}`}>
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${emergency ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </span>
+              </button>
+              {emergency && (
+                <div className="rounded-xl border border-danger-500/30 bg-danger-500/5 px-3 py-2 text-[11px] text-danger-600 dark:text-danger-400 flex items-center gap-1.5">
+                  <Siren size={12} className="shrink-0" /> Served next — slotted in right after the current patient, with a daily priority token (E1, E2…).
                 </div>
               )}
 
@@ -602,12 +651,13 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
               <Button
                 size="lg"
                 fullWidth
-                leftIcon={<Ticket size={16} />}
+                variant={emergency ? 'danger' : 'primary'}
+                leftIcon={emergency ? <Siren size={16} /> : <Ticket size={16} />}
                 onClick={handleGenerate}
                 loading={busy}
                 disabled={inQueueToken != null}
               >
-                Generate token
+                {emergency ? 'Generate emergency token' : 'Generate token'}
               </Button>
             </motion.div>
           )}
@@ -623,16 +673,24 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
               >
                 <Check size={28} />
               </motion.div>
-              <h3 className="mt-5 text-xl font-semibold text-ink-900 dark:text-ink-50">Token generated</h3>
-              <p className="text-sm text-muted">{name || 'Patient'} added to the queue</p>
+              <h3 className="mt-5 text-xl font-semibold text-ink-900 dark:text-ink-50">
+                {generatedEmergencyNo != null ? 'Emergency token generated' : 'Token generated'}
+              </h3>
+              <p className="text-sm text-muted">
+                {name || 'Patient'} added to the queue{generatedEmergencyNo != null ? ' · served next' : ''}
+              </p>
               <motion.div
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 }}
                 className="mx-auto mt-6 inline-flex flex-col items-center rounded-3xl border hairline bg-white dark:bg-navy-900 px-10 py-6 shadow-card"
               >
-                <div className="text-[11px] uppercase tracking-wider text-muted">Your token</div>
-                <div className="text-6xl font-extrabold tracking-tight text-token drop-shadow-[0_0_24px_rgba(34,197,94,0.5)]">#{generatedToken}</div>
+                <div className="text-[11px] uppercase tracking-wider text-muted">{generatedEmergencyNo != null ? 'Emergency token' : 'Your token'}</div>
+                {generatedEmergencyNo != null ? (
+                  <div className="text-6xl font-extrabold tracking-tight text-danger-500 drop-shadow-[0_0_24px_rgba(239,68,68,0.5)]">E{generatedEmergencyNo}</div>
+                ) : (
+                  <div className="text-6xl font-extrabold tracking-tight text-token drop-shadow-[0_0_24px_rgba(59,130,246,0.5)]">#{generatedToken}</div>
+                )}
               </motion.div>
               <div className="mt-6 flex justify-center gap-2">
                 <Button variant="outline" onClick={reset}>Add another</Button>

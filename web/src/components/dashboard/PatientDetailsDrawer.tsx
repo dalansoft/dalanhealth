@@ -12,7 +12,7 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import type { QueueEntry } from '@/store/queue';
-import { useQueue } from '@/store/queue';
+import { useQueue, tokenLabel } from '@/store/queue';
 
 interface Props {
   open: boolean;
@@ -131,7 +131,7 @@ export function PatientDetailsDrawer({ open, entry, onClose }: Props) {
                     <h2 id="patient-drawer-title" className="text-base font-semibold text-ink-900 dark:text-ink-50 truncate">
                       {entry.patientName}
                     </h2>
-                    <Badge tone="brand" size="sm">#{entry.token}</Badge>
+                    <Badge tone={entry.emergency ? 'danger' : 'brand'} size="sm">{tokenLabel(entry)}</Badge>
                   </div>
                   <div className="text-[11px] text-muted flex items-center gap-1 mt-0.5">
                     <Phone size={10} /> {entry.patientMobile}
@@ -153,7 +153,7 @@ export function PatientDetailsDrawer({ open, entry, onClose }: Props) {
               {/* Booking snapshot */}
               <Section title="This visit" icon={<Ticket size={14} />}>
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <Stat label="Token" value={`#${entry.token}`} />
+                  <Stat label="Token" value={tokenLabel(entry)} />
                   <Stat label="Source" value={<SourceBadge source={entry.source} />} />
                   <Stat label="Status" value={<StatusPill status={entry.status} />} />
                   <Stat
