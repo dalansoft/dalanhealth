@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Users, Ticket, IndianRupee, CheckCircle, Monitor, UserPlus } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Users, Ticket, IndianRupee, CheckCircle, Monitor, UserPlus, FileUp } from 'lucide-react';
 import { StatTile } from '@/components/dashboard/StatTile';
 import { CurrentTokenCard } from '@/components/dashboard/CurrentTokenCard';
 import { WalletMiniCard } from '@/components/dashboard/WalletMiniCard';
@@ -63,6 +64,9 @@ export function ClinicDashboard() {
           <Button size="sm" leftIcon={<UserPlus size={14} />} onClick={() => setAddOpen(true)}>
             Add patient
           </Button>
+          <Link to="/clinic/prescription?upload=1">
+            <Button variant="outline" size="sm" leftIcon={<FileUp size={14} />}>Upload prescription</Button>
+          </Link>
           <LiveClock />
           <a href="/display/clinic" target="_blank" rel="noreferrer">
             <Button variant="outline" size="sm" leftIcon={<Monitor size={14} />}>TV display</Button>

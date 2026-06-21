@@ -1,19 +1,22 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Plus, Trash2, Printer, Download, Share2, Upload, Camera, FileText,
-  File as FileIcon, X, Check, RefreshCw, Image as ImageIcon,
+  File as FileIcon, X, Check, RefreshCw, Image as ImageIcon, Search, Save,
 } from 'lucide-react';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Logo } from '@/components/ui/Logo';
-import { demoClinic } from '@/services/demoData';
+import { useQueue } from '@/store/queue';
+import { usePrescriptions, type RxKind } from '@/store/prescriptions';
+import { demoClinic, demoPatients } from '@/services/demoData';
 
 interface Medicine {
   name: string;
-  dose: string;        // "½", "1", "15 ml", …
+  dose: string;
   morning: boolean;
   afternoon: boolean;
   evening: boolean;
@@ -22,6 +25,7 @@ interface Medicine {
 }
 
 type Mode = 'digital' | 'upload' | 'camera';
+interface Patient { name: string; mobile: string; when: string }
 
 const DOSE_CHIPS = ['½', '1', '1½', '2'];
 const DAY_CHIPS = ['3 days', '5 days', '7 days'];
@@ -42,10 +46,32 @@ const chipCls = (active: boolean) =>
   `rounded-lg px-2.5 py-1 text-xs font-semibold border transition-colors ${
     active ? 'border-brand-500 bg-brand-500 text-white' : 'hairline text-ink-600 dark:text-ink-300 hover:bg-ink-50 dark:hover:bg-ink-800'
   }`;
+const initials = (n: string) => n.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
+const fmtSize = (b: number) => (b < 1024 * 1024 ? `${Math.round(b / 1024)} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`);
 
 export function PrescriptionScreen() {
-  const [mode, setMode] = useState<Mode>('digital');
-  const [patient] = useState('Shailesh Kumar');
+  const [params] = useSearchParams();
+  const [mode, setMode] = useState<Mode>(params.get('upload') ? 'upload' : 'digital');
+  const completed = useQueue((s) => s.completed);
+  const addRx = usePrescriptions((s) => s.add);
+
+  // Only patients who have finished a visit — they're the ones who get an Rx.
+  const completedPatients = useMemo<Patient[]>(() => {
+    const seen = new Set<string>();
+    const out: Patient[] = [];
+    const push = (name: string, mobile: string, when: string) => {
+      const k = mobile.replace(/\D/g, '');
+      if (!k || seen.has(k)) return;
+      seen.add(k);
+      out.push({ name, mobile, when });
+    };
+    completed.forEach((e) => push(e.patientName, e.patientMobile, e.completedAt ?? 'Today'));
+    demoPatients.forEach((p) => push(p.name, p.mobile, p.lastVisit));
+    return out;
+  }, [completed]);
+
+  const [patient, setPatient] = useState<Patient>(() => completedPatients[0] ?? { name: 'Shailesh Kumar', mobile: '+91 98765 43210', when: 'Today' });
+
   const [symptoms, setSymptoms] = useState('Sore throat, mild fever for 3 days');
   const [diagnosis, setDiagnosis] = useState('Acute pharyngitis');
   const [tests, setTests] = useState('CBC, throat swab');
@@ -56,11 +82,21 @@ export function PrescriptionScreen() {
     { name: 'Paracetamol 650mg', dose: '1', morning: true, afternoon: true, evening: false, night: true, days: '3 days' },
     { name: 'Betadine gargle', dose: '15 ml', morning: false, afternoon: true, evening: false, night: true, days: '5 days' },
   ]);
+  const [savedDigital, setSavedDigital] = useState(false);
 
   const addMed = () => setMeds([...meds, { name: '', dose: '1', morning: false, afternoon: false, evening: false, night: false, days: '' }]);
   const removeMed = (i: number) => setMeds(meds.filter((_, idx) => idx !== i));
   const updateMed = <K extends keyof Medicine>(i: number, key: K, val: Medicine[K]) => {
     setMeds(meds.map((m, idx) => idx === i ? { ...m, [key]: val } : m));
+  };
+
+  const record = (kind: RxKind, summary: string) =>
+    addRx({ patientName: patient.name, patientMobile: patient.mobile, kind, summary });
+
+  const saveDigital = () => {
+    record('digital', diagnosis.trim() || 'Prescription');
+    setSavedDigital(true);
+    setTimeout(() => setSavedDigital(false), 2000);
   };
 
   const tabs = [
@@ -71,6 +107,8 @@ export function PrescriptionScreen() {
 
   return (
     <div className="space-y-5">
+      <PatientPicker patients={completedPatients} value={patient} onChange={setPatient} />
+
       {/* Mode switcher */}
       <div className="flex flex-wrap gap-2">
         {tabs.map((t) => (
@@ -89,8 +127,8 @@ export function PrescriptionScreen() {
         ))}
       </div>
 
-      {mode === 'upload' && <UploadCard patient={patient} />}
-      {mode === 'camera' && <CameraCard patient={patient} />}
+      {mode === 'upload' && <UploadCard patient={patient} onAttach={(s) => record('upload', s)} />}
+      {mode === 'camera' && <CameraCard patient={patient} onAttach={(s) => record('photo', s)} />}
 
       {mode === 'digital' && (
         <div className="grid lg:grid-cols-5 gap-5">
@@ -123,7 +161,6 @@ export function PrescriptionScreen() {
                         <input value={m.name} onChange={(e) => updateMed(i, 'name', e.target.value)} placeholder="Medicine name" className="flex-1 bg-transparent text-sm font-medium text-ink-900 dark:text-ink-50 outline-none px-1" />
                         <button onClick={() => removeMed(i)} className="text-ink-400 hover:text-danger-500 shrink-0"><Trash2 size={14} /></button>
                       </div>
-
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">Dose</span>
                         {DOSE_CHIPS.map((d) => (
@@ -131,14 +168,12 @@ export function PrescriptionScreen() {
                         ))}
                         <input value={m.dose} onChange={(e) => updateMed(i, 'dose', e.target.value)} placeholder="e.g. 15 ml" className="w-20 rounded-lg border hairline bg-white dark:bg-ink-900 px-2 py-1 text-xs outline-none" />
                       </div>
-
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">When</span>
                         {SLOTS.map(([k, label]) => (
                           <button key={k} type="button" onClick={() => updateMed(i, k, !m[k])} className={chipCls(m[k])}>{label}</button>
                         ))}
                       </div>
-
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="w-11 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted">Days</span>
                         {DAY_CHIPS.map((d) => (
@@ -166,7 +201,7 @@ export function PrescriptionScreen() {
                   <div className="text-xs uppercase tracking-wider text-muted">Date</div>
                   <div className="text-sm font-semibold text-ink-900 dark:text-ink-50">{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
                   <div className="mt-2 text-xs uppercase tracking-wider text-muted">Patient</div>
-                  <div className="text-sm font-semibold text-ink-900 dark:text-ink-50">{patient}</div>
+                  <div className="text-sm font-semibold text-ink-900 dark:text-ink-50">{patient.name}</div>
                 </div>
               </div>
 
@@ -212,14 +247,8 @@ export function PrescriptionScreen() {
 
               <div className="mt-10 pt-5 border-t hairline flex items-end justify-between gap-4">
                 <div className="text-[11px] text-muted space-y-0.5">
-                  <div className="whitespace-nowrap">
-                    Powered by{' '}
-                    <span className="font-bold text-ink-800 dark:text-ink-100">Dalan Health</span>
-                  </div>
-                  <div className="whitespace-nowrap">
-                    A Product of{' '}
-                    <span className="font-bold text-ink-800 dark:text-ink-100">Dalansoft Technologies</span>
-                  </div>
+                  <div className="whitespace-nowrap">Powered by <span className="font-bold text-ink-800 dark:text-ink-100">Dalan Health</span></div>
+                  <div className="whitespace-nowrap">A Product of <span className="font-bold text-ink-800 dark:text-ink-100">Dalansoft Technologies</span></div>
                 </div>
                 <div className="text-right">
                   <div className="border-b border-ink-300 dark:border-ink-700 w-40 mb-1" />
@@ -228,14 +257,19 @@ export function PrescriptionScreen() {
               </div>
 
               <div className="no-print mt-6 flex flex-wrap gap-2 justify-end">
+                <Button variant={savedDigital ? 'success' : 'primary'} leftIcon={savedDigital ? <Check size={14} /> : <Save size={14} />} onClick={saveDigital}>
+                  {savedDigital ? 'Saved' : 'Save prescription'}
+                </Button>
                 <Button variant="outline" leftIcon={<Printer size={14} />} onClick={() => window.print()}>Print</Button>
                 <Button variant="outline" leftIcon={<Download size={14} />}>Download PDF</Button>
-                <Button leftIcon={<Share2 size={14} />}>Share WhatsApp</Button>
+                <Button variant="outline" leftIcon={<Share2 size={14} />}>Share WhatsApp</Button>
               </div>
             </motion.div>
           </div>
         </div>
       )}
+
+      <PrescriptionHistory />
     </div>
   );
 }
@@ -247,10 +281,131 @@ const Field = ({ label, val }: { label: string; val: string }) => (
   </div>
 );
 
-const fmtSize = (b: number) => (b < 1024 * 1024 ? `${Math.round(b / 1024)} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`);
+// ─── Completed-patient picker ───────────────────────────────────────────────
+function PatientPicker({ patients, value, onChange }: { patients: Patient[]; value: Patient; onChange: (p: Patient) => void }) {
+  const [q, setQ] = useState('');
+  const [open, setOpen] = useState(false);
+  const filtered = useMemo(() => {
+    const n = q.toLowerCase().replace(/\s/g, '');
+    return patients.filter((p) => !n || `${p.name}${p.mobile}`.toLowerCase().replace(/\s/g, '').includes(n)).slice(0, 8);
+  }, [patients, q]);
+
+  return (
+    <Card>
+      <CardHeader>
+        <div>
+          <CardTitle>Patient</CardTitle>
+          <CardSubtitle>Search a completed visit to prescribe or upload for — only visited patients appear</CardSubtitle>
+        </div>
+        <Badge tone="neutral">{patients.length} completed</Badge>
+      </CardHeader>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex items-center gap-3 rounded-xl border hairline bg-ink-50/60 dark:bg-ink-900/40 px-3 py-2 shrink-0">
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-white text-xs font-semibold">{initials(value.name)}</span>
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-ink-900 dark:text-ink-50 truncate">{value.name}</div>
+            <div className="text-[11px] text-muted truncate">{value.mobile}</div>
+          </div>
+        </div>
+        <div className="relative flex-1">
+          <Input
+            leftIcon={<Search size={14} />}
+            placeholder="Search completed patient by name or mobile…"
+            value={q}
+            onChange={(e) => { setQ(e.target.value); setOpen(true); }}
+            onFocus={() => setOpen(true)}
+            onBlur={() => setTimeout(() => setOpen(false), 150)}
+          />
+          {open && (
+            <div className="absolute z-20 mt-1 w-full rounded-xl border hairline bg-white dark:bg-ink-900 shadow-card max-h-64 overflow-y-auto">
+              {filtered.map((p) => (
+                <button
+                  key={p.mobile}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => { onChange(p); setQ(''); setOpen(false); }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-ink-50 dark:hover:bg-ink-800/60 transition-colors"
+                >
+                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-500/15 text-brand-600 dark:text-brand-300 text-[11px] font-semibold">{initials(p.name)}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-ink-900 dark:text-ink-50 truncate">{p.name}</div>
+                    <div className="text-[11px] text-muted truncate">{p.mobile} · completed {p.when}</div>
+                  </div>
+                </button>
+              ))}
+              {filtered.length === 0 && (
+                <div className="px-3 py-4 text-center text-sm text-muted">No completed patient found.</div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+const KIND_META: Record<RxKind, { label: string; tone: 'brand' | 'accent' | 'success' }> = {
+  digital: { label: 'Digital', tone: 'brand' },
+  upload: { label: 'Uploaded', tone: 'accent' },
+  photo: { label: 'Photo', tone: 'success' },
+};
+
+// ─── Prescription history — every Rx, all patients ──────────────────────────
+function PrescriptionHistory() {
+  const list = usePrescriptions((s) => s.list);
+  const [q, setQ] = useState('');
+  const filtered = useMemo(() => {
+    const n = q.toLowerCase().replace(/\s/g, '');
+    return !n ? list : list.filter((r) => `${r.patientName}${r.patientMobile}${r.summary}`.toLowerCase().replace(/\s/g, '').includes(n));
+  }, [list, q]);
+
+  return (
+    <Card padded={false}>
+      <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <CardTitle>Prescription history</CardTitle>
+          <CardSubtitle>Every prescription, all patients</CardSubtitle>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="w-full sm:w-64">
+            <Input leftIcon={<Search size={14} />} placeholder="Search patient or summary…" value={q} onChange={(e) => setQ(e.target.value)} />
+          </div>
+          <Badge tone="neutral">{filtered.length}</Badge>
+        </div>
+      </div>
+      <div className="overflow-x-auto border-t hairline">
+        <table className="w-full min-w-[640px] text-sm">
+          <thead className="bg-ink-50 dark:bg-ink-900/60">
+            <tr className="text-left text-[11px] uppercase tracking-wider text-muted">
+              <th className="px-5 py-3">Date</th>
+              <th className="px-5 py-3">Patient</th>
+              <th className="px-5 py-3">Mobile</th>
+              <th className="px-5 py-3">Type</th>
+              <th className="px-5 py-3">Summary</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y hairline">
+            {filtered.map((r) => (
+              <tr key={r.id} className="hover:bg-ink-50 dark:hover:bg-ink-900/40">
+                <td className="px-5 py-3 text-muted whitespace-nowrap">{r.date}</td>
+                <td className="px-5 py-3 font-medium text-ink-900 dark:text-ink-50">{r.patientName}</td>
+                <td className="px-5 py-3 text-muted">{r.patientMobile}</td>
+                <td className="px-5 py-3"><Badge tone={KIND_META[r.kind].tone} size="sm">{KIND_META[r.kind].label}</Badge></td>
+                <td className="px-5 py-3 text-ink-700 dark:text-ink-200">{r.summary}</td>
+              </tr>
+            ))}
+            {filtered.length === 0 && (
+              <tr><td colSpan={5} className="px-5 py-10 text-center text-sm text-muted">No prescriptions yet.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
 
 // ─── Upload an existing prescription (PDF / DOCX / JPG) ──────────────────────
-function UploadCard({ patient }: { patient: string }) {
+function UploadCard({ patient, onAttach }: { patient: Patient; onAttach: (summary: string) => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [drag, setDrag] = useState(false);
@@ -269,7 +424,7 @@ function UploadCard({ patient }: { patient: string }) {
       <CardHeader>
         <div>
           <CardTitle>Upload prescription</CardTitle>
-          <CardSubtitle>Attach a PDF, DOCX or JPG for {patient}</CardSubtitle>
+          <CardSubtitle>Attach a PDF, DOCX or JPG for {patient.name}</CardSubtitle>
         </div>
         {attached && <Badge tone="success" pulse>Saved</Badge>}
       </CardHeader>
@@ -283,9 +438,7 @@ function UploadCard({ patient }: { patient: string }) {
             drag ? 'border-brand-500 bg-brand-500/5' : 'border-ink-300 dark:border-ink-700 hover:border-brand-500/60 hover:bg-ink-50 dark:hover:bg-ink-900/50'
           }`}
         >
-          <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-500/15 text-brand-600 dark:text-brand-300">
-            <Upload size={22} />
-          </span>
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-500/15 text-brand-600 dark:text-brand-300"><Upload size={22} /></span>
           <div className="text-sm font-semibold text-ink-900 dark:text-ink-50">Drag &amp; drop, or click to browse</div>
           <div className="text-xs text-muted">PDF, DOCX or JPG · up to ~10 MB</div>
           <input
@@ -301,9 +454,7 @@ function UploadCard({ patient }: { patient: string }) {
             <img src={preview} alt="Prescription preview" className="max-h-80 w-auto rounded-xl border hairline mx-auto" />
           ) : (
             <div className="flex items-center gap-3 rounded-xl border hairline p-4">
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-500/15 text-brand-600 dark:text-brand-300">
-                <FileIcon size={20} />
-              </span>
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-500/15 text-brand-600 dark:text-brand-300"><FileIcon size={20} /></span>
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold text-ink-900 dark:text-ink-50 truncate">{file.name}</div>
                 <div className="text-xs text-muted">{fmtSize(file.size)} · {file.type || 'file'}</div>
@@ -312,13 +463,13 @@ function UploadCard({ patient }: { patient: string }) {
           )}
           <div className="flex flex-wrap gap-2 justify-between">
             <Button variant="outline" leftIcon={<X size={14} />} onClick={() => pick(null)}>Remove</Button>
-            <Button leftIcon={<Check size={14} />} onClick={() => setAttached(true)} disabled={attached}>
+            <Button leftIcon={<Check size={14} />} onClick={() => { setAttached(true); onAttach(file.name); }} disabled={attached}>
               {attached ? 'Saved to record' : 'Attach to patient record'}
             </Button>
           </div>
           {attached && (
             <div className="rounded-xl border border-success-500/30 bg-success-500/5 px-3 py-2 text-xs text-success-600 dark:text-success-500 flex items-center gap-1.5">
-              <Check size={12} /> Attached to {patient}'s record.
+              <Check size={12} /> Attached to {patient.name}'s record.
             </div>
           )}
         </div>
@@ -328,7 +479,7 @@ function UploadCard({ patient }: { patient: string }) {
 }
 
 // ─── Capture a prescription photo from the camera ───────────────────────────
-function CameraCard({ patient }: { patient: string }) {
+function CameraCard({ patient, onAttach }: { patient: Patient; onAttach: (summary: string) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [streaming, setStreaming] = useState(false);
@@ -369,7 +520,6 @@ function CameraCard({ patient }: { patient: string }) {
     stop();
   };
 
-  // Stop the camera when leaving this mode (component unmounts).
   useEffect(() => () => stop(), []);
 
   return (
@@ -377,7 +527,7 @@ function CameraCard({ patient }: { patient: string }) {
       <CardHeader>
         <div>
           <CardTitle>Photograph prescription</CardTitle>
-          <CardSubtitle>Open the camera and capture a paper prescription for {patient}</CardSubtitle>
+          <CardSubtitle>Capture a paper prescription for {patient.name}</CardSubtitle>
         </div>
         {attached && <Badge tone="success" pulse>Saved</Badge>}
       </CardHeader>
@@ -400,26 +550,19 @@ function CameraCard({ patient }: { patient: string }) {
         </div>
 
         {error && (
-          <div className="rounded-xl border border-warning-500/40 bg-warning-500/5 px-3 py-2 text-xs text-warning-700 dark:text-warning-300">
-            {error}
-          </div>
+          <div className="rounded-xl border border-warning-500/40 bg-warning-500/5 px-3 py-2 text-xs text-warning-700 dark:text-warning-300">{error}</div>
         )}
 
         <div className="flex flex-wrap gap-2 justify-between">
           <div className="flex gap-2">
-            {!streaming && !photo && (
-              <Button leftIcon={<Camera size={14} />} onClick={start}>Start camera</Button>
-            )}
+            {!streaming && !photo && <Button leftIcon={<Camera size={14} />} onClick={start}>Start camera</Button>}
             {streaming && (
               <>
                 <Button leftIcon={<Camera size={14} />} onClick={capture}>Capture</Button>
                 <Button variant="outline" onClick={stop}>Stop</Button>
               </>
             )}
-            {photo && (
-              <Button variant="outline" leftIcon={<RefreshCw size={14} />} onClick={start}>Retake</Button>
-            )}
-            {/* Mobile / fallback: native camera or gallery */}
+            {photo && <Button variant="outline" leftIcon={<RefreshCw size={14} />} onClick={start}>Retake</Button>}
             <label className="inline-flex items-center gap-1.5 rounded-xl border hairline px-3 h-10 text-sm font-medium text-ink-700 dark:text-ink-200 hover:bg-ink-50 dark:hover:bg-ink-800 cursor-pointer">
               <ImageIcon size={14} /> Use device camera
               <input
@@ -427,15 +570,12 @@ function CameraCard({ patient }: { patient: string }) {
                 accept="image/*"
                 capture="environment"
                 className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) { stop(); setError(null); setAttached(false); setPhoto(URL.createObjectURL(f)); }
-                }}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) { stop(); setError(null); setAttached(false); setPhoto(URL.createObjectURL(f)); } }}
               />
             </label>
           </div>
           {photo && (
-            <Button leftIcon={<Check size={14} />} onClick={() => setAttached(true)} disabled={attached}>
+            <Button leftIcon={<Check size={14} />} onClick={() => { setAttached(true); onAttach('Camera photo'); }} disabled={attached}>
               {attached ? 'Saved to record' : 'Attach to patient record'}
             </Button>
           )}
@@ -443,7 +583,7 @@ function CameraCard({ patient }: { patient: string }) {
 
         {attached && (
           <div className="rounded-xl border border-success-500/30 bg-success-500/5 px-3 py-2 text-xs text-success-600 dark:text-success-500 flex items-center gap-1.5">
-            <Check size={12} /> Photo attached to {patient}'s record.
+            <Check size={12} /> Photo attached to {patient.name}'s record.
           </div>
         )}
       </div>
