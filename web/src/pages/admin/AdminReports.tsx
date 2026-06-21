@@ -64,8 +64,8 @@ export function AdminReports() {
                 <XAxis dataKey="m" stroke="currentColor" opacity={0.6} fontSize={11} />
                 <YAxis stroke="currentColor" opacity={0.6} fontSize={11} tickFormatter={(v) => inrCompact(v)} />
                 <Tooltip contentStyle={{ background: 'rgba(15,23,42,0.95)', border: 'none', borderRadius: 12, color: 'white', fontSize: 12 }} formatter={(v: number) => inr(v)} />
-                <Line type="monotone" dataKey="revenue" stroke="#14b8a6" strokeWidth={2.5} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="recharge" stroke="#10b981" strokeWidth={2.5} strokeDasharray="4 4" dot={false} />
+                <Line type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="recharge" stroke="#0ea5e9" strokeWidth={2.5} strokeDasharray="4 4" dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -85,9 +85,9 @@ export function AdminReports() {
                 <YAxis stroke="currentColor" opacity={0.6} fontSize={11} />
                 <Tooltip contentStyle={{ background: 'rgba(15,23,42,0.95)', border: 'none', borderRadius: 12, color: 'white', fontSize: 12 }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="offline" stackId="a" fill="#10b981" name="Offline" />
-                <Bar dataKey="online" stackId="a" fill="#14b8a6" name="Online" />
-                <Bar dataKey="qr" stackId="a" fill="#10b981" name="QR" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="offline" stackId="a" fill="#0ea5e9" name="Offline" />
+                <Bar dataKey="online" stackId="a" fill="#3b82f6" name="Online" />
+                <Bar dataKey="qr" stackId="a" fill="#0ea5e9" name="QR" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

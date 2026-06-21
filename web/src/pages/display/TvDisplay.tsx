@@ -277,7 +277,7 @@ export function TvDisplay() {
                         ? 'text-danger-500 lg:drop-shadow-[0_0_60px_rgba(239,68,68,0.45)]'
                         : current.wasSkipped
                         ? 'text-warning-600 dark:text-warning-300 lg:drop-shadow-[0_0_60px_rgba(245,158,11,0.45)]'
-                        : 'text-token lg:drop-shadow-[0_0_60px_rgba(34,197,94,0.45)]'
+                        : 'text-token lg:drop-shadow-[0_0_60px_rgba(59,130,246,0.45)]'
                     }`}
                     style={{ fontSize: 'clamp(2.25rem, 7vh, 14rem)' }}
                   >

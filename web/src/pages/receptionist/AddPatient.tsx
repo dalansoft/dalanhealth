@@ -689,7 +689,7 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
                 {generatedEmergencyNo != null ? (
                   <div className="text-6xl font-extrabold tracking-tight text-danger-500 drop-shadow-[0_0_24px_rgba(239,68,68,0.5)]">E{generatedEmergencyNo}</div>
                 ) : (
-                  <div className="text-6xl font-extrabold tracking-tight text-token drop-shadow-[0_0_24px_rgba(34,197,94,0.5)]">#{generatedToken}</div>
+                  <div className="text-6xl font-extrabold tracking-tight text-token drop-shadow-[0_0_24px_rgba(59,130,246,0.5)]">#{generatedToken}</div>
                 )}
               </motion.div>
               <div className="mt-6 flex justify-center gap-2">

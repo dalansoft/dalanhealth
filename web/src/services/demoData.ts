@@ -258,9 +258,9 @@ export const demoClinicNotifications = [
 ];
 
 export const demoSourceMix = [
-  { name: 'Offline', value: 56, color: '#10b981' },
-  { name: 'Online', value: 28, color: '#14b8a6' },
-  { name: 'QR', value: 16, color: '#10b981' },
+  { name: 'Offline', value: 56, color: '#0ea5e9' },
+  { name: 'Online', value: 28, color: '#3b82f6' },
+  { name: 'QR', value: 16, color: '#0ea5e9' },
 ];
 
 export const demoFunnelWeek = [

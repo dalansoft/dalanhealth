@@ -71,7 +71,7 @@ export function LiveQueueDemo() {
                   transition={{ type: 'spring', stiffness: 240, damping: 20 }}
                   className="mt-3"
                 >
-                  <div className="text-7xl sm:text-8xl font-extrabold tracking-tight text-token drop-shadow-[0_0_40px_rgba(34,197,94,0.4)]">
+                  <div className="text-7xl sm:text-8xl font-extrabold tracking-tight text-token drop-shadow-[0_0_40px_rgba(59,130,246,0.4)]">
                     #{token(0)}
                   </div>
                   <div className="mt-2 flex items-center justify-center gap-2">

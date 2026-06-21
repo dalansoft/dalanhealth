@@ -39,7 +39,7 @@ export function CurrentTokenCard({ current, onComplete, onSkip }: Props) {
                 initial={{ scale: 0.92, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: 'spring', stiffness: 240, damping: 18 }}
-                className={`text-7xl sm:text-8xl font-extrabold leading-none tracking-tight ${current.emergency ? 'text-danger-500 drop-shadow-[0_0_36px_rgba(239,68,68,0.45)]' : 'text-token drop-shadow-[0_0_36px_rgba(34,197,94,0.45)]'}`}
+                className={`text-7xl sm:text-8xl font-extrabold leading-none tracking-tight ${current.emergency ? 'text-danger-500 drop-shadow-[0_0_36px_rgba(239,68,68,0.45)]' : 'text-token drop-shadow-[0_0_36px_rgba(59,130,246,0.45)]'}`}
               >
                 {tokenLabel(current)}
               </motion.div>

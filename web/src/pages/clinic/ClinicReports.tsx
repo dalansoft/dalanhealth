@@ -33,9 +33,9 @@ export function ClinicReports() {
                 <YAxis stroke="currentColor" opacity={0.6} fontSize={11} />
                 <Tooltip contentStyle={{ background: 'rgba(15,23,42,0.95)', border: 'none', borderRadius: 12, color: 'white', fontSize: 12 }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="offline" stackId="a" fill="#10b981" name="Offline" />
-                <Bar dataKey="online" stackId="a" fill="#14b8a6" name="Online" />
-                <Bar dataKey="qr" stackId="a" fill="#10b981" name="QR" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="offline" stackId="a" fill="#0ea5e9" name="Offline" />
+                <Bar dataKey="online" stackId="a" fill="#3b82f6" name="Online" />
+                <Bar dataKey="qr" stackId="a" fill="#0ea5e9" name="QR" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -78,8 +78,8 @@ export function ClinicReports() {
                 <YAxis stroke="currentColor" opacity={0.6} fontSize={11} />
                 <Tooltip contentStyle={{ background: 'rgba(15,23,42,0.95)', border: 'none', borderRadius: 12, color: 'white', fontSize: 12 }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="visits" fill="#14b8a6" name="Visits" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="followups" fill="#22c55e" name="Follow-ups" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="visits" fill="#3b82f6" name="Visits" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="followups" fill="#3b82f6" name="Follow-ups" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -99,7 +99,7 @@ export function ClinicReports() {
                 <XAxis dataKey="m" stroke="currentColor" opacity={0.6} fontSize={11} />
                 <YAxis stroke="currentColor" opacity={0.6} fontSize={11} tickFormatter={(v) => inrCompact(v)} />
                 <Tooltip contentStyle={{ background: 'rgba(15,23,42,0.95)', border: 'none', borderRadius: 12, color: 'white', fontSize: 12 }} formatter={(v: number) => inr(v)} />
-                <Line type="monotone" dataKey="v" stroke="#10b981" strokeWidth={2.5} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="v" stroke="#0ea5e9" strokeWidth={2.5} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>

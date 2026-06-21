@@ -8,18 +8,18 @@
   --fg: 15 23 42;
   --fg-muted: 100 116 139;
   --border: 226 232 240;
-  --brand: 13 148 136;   /* teal-600 */
-  --accent: 5 150 105;   /* emerald-600 */
+  --brand: 37 99 235;    /* blue-600 */
+  --accent: 2 132 199;   /* sky-600 */
 }
 
 .dark {
-  --bg: 3 11 12;
-  --bg-elev: 8 23 23;
+  --bg: 5 9 22;
+  --bg-elev: 15 23 42;
   --fg: 226 232 240;
   --fg-muted: 148 163 184;
-  --border: 22 49 53;
-  --brand: 45 212 191;   /* teal-400 */
-  --accent: 52 211 153;  /* emerald-400 */
+  --border: 30 41 59;
+  --brand: 96 165 250;   /* blue-400 */
+  --accent: 56 189 248;  /* sky-400 */
 }
 
 html, body, #root {
@@ -36,7 +36,7 @@ body {
 }
 
 ::selection {
-  background: rgba(20, 184, 166, 0.28);
+  background: rgba(59, 130, 246, 0.28);
 }
 
 /* Premium scrollbar */
@@ -90,12 +90,12 @@ body {
   .card-lift:hover {
     @apply -translate-y-1 shadow-lift border-brand-400/40 dark:border-brand-500/40;
   }
-  /* Animated teal→emerald aurora backdrop for section bands. */
+  /* Animated blue→sky aurora backdrop for section bands. */
   .bg-aurora {
     background:
-      radial-gradient(40% 60% at 20% 20%, rgba(20,184,166,0.18), transparent 70%),
-      radial-gradient(40% 60% at 80% 10%, rgba(16,185,129,0.16), transparent 70%),
-      radial-gradient(50% 60% at 50% 100%, rgba(45,212,191,0.14), transparent 70%);
+      radial-gradient(40% 60% at 20% 20%, rgba(59,130,246,0.18), transparent 70%),
+      radial-gradient(40% 60% at 80% 10%, rgba(14,165,233,0.16), transparent 70%),
+      radial-gradient(50% 60% at 50% 100%, rgba(96,165,250,0.14), transparent 70%);
   }
   /* Gradient ring/border used on premium cards (mask trick = border only). */
   .ring-gradient {
