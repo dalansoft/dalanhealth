@@ -64,7 +64,7 @@ function RxDocument({ doc, logo }: { doc: RxDoc; logo?: string }) {
     <div style={{ color: '#0f172a', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <div className="flex items-start justify-between pb-5" style={{ borderBottom: '1px solid #e2e8f0' }}>
         <div>
-          <img src={logo || '/logo-full.png'} alt="Dalan Health" style={{ height: 30, width: 'auto', display: 'block' }} />
+          <img src={logo || '/logo-full.png'} alt="Dalan Health" style={{ height: 38, width: 'auto', display: 'block' }} />
           <div className="mt-2 text-lg font-semibold">{doc.clinicName}</div>
           <div className="text-xs" style={{ color: '#64748b' }}>{doc.doctor} · {doc.spec}</div>
           <div className="text-xs" style={{ color: '#64748b' }}>{doc.city}</div>
@@ -173,7 +173,7 @@ async function renderDocCanvas(doc: RxDoc): Promise<HTMLCanvasElement> {
   await Promise.all(imgs.map((im) => (im.complete && im.naturalWidth > 0
     ? Promise.resolve()
     : new Promise<void>((res) => { im.onload = () => res(); im.onerror = () => res(); }))));
-  const canvas = await html2canvas(target, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
+  const canvas = await html2canvas(target, { scale: 3, backgroundColor: '#ffffff', useCORS: true, logging: false });
   root.unmount();
   host.remove();
   return canvas;
@@ -191,14 +191,15 @@ async function exportDocPdf(doc: RxDoc, filename: string) {
   const pw = pdf.internal.pageSize.getWidth();
   const ph = pdf.internal.pageSize.getHeight();
   const imgH = (canvas.height / canvas.width) * pw;
-  const data = canvas.toDataURL('image/jpeg', 0.95);
+  // PNG (lossless) — JPEG compression was softening the thin logo tagline.
+  const data = canvas.toDataURL('image/png');
   if (imgH <= ph) {
-    pdf.addImage(data, 'JPEG', 0, 0, pw, imgH);
+    pdf.addImage(data, 'PNG', 0, 0, pw, imgH, undefined, 'FAST');
   } else {
     let position = 0;
     let remaining = imgH;
     while (remaining > 0) {
-      pdf.addImage(data, 'JPEG', 0, position, pw, imgH);
+      pdf.addImage(data, 'PNG', 0, position, pw, imgH, undefined, 'FAST');
       remaining -= ph;
       if (remaining > 0) { pdf.addPage(); position -= ph; }
     }
