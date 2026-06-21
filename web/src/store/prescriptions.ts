@@ -2,6 +2,23 @@ import { create } from 'zustand';
 
 export type RxKind = 'digital' | 'upload' | 'photo';
 
+export interface RxMed {
+  name: string;
+  dose: string;
+  morning: boolean;
+  afternoon: boolean;
+  evening: boolean;
+  night: boolean;
+  days: string;
+}
+
+export interface RxDoc {
+  clinicName: string; doctor: string; spec: string; city: string;
+  patient: string; date: string;
+  symptoms: string; diagnosis: string; tests: string; followUp: string; notes: string;
+  meds: RxMed[];
+}
+
 export interface Rx {
   id: string;
   patientName: string;
@@ -9,8 +26,8 @@ export interface Rx {
   date: string;     // display, e.g. "21 Jun 2026"
   kind: RxKind;
   summary: string;  // diagnosis line or file name
-  /** Self-contained printable HTML (digital prescriptions). */
-  html?: string;
+  /** Structured digital prescription — re-printable and re-exportable to PDF. */
+  doc?: RxDoc;
   /** data/object URL of an uploaded file or captured photo (not persisted). */
   fileUrl?: string;
   fileName?: string;

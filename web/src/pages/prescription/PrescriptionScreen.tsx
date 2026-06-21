@@ -11,19 +11,10 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Logo } from '@/components/ui/Logo';
 import { useQueue } from '@/store/queue';
-import { usePrescriptions, type RxKind, type Rx } from '@/store/prescriptions';
+import { usePrescriptions, type RxKind, type Rx, type RxMed, type RxDoc } from '@/store/prescriptions';
 import { demoClinic, demoPatients } from '@/services/demoData';
 
-interface Medicine {
-  name: string;
-  dose: string;
-  morning: boolean;
-  afternoon: boolean;
-  evening: boolean;
-  night: boolean;
-  days: string;
-}
-
+type Medicine = RxMed;
 type Mode = 'digital' | 'upload' | 'camera';
 interface Patient { name: string; mobile: string; when: string }
 
@@ -51,13 +42,6 @@ const fmtSize = (b: number) => (b < 1024 * 1024 ? `${Math.round(b / 1024)} KB` :
 
 // ─── Printable prescription document (standalone HTML) ──────────────────────
 const esc = (s: string) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
-
-interface RxDoc {
-  clinicName: string; doctor: string; spec: string; city: string;
-  patient: string; date: string;
-  symptoms: string; diagnosis: string; tests: string; followUp: string; notes: string;
-  meds: Medicine[];
-}
 
 function buildRxHtml(d: RxDoc): string {
   const rows = d.meds.filter((m) => m.name).map((m) =>
@@ -125,7 +109,7 @@ function fileRxHtml(rx: Rx): string {
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(rx.fileName ?? 'Prescription')}</title><style>body{margin:0;padding:12px}</style></head><body>${body}</body></html>`;
 }
 
-const rxHtml = (rx: Rx): string => (rx.html ? rx.html : rx.fileUrl ? fileRxHtml(rx) : simpleRxHtml(rx));
+const rxHtml = (rx: Rx): string => (rx.doc ? buildRxHtml(rx.doc) : rx.fileUrl ? fileRxHtml(rx) : simpleRxHtml(rx));
 
 function printHtml(html: string) {
   const iframe = document.createElement('iframe');
@@ -141,16 +125,108 @@ function printHtml(html: string) {
   else win.onload = () => setTimeout(run, 250);
 }
 
-function downloadHtml(html: string, filename: string) {
-  const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
-  const a = document.createElement('a');
-  a.href = url; a.download = filename; a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
 function downloadUrl(url: string, filename: string) {
   const a = document.createElement('a');
   a.href = url; a.download = filename; a.click();
+}
+
+// ─── PDF export (jsPDF, lazy-loaded on demand) ──────────────────────────────
+async function loadJsPdf() {
+  const { jsPDF } = await import('jspdf');
+  const autoTable = (await import('jspdf-autotable')).default;
+  return { jsPDF, autoTable };
+}
+
+async function digitalPdf(d: RxDoc) {
+  const { jsPDF, autoTable } = await loadJsPdf();
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  let y = 52;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(37, 99, 235);
+  doc.text('DALAN HEALTH', 40, y);
+  doc.setTextColor(15, 23, 42); doc.setFontSize(13);
+  doc.text(d.clinicName, 40, y + 20);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(100, 116, 139);
+  doc.text(`${d.doctor} · ${d.spec}`, 40, y + 35);
+  doc.text(d.city, 40, y + 48);
+  doc.setFontSize(8); doc.setTextColor(148, 163, 184);
+  doc.text('DATE', W - 40, y, { align: 'right' });
+  doc.setFontSize(11); doc.setTextColor(15, 23, 42);
+  doc.text(d.date, W - 40, y + 14, { align: 'right' });
+  doc.setFontSize(8); doc.setTextColor(148, 163, 184);
+  doc.text('PATIENT', W - 40, y + 32, { align: 'right' });
+  doc.setFontSize(11); doc.setTextColor(15, 23, 42);
+  doc.text(d.patient, W - 40, y + 46, { align: 'right' });
+  y += 66;
+  doc.setDrawColor(226, 232, 240); doc.line(40, y, W - 40, y); y += 22;
+  const field = (label: string, val: string, x: number, yy: number) => {
+    doc.setFontSize(8); doc.setTextColor(148, 163, 184); doc.text(label.toUpperCase(), x, yy);
+    doc.setFontSize(11); doc.setTextColor(15, 23, 42);
+    doc.text(doc.splitTextToSize(val || '—', (W - 80) / 2 - 12), x, yy + 14);
+  };
+  field('Symptoms', d.symptoms, 40, y); field('Diagnosis', d.diagnosis, W / 2, y); y += 42;
+  field('Tests', d.tests, 40, y); field('Follow-up', d.followUp, W / 2, y); y += 46;
+  autoTable(doc, {
+    startY: y,
+    head: [['Medicine', 'Dose', 'Timing', 'Duration']],
+    body: d.meds.filter((m) => m.name).map((m) => [m.name, doseLabel(m), timingText(m) || '—', m.days]),
+    theme: 'grid',
+    headStyles: { fillColor: [248, 250, 252], textColor: [100, 116, 139], fontSize: 9, fontStyle: 'bold' },
+    styles: { fontSize: 10, cellPadding: 6, textColor: [15, 23, 42], lineColor: [226, 232, 240] },
+    margin: { left: 40, right: 40 },
+  });
+  let after = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 24;
+  if (d.notes) {
+    doc.setFontSize(8); doc.setTextColor(100, 116, 139); doc.text("DOCTOR'S NOTES", 40, after); after += 14;
+    doc.setFontSize(10); doc.setTextColor(15, 23, 42);
+    doc.text(doc.splitTextToSize(d.notes, W - 80), 40, after);
+  }
+  doc.setDrawColor(203, 213, 225); doc.line(W - 200, H - 64, W - 40, H - 64);
+  doc.setFontSize(9); doc.setTextColor(100, 116, 139); doc.text('Doctor signature', W - 40, H - 50, { align: 'right' });
+  doc.setFontSize(8); doc.text('Powered by Dalan Health · Dalansoft Technologies', 40, H - 50);
+  return doc;
+}
+
+async function imagePdf(dataUrl: string) {
+  const { jsPDF } = await loadJsPdf();
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = dataUrl; });
+  const ratio = Math.min((W - 80) / img.width, (H - 80) / img.height, 1);
+  const w = img.width * ratio, h = img.height * ratio;
+  doc.addImage(dataUrl, dataUrl.includes('image/png') ? 'PNG' : 'JPEG', (W - w) / 2, 40, w, h);
+  return doc;
+}
+
+async function summaryPdf(rx: Rx) {
+  const { jsPDF } = await loadJsPdf();
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(37, 99, 235);
+  doc.text('DALAN HEALTH', 40, 56);
+  doc.setTextColor(15, 23, 42); doc.setFontSize(14); doc.text('Prescription', 40, 84);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+  doc.text(`Patient: ${rx.patientName}  ·  ${rx.patientMobile}`, 40, 112);
+  doc.setTextColor(100, 116, 139); doc.setFontSize(10);
+  doc.text(`Date: ${rx.date}    Type: ${rx.kind}`, 40, 130);
+  doc.setTextColor(15, 23, 42); doc.setFontSize(11);
+  doc.text(doc.splitTextToSize(rx.summary, 500), 40, 158);
+  return doc;
+}
+
+/** Download any prescription as a PDF — digital, attached file, or photo. */
+async function downloadRxPdf(rx: Rx) {
+  const name = `prescription-${rx.patientName.replace(/\s+/g, '-')}.pdf`;
+  if (rx.doc) { (await digitalPdf(rx.doc)).save(name); return; }
+  if (rx.fileUrl) {
+    const fn = (rx.fileName ?? '').toLowerCase();
+    if (fn.endsWith('.pdf') || rx.fileUrl.startsWith('data:application/pdf')) { downloadUrl(rx.fileUrl, rx.fileName ?? name); return; }
+    if (rx.fileUrl.startsWith('data:image') || /\.(jpe?g|png)$/i.test(fn) || rx.fileUrl.startsWith('blob:')) { (await imagePdf(rx.fileUrl)).save(name); return; }
+    downloadUrl(rx.fileUrl, rx.fileName ?? name); // e.g. DOCX — keep original
+    return;
+  }
+  (await summaryPdf(rx)).save(name);
 }
 
 export function PrescriptionScreen() {
@@ -201,11 +277,11 @@ export function PrescriptionScreen() {
     symptoms, diagnosis, tests, followUp, notes, meds,
   });
 
-  const record = (kind: RxKind, summary: string, extra?: { html?: string; fileUrl?: string; fileName?: string }) =>
+  const record = (kind: RxKind, summary: string, extra?: { doc?: RxDoc; fileUrl?: string; fileName?: string }) =>
     addRx({ patientName: patient.name, patientMobile: patient.mobile, kind, summary, ...extra });
 
   const saveDigital = () => {
-    record('digital', diagnosis.trim() || 'Prescription', { html: buildRxHtml(currentDoc()) });
+    record('digital', diagnosis.trim() || 'Prescription', { doc: currentDoc() });
     setSavedDigital(true);
     setTimeout(() => setSavedDigital(false), 2000);
   };
@@ -372,7 +448,7 @@ export function PrescriptionScreen() {
                   {savedDigital ? 'Saved' : 'Save prescription'}
                 </Button>
                 <Button variant="outline" leftIcon={<Printer size={14} />} onClick={() => printHtml(buildRxHtml(currentDoc()))}>Print</Button>
-                <Button variant="outline" leftIcon={<Download size={14} />} onClick={() => downloadHtml(buildRxHtml(currentDoc()), `prescription-${patient.name}.html`)}>Download</Button>
+                <Button variant="outline" leftIcon={<Download size={14} />} onClick={() => { void digitalPdf(currentDoc()).then((pdf) => pdf.save(`prescription-${patient.name.replace(/\s+/g, '-')}.pdf`)); }}>Download PDF</Button>
                 <Button variant="outline" leftIcon={<Share2 size={14} />}>Share WhatsApp</Button>
               </div>
             </motion.div>
@@ -510,8 +586,8 @@ function PrescriptionHistory() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => (r.fileUrl ? downloadUrl(r.fileUrl, r.fileName ?? `prescription-${r.patientName}`) : downloadHtml(r.html ?? simpleRxHtml(r), `prescription-${r.patientName}.html`))}
-                    title="Download prescription"
+                    onClick={() => { void downloadRxPdf(r); }}
+                    title="Download PDF"
                     className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 hover:text-brand-600 dark:hover:text-brand-300"
                   >
                     <Download size={14} />
