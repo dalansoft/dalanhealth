@@ -1,6 +1,6 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, Users, Ticket, Calendar, Receipt, FileText, BarChart3,
+  LayoutDashboard, Users, Ticket, Receipt, FileText, BarChart3,
   UserCog, QrCode, Bell, Settings, CreditCard, UserCircle, Building2,
   Monitor,
 } from 'lucide-react';
@@ -16,7 +16,6 @@ const buildNav = (queueCount: number): NavSection[] => [
       { to: '/clinic', label: 'Dashboard', icon: <LayoutDashboard size={16} />, end: true },
       { to: '/clinic/queue', label: 'Queue & Tokens', icon: <Ticket size={16} />, badge: queueCount || undefined },
       { to: '/clinic/patients', label: 'Patients', icon: <Users size={16} /> },
-      { to: '/clinic/appointments', label: 'Appointments', icon: <Calendar size={16} /> },
       { to: '/clinic/prescription', label: 'Prescriptions', icon: <FileText size={16} /> },
       { to: '/clinic/reports', label: 'Reports & Analytics', icon: <BarChart3 size={16} /> },
     ],
