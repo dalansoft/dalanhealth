@@ -10,7 +10,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { useQueue, tokenLabel, type QueueEntry, type QueueSource, type PatientDetails } from '@/store/queue';
 import { demoPatients } from '@/services/demoData';
 
-type Tone = 'brand' | 'accent' | 'success' | 'neutral';
+type Tone = 'brand' | 'accent' | 'success' | 'neutral' | 'warning';
 type StatusFilter = 'All' | 'In queue' | 'Completed';
 
 interface Row {
@@ -44,6 +44,7 @@ const DOCTORS = ['Dr. Anil Sharma', 'Dr. Priya Gupta', 'Dr. Ravi Kumar'];
 
 function statusOf(e: QueueEntry): { label: string; tone: Tone } {
   if (e.completedAt) return { label: 'Completed', tone: 'success' };
+  if (e.wasSkipped) return { label: 'Skipped', tone: 'warning' };
   if (e.status === 'Consultation') return { label: 'In consultation', tone: 'brand' };
   if (e.status === 'Queue') return { label: 'Up next', tone: 'accent' };
   return { label: 'Waiting', tone: 'neutral' };
