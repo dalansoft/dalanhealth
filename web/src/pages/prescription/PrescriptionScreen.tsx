@@ -58,13 +58,13 @@ const DocField = ({ label, val }: { label: string; val: string }) => (
   </div>
 );
 
-function RxDocument({ doc }: { doc: RxDoc }) {
+function RxDocument({ doc, logo }: { doc: RxDoc; logo?: string }) {
   const meds = doc.meds.filter((m) => m.name);
   return (
     <div style={{ color: '#0f172a', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <div className="flex items-start justify-between pb-5" style={{ borderBottom: '1px solid #e2e8f0' }}>
         <div>
-          <img src="/logo-full.png" alt="Dalan Health" style={{ height: 30, width: 'auto', display: 'block' }} crossOrigin="anonymous" />
+          <img src={logo || '/logo-full.png'} alt="Dalan Health" style={{ height: 30, width: 'auto', display: 'block' }} />
           <div className="mt-2 text-lg font-semibold">{doc.clinicName}</div>
           <div className="text-xs" style={{ color: '#64748b' }}>{doc.doctor} · {doc.spec}</div>
           <div className="text-xs" style={{ color: '#64748b' }}>{doc.city}</div>
@@ -134,9 +134,30 @@ function RxDocument({ doc }: { doc: RxDoc }) {
   );
 }
 
+// Inline the logo once as a data URL so the captured document never races the
+// image load (which left the logo faded/half-rendered in the PDF).
+let logoDataUrlCache: string | null = null;
+async function getLogoDataUrl(): Promise<string> {
+  if (logoDataUrlCache !== null) return logoDataUrlCache;
+  try {
+    const res = await fetch('/logo-full.png');
+    const blob = await res.blob();
+    logoDataUrlCache = await new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = reject;
+      r.readAsDataURL(blob);
+    });
+  } catch {
+    logoDataUrlCache = '';
+  }
+  return logoDataUrlCache;
+}
+
 // ─── Capture the real document, then print / PDF it (so they always match) ──
 async function renderDocCanvas(doc: RxDoc): Promise<HTMLCanvasElement> {
   const html2canvas = (await import('html2canvas')).default;
+  const logo = await getLogoDataUrl();
   const host = document.createElement('div');
   host.style.cssText = 'position:fixed;left:-10000px;top:0;z-index:-1;background:#ffffff;';
   document.body.appendChild(host);
@@ -144,9 +165,14 @@ async function renderDocCanvas(doc: RxDoc): Promise<HTMLCanvasElement> {
   target.style.cssText = 'width:794px;background:#ffffff;padding:36px;';
   host.appendChild(target);
   const root = createRoot(target);
-  root.render(<RxDocument doc={doc} />);
+  root.render(<RxDocument doc={doc} logo={logo} />);
   try { await (document as unknown as { fonts?: { ready: Promise<unknown> } }).fonts?.ready; } catch { /* ignore */ }
-  await new Promise((r) => setTimeout(r, 350)); // let the logo image paint
+  await new Promise((r) => setTimeout(r, 60));
+  // Make sure every image (the inlined logo) has decoded before capture.
+  const imgs = Array.from(target.querySelectorAll('img')) as HTMLImageElement[];
+  await Promise.all(imgs.map((im) => (im.complete && im.naturalWidth > 0
+    ? Promise.resolve()
+    : new Promise<void>((res) => { im.onload = () => res(); im.onerror = () => res(); }))));
   const canvas = await html2canvas(target, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
   root.unmount();
   host.remove();
