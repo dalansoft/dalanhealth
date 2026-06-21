@@ -9,6 +9,11 @@ export interface Rx {
   date: string;     // display, e.g. "21 Jun 2026"
   kind: RxKind;
   summary: string;  // diagnosis line or file name
+  /** Self-contained printable HTML (digital prescriptions). */
+  html?: string;
+  /** data/object URL of an uploaded file or captured photo (not persisted). */
+  fileUrl?: string;
+  fileName?: string;
 }
 
 const KEY = 'dh-prescriptions';
@@ -45,7 +50,12 @@ export const usePrescriptions = create<State>((set, get) => ({
     const next: Rx[] = [{ ...rx, id: `rx-${Date.now()}`, date: todayLabel() }, ...get().list];
     set({ list: next });
     if (typeof window !== 'undefined') {
-      try { window.localStorage.setItem(KEY, JSON.stringify(next)); } catch {}
+      // Don't persist big file data URLs (localStorage quota) — keep metadata
+      // + the small HTML snapshot; uploaded files stay in memory for the session.
+      try {
+        const persistable = next.map(({ fileUrl: _drop, ...rest }) => rest);
+        window.localStorage.setItem(KEY, JSON.stringify(persistable));
+      } catch { /* ignore quota */ }
     }
   },
 }));
