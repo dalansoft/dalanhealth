@@ -70,7 +70,7 @@ body {
     @apply text-ink-400 dark:text-ink-500;
   }
   .gradient-text {
-    @apply bg-gradient-to-br from-brand-600 via-brand-500 to-accent-500 bg-clip-text text-transparent;
+    @apply text-brand-600 dark:text-brand-400;
   }
   .grid-bg {
     @apply bg-grid-light dark:bg-grid-dark bg-grid;

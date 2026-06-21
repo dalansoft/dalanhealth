@@ -22,7 +22,7 @@ export function TokenTracking() {
 
   return (
     <div className="space-y-5">
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl bg-gradient-to-br from-brand-500 to-accent-500 text-white p-6 shadow-glow">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl bg-brand-600 text-white p-6 shadow-glow">
         <div className="flex items-center justify-between">
           <div className="text-[10px] uppercase tracking-wider opacity-90">{demoPatient.clinic}</div>
           <Badge tone={statusTone} pulse={status === 'Consultation'} className="bg-white/20 text-white ring-white/30">{status === 'Consultation' ? 'It is your turn' : status === 'Queue' ? 'Up next' : 'Waiting'}</Badge>

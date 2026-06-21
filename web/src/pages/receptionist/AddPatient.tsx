@@ -438,7 +438,7 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
                               : 'hairline hover:border-brand-500/40 hover:bg-white dark:hover:bg-ink-900/60'
                           }`}
                         >
-                          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-accent-500 text-white text-xs font-semibold">
+                          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white text-xs font-semibold">
                             {p.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
                           </span>
                           <div className="min-w-0 flex-1">

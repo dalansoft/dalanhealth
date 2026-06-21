@@ -32,6 +32,7 @@ const config: Config = {
           400: '#38bdf8',
           500: '#0ea5e9',
           600: '#0284c7',
+          700: '#0369a1',
         },
         success: { 500: '#10b981', 600: '#059669' },
         warning: { 500: '#f59e0b', 600: '#d97706' },
@@ -74,12 +75,12 @@ const config: Config = {
       },
       boxShadow: {
         soft: '0 2px 10px -2px rgba(15, 23, 42, 0.06), 0 4px 24px -4px rgba(15, 23, 42, 0.05)',
-        glow: '0 0 0 1px rgba(59, 130, 246, 0.15), 0 10px 40px -10px rgba(59, 130, 246, 0.4)',
-        glowAccent: '0 0 0 1px rgba(14, 165, 233, 0.15), 0 10px 40px -10px rgba(14, 165, 233, 0.42)',
-        glowBright: '0 0 0 1px rgba(96, 165, 250, 0.35), 0 8px 24px -4px rgba(96, 165, 250, 0.55), inset 0 1px 0 rgba(255,255,255,0.18)',
+        glow: '0 1px 0 rgba(15, 23, 42, 0.04), 0 10px 30px -14px rgba(15, 23, 42, 0.22)',
+        glowAccent: '0 1px 0 rgba(15, 23, 42, 0.04), 0 10px 30px -14px rgba(15, 23, 42, 0.22)',
+        glowBright: '0 4px 14px -6px rgba(15, 23, 42, 0.28)',
         card: '0 1px 0 rgba(15, 23, 42, 0.04), 0 8px 32px -12px rgba(15, 23, 42, 0.1)',
         cardDark: '0 1px 0 rgba(255,255,255,0.04), 0 12px 40px -16px rgba(0,0,0,0.6)',
-        lift: '0 20px 50px -20px rgba(37, 99, 235, 0.35), 0 8px 24px -12px rgba(15, 23, 42, 0.15)',
+        lift: '0 18px 40px -18px rgba(15, 23, 42, 0.28), 0 8px 24px -12px rgba(15, 23, 42, 0.12)',
       },
       backgroundImage: {
         'mesh-light':
