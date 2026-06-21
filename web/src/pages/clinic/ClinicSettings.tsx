@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Save, Clock, Palette, Bell, MessageCircle, MessageSquare, Mail, Smartphone, Sparkles } from 'lucide-react';
+import { Save, Clock, Palette, Bell, MessageCircle, MessageSquare, Mail, Smartphone, Sparkles, Check } from 'lucide-react';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -197,8 +197,18 @@ export function ClinicSettings() {
 
       <div className="sticky bottom-0 -mx-5 sm:-mx-8 px-5 sm:px-8 py-4 border-t hairline bg-white/80 dark:bg-ink-950/80 backdrop-blur-xl">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between">
-          <div className="text-xs text-muted inline-flex items-center gap-1.5"><Bell size={12} /> Changes apply immediately on save.</div>
-          <Button leftIcon={<Save size={14} />} onClick={save}>Save changes</Button>
+          <div className="text-xs inline-flex items-center gap-1.5">
+            {saved
+              ? <span className="text-success-600 dark:text-success-500 inline-flex items-center gap-1.5"><Check size={13} /> All changes saved</span>
+              : <span className="text-muted inline-flex items-center gap-1.5"><Bell size={12} /> Changes apply immediately on save.</span>}
+          </div>
+          <Button
+            variant={saved ? 'success' : 'primary'}
+            leftIcon={saved ? <Check size={14} /> : <Save size={14} />}
+            onClick={save}
+          >
+            {saved ? 'Saved' : 'Save changes'}
+          </Button>
         </div>
       </div>
     </div>
