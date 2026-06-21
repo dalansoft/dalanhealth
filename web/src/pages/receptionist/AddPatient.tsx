@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Phone, User, Calendar, Check, Ticket, UserPlus, Users, Search, Siren,
+  Phone, User, Calendar, Check, Ticket, UserPlus, Users, Search, Siren, Lock,
   ChevronDown, Weight, Ruler, Droplet, Home, AlertCircle, Stethoscope,
   ShieldAlert, AlertTriangle,
 } from 'lucide-react';
@@ -10,7 +10,7 @@ import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { useQueue, type PatientDetails } from '@/store/queue';
+import { useQueue, type PatientDetails, type QueueEntry } from '@/store/queue';
 import { demoQueue } from '@/services/demoData';
 import { patientsApi, queueApi } from '@/services/api';
 
@@ -118,25 +118,30 @@ interface AddPatientProps {
   /** Called instead of navigating after success. When provided, the "Go to
    *  queue" button is replaced with "Close". */
   onClose?: () => void;
+  /** When set, the form opens in EDIT mode: every field pre-filled, the mobile
+   *  locked, no search / emergency / token — just save the patient's details. */
+  editEntry?: QueueEntry;
 }
 
-export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) {
-  const [mobile, setMobile] = useState('');
-  const [name, setName] = useState('');
-  const [age, setAge] = useState('');
-  const [gender, setGender] = useState<'Male' | 'Female' | 'Other'>('Male');
+export function AddPatient({ embedded = false, onClose, editEntry }: AddPatientProps = {}) {
+  const isEdit = !!editEntry;
+  const ed = editEntry?.details;
+  const [mobile, setMobile] = useState(() => (editEntry?.patientMobile ?? '').replace(/\D/g, '').slice(-10));
+  const [name, setName] = useState(() => editEntry?.patientName ?? '');
+  const [age, setAge] = useState(() => (ed?.age != null ? String(ed.age) : ''));
+  const [gender, setGender] = useState<'Male' | 'Female' | 'Other'>(() => ed?.gender ?? 'Male');
   // Extended details — collected only if receptionist expands the optional
   // section. All values stay as strings until submit so the inputs remain
-  // controllable + empty-friendly.
-  const [showMore, setShowMore] = useState(false);
-  const [weight, setWeight] = useState('');
-  const [height, setHeight] = useState('');
-  const [bloodGroup, setBloodGroup] = useState('');
-  const [address, setAddress] = useState('');
-  const [allergies, setAllergies] = useState('');
-  const [conditions, setConditions] = useState('');
-  const [emergencyName, setEmergencyName] = useState('');
-  const [emergencyMobile, setEmergencyMobile] = useState('');
+  // controllable + empty-friendly. Pre-expanded + pre-filled when editing.
+  const [showMore, setShowMore] = useState(isEdit);
+  const [weight, setWeight] = useState(() => (ed?.weight != null ? String(ed.weight) : ''));
+  const [height, setHeight] = useState(() => (ed?.height != null ? String(ed.height) : ''));
+  const [bloodGroup, setBloodGroup] = useState(() => ed?.bloodGroup ?? '');
+  const [address, setAddress] = useState(() => ed?.address ?? '');
+  const [allergies, setAllergies] = useState(() => ed?.allergies ?? '');
+  const [conditions, setConditions] = useState(() => ed?.conditions ?? '');
+  const [emergencyName, setEmergencyName] = useState(() => ed?.emergencyName ?? '');
+  const [emergencyMobile, setEmergencyMobile] = useState(() => (ed?.emergencyMobile ?? '').replace(/\D/g, '').slice(-10));
   const [formError, setFormError] = useState<string | null>(null);
   const [step, setStep] = useState<Step>('form');
   const [family, setFamily] = useState<PatientRecord[]>([]);
@@ -150,7 +155,7 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
   const [searched, setSearched] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState<string | undefined>(undefined);
   const [inQueueToken, setInQueueToken] = useState<number | undefined>(undefined);
-  const { entries, setEntries, addEntry, addEmergency, mode } = useQueue();
+  const { entries, setEntries, addEntry, addEmergency, updateEntry, mode } = useQueue();
   const navigate = useNavigate();
 
   // Lookup field accepts only 10 digits — country code is always +91.
@@ -335,6 +340,30 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
     generateTokenFor({ id: selectedPatientId, name: name.trim(), age: details.age, gender }, details);
   };
 
+  // EDIT mode: validate, update the patient's name + details in place, close.
+  const handleSaveEdit = () => {
+    setFormError(null);
+    if (!name.trim()) { setFormError('Full name is required'); return; }
+    if (emergencyMobile && emergencyMobile.length !== 10) {
+      setFormError('Emergency mobile must be exactly 10 digits');
+      return;
+    }
+    const details: PatientDetails = {
+      age: age ? Number(age) : undefined,
+      gender,
+      weight: weight ? Number(weight) : undefined,
+      height: height ? Number(height) : undefined,
+      bloodGroup: bloodGroup || undefined,
+      address: address.trim() || undefined,
+      allergies: allergies.trim() || undefined,
+      conditions: conditions.trim() || undefined,
+      emergencyName: emergencyName.trim() || undefined,
+      emergencyMobile: emergencyMobile ? formatStoredMobile(emergencyMobile) : undefined,
+    };
+    if (editEntry) updateEntry(editEntry.id, { patientName: name.trim(), details });
+    onClose?.();
+  };
+
   const reset = () => {
     setStep('form');
     setMobile('');
@@ -388,23 +417,26 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
                     required
                     value={mobile}
                     onChange={(v) => { handleMobileChange(v); setSearched(false); setSelectedPatientId(undefined); setInQueueToken(undefined); }}
-                    autoFocus
+                    autoFocus={!isEdit}
+                    locked={isEdit}
                   />
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  onClick={runSearch}
-                  disabled={mobile.length !== 10}
-                  loading={searching}
-                  leftIcon={<Search size={16} />}
-                >
-                  Search
-                </Button>
+                {!isEdit && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    onClick={runSearch}
+                    disabled={mobile.length !== 10}
+                    loading={searching}
+                    leftIcon={<Search size={16} />}
+                  >
+                    Search
+                  </Button>
+                )}
               </div>
 
-              {mode === 'demo' && !searched && (
+              {mode === 'demo' && !searched && !isEdit && (
                 <div className="text-xs text-muted">
                   Search <code className="font-mono">9876543210</code> for a family with 3 patients,
                   or <code className="font-mono">9876543100</code> for a single returning patient.
@@ -412,7 +444,7 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
               )}
 
               {/* Search results — tap a record to fill the form */}
-              {searched && family.length > 1 && (
+              {!isEdit && searched && family.length > 1 && (
                 <div className="rounded-xl border hairline bg-ink-50/60 dark:bg-ink-900/40 p-3 space-y-2">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
                     <Users size={12} className="text-brand-600 dark:text-brand-300" />
@@ -452,19 +484,19 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
                   </div>
                 </div>
               )}
-              {searched && family.length === 1 && (
+              {!isEdit && searched && family.length === 1 && (
                 <div className="rounded-xl border border-brand-500/30 bg-brand-500/5 px-3 py-2 text-xs text-brand-700 dark:text-brand-300 flex items-center gap-1.5">
                   <Check size={12} /> Returning patient — details filled below.
                 </div>
               )}
-              {searched && family.length === 0 && (
+              {!isEdit && searched && family.length === 0 && (
                 <div className="rounded-xl border hairline bg-ink-50/60 dark:bg-ink-900/60 px-3 py-2 text-xs text-muted flex items-center gap-1.5">
                   <UserPlus size={12} className="text-brand-600 dark:text-brand-300" /> No record found — new patient. Fill the details below.
                 </div>
               )}
 
-              {/* Emergency / priority toggle — jumps the patient in right
-                  after the current consultation with a daily E-token. */}
+              {/* Emergency / priority toggle — hidden when editing a patient. */}
+              {!isEdit && (<>
               <button
                 type="button"
                 onClick={() => setEmergency((v) => !v)}
@@ -489,6 +521,7 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
                   <Siren size={12} className="shrink-0" /> Served next — slotted in right after the current patient, with a daily priority token (E1, E2…).
                 </div>
               )}
+              </>)}
 
               {/* Required + basic */}
               <Input
@@ -642,7 +675,7 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
                 </div>
               )}
 
-              {inQueueToken != null && (
+              {!isEdit && inQueueToken != null && (
                 <div className="rounded-xl border border-warning-500/40 bg-warning-500/5 px-3 py-2 text-xs text-warning-700 dark:text-warning-300 flex items-center gap-1.5">
                   <AlertTriangle size={12} /> {name || 'This patient'} is already in today's queue (token #{inQueueToken}).
                 </div>
@@ -651,13 +684,13 @@ export function AddPatient({ embedded = false, onClose }: AddPatientProps = {}) 
               <Button
                 size="lg"
                 fullWidth
-                variant={emergency ? 'danger' : 'primary'}
-                leftIcon={emergency ? <Siren size={16} /> : <Ticket size={16} />}
-                onClick={handleGenerate}
+                variant={!isEdit && emergency ? 'danger' : 'primary'}
+                leftIcon={isEdit ? <Check size={16} /> : emergency ? <Siren size={16} /> : <Ticket size={16} />}
+                onClick={isEdit ? handleSaveEdit : handleGenerate}
                 loading={busy}
-                disabled={inQueueToken != null}
+                disabled={!isEdit && inQueueToken != null}
               >
-                {emergency ? 'Generate emergency token' : 'Generate token'}
+                {isEdit ? 'Save changes' : emergency ? 'Generate emergency token' : 'Generate token'}
               </Button>
             </motion.div>
           )}
@@ -727,13 +760,15 @@ function renderRequiredLabel(text: string): React.ReactNode {
  *  hard cap of 10 characters. Used wherever a clinic captures an Indian
  *  mobile (lookup form, emergency contact, etc.). */
 function MobileInput({
-  label, value, onChange, required, autoFocus,
+  label, value, onChange, required, autoFocus, locked,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   required?: boolean;
   autoFocus?: boolean;
+  /** Read-only (used in edit mode — the mobile can't be changed). */
+  locked?: boolean;
 }) {
   return (
     <div className="w-full">
@@ -743,7 +778,7 @@ function MobileInput({
       </label>
       {/* No `transition-all` here — it was animating every keystroke and
           reading as a flicker. Only animate the focus ring + border colour. */}
-      <div className="group relative flex items-center rounded-xl border bg-white dark:bg-ink-900/80 transition-[box-shadow,border-color] duration-150 border-ink-200 dark:border-ink-800 focus-within:border-brand-500/70 focus-within:ring-4 focus-within:ring-brand-500/10 dark:focus-within:ring-brand-500/15">
+      <div className={`group relative flex items-center rounded-xl border transition-[box-shadow,border-color] duration-150 border-ink-200 dark:border-ink-800 ${locked ? 'bg-ink-100/70 dark:bg-ink-800/50' : 'bg-white dark:bg-ink-900/80 focus-within:border-brand-500/70 focus-within:ring-4 focus-within:ring-brand-500/10 dark:focus-within:ring-brand-500/15'}`}>
         <span className="pl-3 pr-2 flex items-center gap-1.5 text-ink-400 dark:text-ink-500">
           <Phone size={14} />
           <span className="text-sm font-semibold text-ink-700 dark:text-ink-200">+91</span>
@@ -765,13 +800,19 @@ function MobileInput({
             if (!/^\d$/.test(e.key)) e.preventDefault();
           }}
           autoFocus={autoFocus}
-          className="w-full bg-transparent px-2 py-2.5 text-sm tracking-wider text-ink-900 dark:text-ink-50 placeholder:text-ink-400 dark:placeholder:text-ink-500 outline-none"
+          disabled={locked}
+          className="w-full bg-transparent px-2 py-2.5 text-sm tracking-wider text-ink-900 dark:text-ink-50 placeholder:text-ink-400 dark:placeholder:text-ink-500 outline-none disabled:cursor-not-allowed"
         />
-        {/* Fixed-width counter (w-[44px]) so going from "1/10" → "10/10" can't
-            jiggle the input's right edge. */}
-        <span className="pr-3 text-[11px] font-mono text-muted tabular-nums whitespace-nowrap text-right w-[44px] shrink-0">
-          {value.length}/10
-        </span>
+        {locked ? (
+          <span className="pr-3 inline-flex items-center gap-1 text-[10px] font-medium text-muted whitespace-nowrap shrink-0">
+            <Lock size={11} /> Locked
+          </span>
+        ) : (
+          /* Fixed-width counter (w-[44px]) so "1/10" → "10/10" can't jiggle the edge. */
+          <span className="pr-3 text-[11px] font-mono text-muted tabular-nums whitespace-nowrap text-right w-[44px] shrink-0">
+            {value.length}/10
+          </span>
+        )}
       </div>
     </div>
   );
