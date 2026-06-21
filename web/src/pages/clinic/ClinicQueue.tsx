@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, SkipForward, Plus, Clock, Monitor, RotateCcw } from 'lucide-react';
+import { Check, SkipForward, Plus, Clock, Monitor, RotateCcw, Search } from 'lucide-react';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { SourceBadge } from '@/components/ui/SourceBadge';
 import { StatusPill } from '@/components/ui/StatusPill';
@@ -43,6 +44,14 @@ export function ClinicQueue() {
 
   const current = entries[0];
   const upNext = entries[1];
+
+  // Search the queue table by name, mobile or token (e.g. "6", "#6", "E1").
+  const [search, setSearch] = useState('');
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const nq = norm(search);
+  const filtered = nq
+    ? entries.filter((q) => norm(`${q.patientName} ${q.patientMobile} ${tokenLabel(q)}`).includes(nq))
+    : entries;
 
   return (
     <div className="space-y-5">
@@ -112,12 +121,22 @@ export function ClinicQueue() {
       </Card>
 
       <Card padded={false}>
-        <div className="px-5 py-4 border-b hairline flex items-center justify-between">
+        <div className="px-5 py-4 border-b hairline flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <CardTitle>All entries</CardTitle>
             <CardSubtitle>Sequential token order</CardSubtitle>
           </div>
-          <Badge tone="neutral">{entries.length} in queue</Badge>
+          <div className="flex items-center gap-3">
+            <div className="w-full sm:w-72">
+              <Input
+                leftIcon={<Search size={14} />}
+                placeholder="Search name, mobile or token…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <Badge tone="neutral">{nq ? `${filtered.length} found` : `${entries.length} in queue`}</Badge>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
@@ -132,7 +151,7 @@ export function ClinicQueue() {
             </thead>
             <tbody className="divide-y hairline">
               <AnimatePresence initial={false}>
-                {entries.map((q) => (
+                {filtered.map((q) => (
                   <motion.tr
                     key={q.id}
                     layout
@@ -177,6 +196,13 @@ export function ClinicQueue() {
                   </motion.tr>
                 ))}
               </AnimatePresence>
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-5 py-10 text-center text-sm text-muted">
+                    {nq ? 'No patients match your search.' : 'Queue is empty.'}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
