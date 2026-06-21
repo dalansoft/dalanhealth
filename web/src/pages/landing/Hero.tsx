@@ -144,7 +144,7 @@ function Scene({ scene }: { scene: number }) {
             initial={{ scale: 1 }}
             animate={{ scale: [1, 0.95, 1] }}
             transition={{ delay: 0.8, duration: 0.4 }}
-            className="mt-3 rounded-xl bg-gradient-to-br from-brand-600 to-brand-500 text-white text-center text-sm font-semibold py-2.5 shadow-glow"
+            className="mt-3 rounded-xl bg-brand-600 text-white text-center text-sm font-semibold py-2.5 shadow-glow"
           >
             Generate Token
           </motion.div>
@@ -244,7 +244,7 @@ function Scene({ scene }: { scene: number }) {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.9 }}
-                className="rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 p-3 text-white"
+                className="rounded-xl bg-brand-600 p-3 text-white"
               >
                 <div className="text-[9px] uppercase tracking-wider opacity-90">Your token</div>
                 <div className="text-2xl font-bold">#23</div>

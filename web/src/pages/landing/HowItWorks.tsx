@@ -25,7 +25,7 @@ export function HowItWorks() {
           whileInView={{ scaleY: 1 }}
           viewport={{ once: true, amount: 0.15 }}
           transition={{ duration: 1.2, ease: 'easeOut' }}
-          className="absolute left-[27px] top-2 bottom-2 w-[2px] origin-top bg-gradient-to-b from-brand-500 via-accent-500 to-token"
+          className="absolute left-[27px] top-2 bottom-2 w-[2px] origin-top bg-brand-500"
           aria-hidden
         />
         <ol className="space-y-8">

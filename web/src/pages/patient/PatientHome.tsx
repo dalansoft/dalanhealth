@@ -23,7 +23,7 @@ export function PatientHome() {
       {upcoming && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
           <Link to="/patient/queue" className="block">
-            <div className="rounded-3xl bg-gradient-to-br from-brand-500 to-accent-500 p-5 text-white shadow-glow">
+            <div className="rounded-3xl bg-brand-600 p-5 text-white shadow-glow">
               <div className="flex items-center justify-between">
                 <div className="text-[10px] uppercase tracking-wider opacity-90">Your active token</div>
                 <Badge tone="neutral" size="sm" className="bg-white/20 text-white ring-white/30">{upcoming.clinic}</Badge>

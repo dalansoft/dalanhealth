@@ -172,7 +172,7 @@ function CompounderVignette({ step, beat }: { step: number; beat: number }) {
           <motion.div
             animate={{ scale: [1, 0.96, 1] }}
             transition={{ duration: 1.4, repeat: Infinity }}
-            className="rounded-xl bg-gradient-to-br from-brand-600 to-brand-500 text-white text-center text-sm font-semibold py-2.5 shadow-glow"
+            className="rounded-xl bg-brand-600 text-white text-center text-sm font-semibold py-2.5 shadow-glow"
           >
             Generate Token
           </motion.div>
@@ -238,7 +238,7 @@ function CompounderVignette({ step, beat }: { step: number; beat: number }) {
                   initial={{ width: '0%' }}
                   animate={{ width: '100%' }}
                   transition={{ duration: 1.8, ease: 'easeInOut' }}
-                  className="h-full rounded-full bg-gradient-to-r from-accent-500 to-brand-500"
+                  className="h-full rounded-full bg-brand-600"
                 />
               </div>
             </div>

@@ -95,8 +95,8 @@ const fragmentShader = /* glsl */ `
     vec3 col = mix(uColorA, uColorB, d);
     col = mix(col, uColorC, smoothstep(0.25, 0.95, vDisp));
     float fres = pow(1.0 - max(dot(vNormal, vView), 0.0), 2.4);
-    col += fres * 0.55;                  // luminous rim
-    float alpha = 0.82 + fres * 0.18;
+    col += fres * 0.12;                  // faint rim only — mostly flat blue
+    float alpha = 0.95;
     gl_FragColor = vec4(col, alpha);
   }
 `;
@@ -109,9 +109,9 @@ function Blob() {
     () => ({
       uTime: { value: 0 },
       uMouse: { value: new THREE.Vector2(0, 0) },
-      uColorA: { value: new THREE.Color('#1d4ed8') }, // blue-700
-      uColorB: { value: new THREE.Color('#3b82f6') }, // blue-500
-      uColorC: { value: new THREE.Color('#38bdf8') }, // sky-400
+      uColorA: { value: new THREE.Color('#2563eb') }, // blue-600 (flat)
+      uColorB: { value: new THREE.Color('#2563eb') }, // blue-600 (flat)
+      uColorC: { value: new THREE.Color('#2563eb') }, // blue-600 (flat)
     }),
     [],
   );

@@ -140,7 +140,7 @@ export function DemoSelector() {
                   </div>
                   <button
                     onClick={() => openDemo(d.role)}
-                    className="mt-5 group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-brand-600 to-accent-500 text-white py-3 text-sm font-semibold shadow-glow hover:shadow-glowAccent transition-all"
+                    className="mt-5 group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 text-white py-3 text-sm font-semibold shadow-glow hover:shadow-glowAccent transition-all"
                   >
                     Open demo
                     <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />

@@ -15,7 +15,7 @@ const tx = [
 export function PatientWallet() {
   return (
     <div className="space-y-5">
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl bg-gradient-to-br from-accent-500 to-brand-500 p-5 text-white shadow-glow">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl bg-brand-600 p-5 text-white shadow-glow">
         <div className="flex items-center justify-between">
           <div className="text-[10px] uppercase tracking-wider opacity-90">DalanHealth Rewards Wallet</div>
           <Gift size={16} />

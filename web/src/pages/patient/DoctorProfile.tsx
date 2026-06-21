@@ -15,7 +15,7 @@ export function DoctorProfile() {
     <div className="space-y-5">
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl bg-gradient-to-br from-brand-500/15 via-transparent to-accent-500/15 border hairline p-5">
         <div className="flex items-center gap-4">
-          <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-brand-500 to-accent-500 text-white font-semibold text-xl flex items-center justify-center shadow-glow">
+          <div className="h-16 w-16 rounded-2xl bg-brand-600 text-white font-semibold text-xl flex items-center justify-center shadow-glow">
             {d.name.split(' ')[1]?.[0] ?? 'D'}
           </div>
           <div>
