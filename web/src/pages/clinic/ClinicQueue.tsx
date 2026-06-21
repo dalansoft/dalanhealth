@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, SkipForward, Receipt, FileText, Plus, Clock, Monitor, RotateCcw } from 'lucide-react';
+import { Check, SkipForward, Plus, Clock, Monitor, RotateCcw } from 'lucide-react';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -9,7 +9,7 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { useQueue, type QueueEntry, tokenLabel } from '@/store/queue';
 import { useQueueBoot } from '@/hooks/useQueueBoot';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { PatientDetailsDrawer } from '@/components/dashboard/PatientDetailsDrawer';
 import { AddPatientModal } from '@/pages/receptionist/AddPatientModal';
 import { NowServingAnnouncer } from '@/components/feedback/NowServingAnnouncer';
@@ -80,8 +80,6 @@ export function ClinicQueue() {
               <div className="mt-5 flex flex-wrap gap-2">
                 <Button variant="success" leftIcon={<Check size={14} />} onClick={advance}>Complete consultation</Button>
                 <Button variant="outline" leftIcon={<SkipForward size={14} />} onClick={skipCurrent}>Skip</Button>
-                <Link to="/clinic/billing"><Button variant="outline" leftIcon={<Receipt size={14} />}>Billing</Button></Link>
-                <Link to="/clinic/prescription"><Button variant="outline" leftIcon={<FileText size={14} />}>Prescription</Button></Link>
               </div>
             </div>
             <div className="rounded-2xl border hairline bg-white dark:bg-ink-900 p-5">
