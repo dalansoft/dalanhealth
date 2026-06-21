@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Logo } from '@/components/ui/Logo';
 import { useQueue } from '@/store/queue';
-import { usePrescriptions, type RxKind } from '@/store/prescriptions';
+import { usePrescriptions, type RxKind, type Rx } from '@/store/prescriptions';
 import { demoClinic, demoPatients } from '@/services/demoData';
 
 interface Medicine {
@@ -48,6 +48,110 @@ const chipCls = (active: boolean) =>
   }`;
 const initials = (n: string) => n.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 const fmtSize = (b: number) => (b < 1024 * 1024 ? `${Math.round(b / 1024)} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`);
+
+// ─── Printable prescription document (standalone HTML) ──────────────────────
+const esc = (s: string) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+
+interface RxDoc {
+  clinicName: string; doctor: string; spec: string; city: string;
+  patient: string; date: string;
+  symptoms: string; diagnosis: string; tests: string; followUp: string; notes: string;
+  meds: Medicine[];
+}
+
+function buildRxHtml(d: RxDoc): string {
+  const rows = d.meds.filter((m) => m.name).map((m) =>
+    `<tr><td>${esc(m.name)}</td><td>${esc(doseLabel(m))}</td><td>${esc(timingText(m) || '—')}</td><td>${esc(m.days)}</td></tr>`,
+  ).join('') || '<tr><td colspan="4" style="color:#94a3b8">No medicines</td></tr>';
+  const field = (l: string, v: string) => `<div><div class="lbl">${esc(l)}</div><div class="val">${esc(v || '—')}</div></div>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Prescription — ${esc(d.patient)}</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:'Inter',Arial,sans-serif;color:#0f172a;margin:0;padding:28px}
+  .rx{max-width:720px;margin:0 auto}
+  .hdr{display:flex;justify-content:space-between;border-bottom:1px solid #e2e8f0;padding-bottom:16px}
+  .brand{font-size:20px;font-weight:800;color:#2563eb;letter-spacing:-.02em}
+  .clinic{font-size:16px;font-weight:700;margin-top:6px}
+  .muted{color:#64748b;font-size:12px}
+  .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8}
+  .val{font-size:14px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+  h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin:22px 0 8px}
+  table{width:100%;border-collapse:collapse;border:1px solid #e2e8f0}
+  th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;background:#f8fafc;padding:8px 12px}
+  td{padding:9px 12px;border-top:1px solid #eef2f7;font-size:13px}
+  .ftr{display:flex;justify-content:space-between;align-items:flex-end;margin-top:48px;padding-top:16px;border-top:1px solid #e2e8f0}
+  .sign{border-bottom:1px solid #cbd5e1;width:160px;margin-bottom:4px}
+  @media print{body{padding:0}}
+</style></head><body>
+<div class="rx">
+  <div class="hdr">
+    <div>
+      <div class="brand">DALAN HEALTH</div>
+      <div class="clinic">${esc(d.clinicName)}</div>
+      <div class="muted">${esc(d.doctor)} · ${esc(d.spec)}</div>
+      <div class="muted">${esc(d.city)}</div>
+    </div>
+    <div style="text-align:right">
+      <div class="lbl">Date</div><div class="val">${esc(d.date)}</div>
+      <div class="lbl" style="margin-top:8px">Patient</div><div class="val">${esc(d.patient)}</div>
+    </div>
+  </div>
+  <div class="grid">${field('Symptoms', d.symptoms)}${field('Diagnosis', d.diagnosis)}${field('Tests', d.tests)}${field('Follow-up', d.followUp)}</div>
+  <h3>℞ Medicines</h3>
+  <table><thead><tr><th>Medicine</th><th>Dose</th><th>Timing</th><th>Duration</th></tr></thead><tbody>${rows}</tbody></table>
+  ${d.notes ? `<h3>Doctor's notes</h3><div class="val">${esc(d.notes)}</div>` : ''}
+  <div class="ftr">
+    <div class="muted">Powered by <b>Dalan Health</b><br/>A Product of <b>Dalansoft Technologies</b></div>
+    <div style="text-align:right"><div class="sign"></div><div class="muted">Doctor signature</div></div>
+  </div>
+</div></body></html>`;
+}
+
+function simpleRxHtml(rx: Rx): string {
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Prescription — ${esc(rx.patientName)}</title>
+<style>body{font-family:Inter,Arial,sans-serif;color:#0f172a;padding:28px;max-width:720px;margin:auto}.brand{font-size:20px;font-weight:800;color:#2563eb}.muted{color:#64748b;font-size:12px}h2{margin:8px 0}</style></head>
+<body><div class="brand">DALAN HEALTH</div><h2>Prescription</h2>
+<div>Patient: <b>${esc(rx.patientName)}</b> · ${esc(rx.patientMobile)}</div>
+<div class="muted">Date: ${esc(rx.date)} · ${esc(rx.kind)}</div><p>${esc(rx.summary)}</p></body></html>`;
+}
+
+function fileRxHtml(rx: Rx): string {
+  const src = rx.fileUrl ?? '';
+  const isPdf = (rx.fileName ?? '').toLowerCase().endsWith('.pdf') || src.startsWith('data:application/pdf');
+  const body = isPdf
+    ? `<embed src="${src}" type="application/pdf" style="width:100%;height:100vh" />`
+    : `<img src="${src}" style="max-width:100%;height:auto;display:block;margin:auto" />`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(rx.fileName ?? 'Prescription')}</title><style>body{margin:0;padding:12px}</style></head><body>${body}</body></html>`;
+}
+
+const rxHtml = (rx: Rx): string => (rx.html ? rx.html : rx.fileUrl ? fileRxHtml(rx) : simpleRxHtml(rx));
+
+function printHtml(html: string) {
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('aria-hidden', 'true');
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+  document.body.appendChild(iframe);
+  const win = iframe.contentWindow;
+  const doc = win?.document;
+  if (!win || !doc) { iframe.remove(); return; }
+  doc.open(); doc.write(html); doc.close();
+  const run = () => { try { win.focus(); win.print(); } finally { setTimeout(() => iframe.remove(), 1000); } };
+  if (doc.readyState === 'complete') setTimeout(run, 250);
+  else win.onload = () => setTimeout(run, 250);
+}
+
+function downloadHtml(html: string, filename: string) {
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function downloadUrl(url: string, filename: string) {
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+}
 
 export function PrescriptionScreen() {
   const [params] = useSearchParams();
@@ -90,11 +194,18 @@ export function PrescriptionScreen() {
     setMeds(meds.map((m, idx) => idx === i ? { ...m, [key]: val } : m));
   };
 
-  const record = (kind: RxKind, summary: string) =>
-    addRx({ patientName: patient.name, patientMobile: patient.mobile, kind, summary });
+  const currentDoc = (): RxDoc => ({
+    clinicName: demoClinic.name, doctor: demoClinic.doctor, spec: demoClinic.specialization, city: demoClinic.city,
+    patient: patient.name,
+    date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+    symptoms, diagnosis, tests, followUp, notes, meds,
+  });
+
+  const record = (kind: RxKind, summary: string, extra?: { html?: string; fileUrl?: string; fileName?: string }) =>
+    addRx({ patientName: patient.name, patientMobile: patient.mobile, kind, summary, ...extra });
 
   const saveDigital = () => {
-    record('digital', diagnosis.trim() || 'Prescription');
+    record('digital', diagnosis.trim() || 'Prescription', { html: buildRxHtml(currentDoc()) });
     setSavedDigital(true);
     setTimeout(() => setSavedDigital(false), 2000);
   };
@@ -127,8 +238,8 @@ export function PrescriptionScreen() {
         ))}
       </div>
 
-      {mode === 'upload' && <UploadCard patient={patient} onAttach={(s) => record('upload', s)} />}
-      {mode === 'camera' && <CameraCard patient={patient} onAttach={(s) => record('photo', s)} />}
+      {mode === 'upload' && <UploadCard patient={patient} onAttach={(s, extra) => record('upload', s, extra)} />}
+      {mode === 'camera' && <CameraCard patient={patient} onAttach={(s, extra) => record('photo', s, extra)} />}
 
       {mode === 'digital' && (
         <div className="grid lg:grid-cols-5 gap-5">
@@ -260,8 +371,8 @@ export function PrescriptionScreen() {
                 <Button variant={savedDigital ? 'success' : 'primary'} leftIcon={savedDigital ? <Check size={14} /> : <Save size={14} />} onClick={saveDigital}>
                   {savedDigital ? 'Saved' : 'Save prescription'}
                 </Button>
-                <Button variant="outline" leftIcon={<Printer size={14} />} onClick={() => window.print()}>Print</Button>
-                <Button variant="outline" leftIcon={<Download size={14} />}>Download PDF</Button>
+                <Button variant="outline" leftIcon={<Printer size={14} />} onClick={() => printHtml(buildRxHtml(currentDoc()))}>Print</Button>
+                <Button variant="outline" leftIcon={<Download size={14} />} onClick={() => downloadHtml(buildRxHtml(currentDoc()), `prescription-${patient.name}.html`)}>Download</Button>
                 <Button variant="outline" leftIcon={<Share2 size={14} />}>Share WhatsApp</Button>
               </div>
             </motion.div>
@@ -382,6 +493,7 @@ function PrescriptionHistory() {
               <th className="px-5 py-3">Mobile</th>
               <th className="px-5 py-3">Type</th>
               <th className="px-5 py-3">Summary</th>
+              <th className="px-5 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y hairline">
@@ -392,10 +504,23 @@ function PrescriptionHistory() {
                 <td className="px-5 py-3 text-muted">{r.patientMobile}</td>
                 <td className="px-5 py-3"><Badge tone={KIND_META[r.kind].tone} size="sm">{KIND_META[r.kind].label}</Badge></td>
                 <td className="px-5 py-3 text-ink-700 dark:text-ink-200">{r.summary}</td>
+                <td className="px-5 py-3 text-right whitespace-nowrap">
+                  <button type="button" onClick={() => printHtml(rxHtml(r))} title="Print prescription" className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 hover:text-brand-600 dark:hover:text-brand-300">
+                    <Printer size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => (r.fileUrl ? downloadUrl(r.fileUrl, r.fileName ?? `prescription-${r.patientName}`) : downloadHtml(r.html ?? simpleRxHtml(r), `prescription-${r.patientName}.html`))}
+                    title="Download prescription"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 hover:text-brand-600 dark:hover:text-brand-300"
+                  >
+                    <Download size={14} />
+                  </button>
+                </td>
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={5} className="px-5 py-10 text-center text-sm text-muted">No prescriptions yet.</td></tr>
+              <tr><td colSpan={6} className="px-5 py-10 text-center text-sm text-muted">No prescriptions yet.</td></tr>
             )}
           </tbody>
         </table>
@@ -405,7 +530,7 @@ function PrescriptionHistory() {
 }
 
 // ─── Upload an existing prescription (PDF / DOCX / JPG) ──────────────────────
-function UploadCard({ patient, onAttach }: { patient: Patient; onAttach: (summary: string) => void }) {
+function UploadCard({ patient, onAttach }: { patient: Patient; onAttach: (summary: string, extra?: { fileUrl?: string; fileName?: string }) => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [drag, setDrag] = useState(false);
@@ -463,7 +588,12 @@ function UploadCard({ patient, onAttach }: { patient: Patient; onAttach: (summar
           )}
           <div className="flex flex-wrap gap-2 justify-between">
             <Button variant="outline" leftIcon={<X size={14} />} onClick={() => pick(null)}>Remove</Button>
-            <Button leftIcon={<Check size={14} />} onClick={() => { setAttached(true); onAttach(file.name); }} disabled={attached}>
+            <Button leftIcon={<Check size={14} />} onClick={() => {
+              setAttached(true);
+              const reader = new FileReader();
+              reader.onload = () => onAttach(file.name, { fileUrl: String(reader.result), fileName: file.name });
+              reader.readAsDataURL(file);
+            }} disabled={attached}>
               {attached ? 'Saved to record' : 'Attach to patient record'}
             </Button>
           </div>
@@ -479,7 +609,7 @@ function UploadCard({ patient, onAttach }: { patient: Patient; onAttach: (summar
 }
 
 // ─── Capture a prescription photo from the camera ───────────────────────────
-function CameraCard({ patient, onAttach }: { patient: Patient; onAttach: (summary: string) => void }) {
+function CameraCard({ patient, onAttach }: { patient: Patient; onAttach: (summary: string, extra?: { fileUrl?: string; fileName?: string }) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [streaming, setStreaming] = useState(false);
@@ -575,7 +705,7 @@ function CameraCard({ patient, onAttach }: { patient: Patient; onAttach: (summar
             </label>
           </div>
           {photo && (
-            <Button leftIcon={<Check size={14} />} onClick={() => { setAttached(true); onAttach('Camera photo'); }} disabled={attached}>
+            <Button leftIcon={<Check size={14} />} onClick={() => { setAttached(true); onAttach('Camera photo', { fileUrl: photo ?? undefined, fileName: 'prescription.jpg' }); }} disabled={attached}>
               {attached ? 'Saved to record' : 'Attach to patient record'}
             </Button>
           )}
