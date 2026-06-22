@@ -72,6 +72,7 @@ export function DashboardShell({ nav, children, title, subtitle, topRight }: Pro
   const contentRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     contentRef.current?.scrollTo({ top: 0 });
+    setMobileOpen(false); // always close the mobile drawer after navigating
   }, [pathname]);
 
   const onLogout = () => {
@@ -366,7 +367,9 @@ export function DashboardShell({ nav, children, title, subtitle, topRight }: Pro
             sidebar + header stay fixed and tightly-fitting pages (like the
             clinic dashboard) can render fully without a page scrollbar. */}
         <div ref={contentRef} className="flex-1 min-h-0 overflow-y-auto">
-          <div className="h-full p-4 sm:p-6 max-w-[1600px] w-full mx-auto">{children}</div>
+          {/* lg:h-full lets viewport-fit pages (clinic dashboard) fill on
+              desktop, while mobile flows naturally and scrolls. */}
+          <div className="lg:h-full p-4 sm:p-6 max-w-[1600px] w-full mx-auto">{children}</div>
         </div>
       </div>
 

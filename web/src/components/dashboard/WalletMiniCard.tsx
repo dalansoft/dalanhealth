@@ -16,9 +16,9 @@ export function WalletMiniCard({ balance, perVisitRate, to = '/clinic/wallet', w
   const low = balance < warnAt;
   const visitsLeft = Math.floor(balance / perVisitRate);
   return (
-    <Card className="relative overflow-hidden h-full">
+    <Card className="relative overflow-hidden lg:h-full">
       <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-brand-500/15 blur-2xl" />
-      <div className="relative h-full flex flex-col">
+      <div className="relative flex flex-col lg:h-full">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">Clinic wallet</div>
