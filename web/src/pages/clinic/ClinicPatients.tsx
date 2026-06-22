@@ -1,13 +1,19 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Users, AlertCircle, CheckCircle2, Clock, Calendar, X, Phone, Pencil } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useSearchParams } from 'react-router-dom';
+import {
+  Search, Users, AlertCircle, CheckCircle2, Clock, Calendar, X, Phone, Pencil,
+  ChevronLeft, Download, FileText, Loader2,
+} from 'lucide-react';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { StatCard } from '@/components/ui/StatCard';
 import { SourceBadge } from '@/components/ui/SourceBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import { useQueue, tokenLabel, type QueueEntry, type QueueSource, type PatientDetails } from '@/store/queue';
+import { usePrescriptions, type Rx, type RxMed } from '@/store/prescriptions';
 import { AddPatientModal } from '@/pages/receptionist/AddPatientModal';
 import { demoPatients } from '@/services/demoData';
 
@@ -41,9 +47,15 @@ const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.ge
 const ddmmyyyy = (d: Date) => `${pad(d.getDate())}${pad(d.getMonth() + 1)}${d.getFullYear()}`;
 const fmtDate = (d: Date) => d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+const last10 = (s: string) => s.replace(/\D/g, '').slice(-10);
 
 const SOURCES: QueueSource[] = ['OFFLINE', 'ONLINE', 'QR'];
 const DOCTORS = ['Dr. Anil Sharma', 'Dr. Priya Gupta', 'Dr. Ravi Kumar'];
+
+const medDose = (m: RxMed) => m.dose?.trim() || '—';
+const medTiming = (m: RxMed) =>
+  ([['morning', 'Morning'], ['afternoon', 'Afternoon'], ['evening', 'Evening'], ['night', 'Night']] as const)
+    .filter(([k]) => m[k]).map(([, l]) => l).join(', ') || 'as needed';
 
 function statusOf(e: QueueEntry): { label: string; tone: Tone } {
   if (e.completedAt) return { label: 'Completed', tone: 'success' };
@@ -95,25 +107,101 @@ function Field({ label, value }: { label: string; value?: ReactNode }) {
   );
 }
 
+// "Download everything" — a single PDF with the patient's details, every
+// visit, and every prescription (with medicines for digital ones).
+async function exportPatientPdf(sel: Row, visits: Row[], rx: Rx[]) {
+  const { jsPDF } = await import('jspdf');
+  const autoTable = (await import('jspdf-autotable')).default;
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const M = 40;
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const lastY = () => (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
+  let y = M + 8;
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(15, 23, 42);
+  doc.text('Patient Record', M, y);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 116, 139);
+  doc.text('Dalan Health', W - M, y, { align: 'right' });
+  y += 10; doc.setDrawColor(226, 232, 240); doc.line(M, y, W - M, y); y += 22;
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(15, 23, 42);
+  doc.text(sel.name, M, y); y += 15;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(71, 85, 105);
+  doc.text(sel.mobile, M, y); y += 14;
+
+  const dd = sel.details;
+  const info: string[] = [];
+  if (sel.age != null) info.push(`Age: ${sel.age}`);
+  if (sel.gender) info.push(`Gender: ${sel.gender}`);
+  if (dd?.bloodGroup) info.push(`Blood group: ${dd.bloodGroup}`);
+  if (dd?.allergies) info.push(`Allergies: ${dd.allergies}`);
+  if (dd?.conditions) info.push(`Conditions: ${dd.conditions}`);
+  if (info.length) {
+    doc.setFontSize(9); doc.setTextColor(100, 116, 139);
+    const lines = doc.splitTextToSize(info.join('   ·   '), W - 2 * M);
+    doc.text(lines, M, y); y += lines.length * 12 + 4;
+  }
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(15, 23, 42);
+  doc.text(`Visit history (${visits.length})`, M, y + 14);
+  autoTable(doc, {
+    startY: y + 20,
+    head: [['Date · Time', 'Token', 'Status', 'Source', 'Visit ID']],
+    body: visits.map((v) => [`${fmtDate(v.date)} · ${v.time}`, v.token, v.status, v.source, v.id]),
+    styles: { fontSize: 8, cellPadding: 4 },
+    headStyles: { fillColor: [37, 99, 235], textColor: 255 },
+    margin: { left: M, right: M },
+  });
+  y = lastY() + 24;
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(15, 23, 42);
+  doc.text(`Prescriptions (${rx.length})`, M, y);
+  if (!rx.length) {
+    y += 16; doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 116, 139);
+    doc.text('No prescriptions on record.', M, y);
+  } else {
+    rx.forEach((r) => {
+      if (y > H - 130) { doc.addPage(); y = M; }
+      y += 18;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(30, 41, 59);
+      doc.text(`${r.date}  ·  ${r.kind.toUpperCase()}`, M, y); y += 12;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(71, 85, 105);
+      const sl = doc.splitTextToSize(r.summary || '—', W - 2 * M);
+      doc.text(sl, M, y); y += sl.length * 11;
+      const meds = (r.doc?.meds ?? []).filter((m) => m.name);
+      if (meds.length) {
+        autoTable(doc, {
+          startY: y + 4,
+          head: [['Medicine', 'Dose', 'Timing', 'Days']],
+          body: meds.map((m) => [m.name, medDose(m), medTiming(m), m.days || '—']),
+          styles: { fontSize: 8, cellPadding: 3 },
+          headStyles: { fillColor: [241, 245, 249], textColor: [51, 65, 85] },
+          margin: { left: M, right: M },
+        });
+        y = lastY() + 6;
+      }
+    });
+  }
+
+  doc.save(`patient-${sel.name.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+}
+
 export function ClinicPatients() {
   const { entries, completed } = useQueue();
+  const allRx = usePrescriptions((s) => s.list);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
   const [dateFilter, setDateFilter] = useState('');
   const [selected, setSelected] = useState<Row | null>(null);
   const [editEntry, setEditEntry] = useState<QueueEntry | null>(null);
-
-  // Esc closes the detail panel.
-  useEffect(() => {
-    if (!selected) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelected(null); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [selected]);
+  const [downloading, setDownloading] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const past = useMemo(buildPastVisits, []);
 
-  const rows = useMemo(() => {
+  // Every visit (today's live queue + completed + synthetic past), unfiltered.
+  const allRows = useMemo<Row[]>(() => {
     const today: Row[] = [...entries, ...completed].map((e) => {
       const st = statusOf(e);
       const d = new Date();
@@ -134,9 +222,12 @@ export function ClinicPatients() {
         entry: e,
       };
     });
-    const all = [...today, ...[...past].sort((a, b) => b.date.getTime() - a.date.getTime())];
+    return [...today, ...[...past].sort((a, b) => b.date.getTime() - a.date.getTime())];
+  }, [entries, completed, past]);
+
+  const rows = useMemo(() => {
     const nq = norm(query);
-    return all.filter((r) => {
+    return allRows.filter((r) => {
       if (statusFilter === 'In queue' && r.status === 'Completed') return false;
       if (statusFilter === 'Completed' && r.status !== 'Completed') return false;
       if (dateFilter && ymd(r.date) !== dateFilter) return false;
@@ -146,13 +237,207 @@ export function ClinicPatients() {
       }
       return true;
     });
-  }, [entries, completed, past, query, statusFilter, dateFilter]);
+  }, [allRows, query, statusFilter, dateFilter]);
+
+  // Deep-link: queue rows open here as `?focus=<mobile digits>` and auto-show
+  // that patient's full history. Clear the param so refreshes stay clean.
+  useEffect(() => {
+    const f = searchParams.get('focus');
+    if (!f) return;
+    const match = allRows.find((r) => last10(r.mobile) === f.slice(-10));
+    if (match) setSelected(match);
+    const next = new URLSearchParams(searchParams);
+    next.delete('focus');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, allRows, setSearchParams]);
+
+  // Esc closes the inline patient view.
+  useEffect(() => {
+    if (!selected) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelected(null); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [selected]);
+
+  // All visits + prescriptions for the selected patient (across all dates).
+  const patientVisits = useMemo(
+    () => (selected ? allRows.filter((r) => last10(r.mobile) === last10(selected.mobile)).sort((a, b) => b.date.getTime() - a.date.getTime()) : []),
+    [allRows, selected],
+  );
+  const patientRx = useMemo(
+    () => (selected ? allRx.filter((r) => last10(r.patientMobile) === last10(selected.mobile)) : []),
+    [allRx, selected],
+  );
 
   const inQueueCount = entries.length;
   const seenCount = completed.length;
   const followUps = demoPatients.filter((p) => p.status === 'Follow-up due').length;
-  const d = selected?.details;
 
+  const doDownload = async () => {
+    if (!selected) return;
+    setDownloading(true);
+    try { await exportPatientPdf(selected, patientVisits, patientRx); }
+    finally { setDownloading(false); }
+  };
+
+  // ─── Inline patient view (same tab, no floating dialog) ──────────────────
+  if (selected) {
+    const d = selected.details;
+    return (
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => setSelected(null)}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-600 dark:text-ink-300 hover:text-ink-900 dark:hover:text-ink-50"
+          >
+            <ChevronLeft size={16} /> Back to patients
+          </button>
+          <div className="flex items-center gap-2">
+            {selected.entry && (
+              <Button variant="outline" size="sm" leftIcon={<Pencil size={14} />} onClick={() => setEditEntry(selected.entry!)}>
+                Edit
+              </Button>
+            )}
+            <Button
+              size="sm"
+              leftIcon={downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+              onClick={doDownload}
+              disabled={downloading}
+            >
+              Download record (PDF)
+            </Button>
+          </div>
+        </div>
+
+        {/* Patient header + info */}
+        <Card>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Avatar name={selected.name} />
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-bold text-ink-900 dark:text-ink-50">{selected.name}</span>
+                  <span className={`text-sm font-bold ${selected.emergency ? 'text-danger-500' : 'text-brand-600 dark:text-brand-300'}`}>{selected.token}</span>
+                  {selected.emergency && <Badge tone="danger" size="sm">Emergency</Badge>}
+                </div>
+                <div className="text-xs text-muted inline-flex items-center gap-1 mt-0.5"><Phone size={11} /> {selected.mobile}</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <Badge tone={selected.tone} size="sm" pulse={selected.status === 'In consultation'}>{selected.status}</Badge>
+            </div>
+          </div>
+
+          <div className="mt-4 grid sm:grid-cols-2 gap-x-8 gap-y-0">
+            <div className="rounded-xl border hairline divide-y hairline px-4">
+              <div className="py-2 text-[11px] font-semibold uppercase tracking-wider text-muted">Patient</div>
+              <Field label="Name" value={selected.name} />
+              <Field label="Mobile" value={selected.mobile} />
+              <Field label="Age" value={selected.age} />
+              <Field label="Gender" value={selected.gender} />
+            </div>
+            {d && (d.weight || d.height || d.bloodGroup || d.address || d.allergies || d.conditions || d.emergencyName) ? (
+              <div className="rounded-xl border hairline divide-y hairline px-4">
+                <div className="py-2 text-[11px] font-semibold uppercase tracking-wider text-muted">Health record</div>
+                <Field label="Weight" value={d.weight !== undefined ? `${d.weight} kg` : undefined} />
+                <Field label="Height" value={d.height !== undefined ? `${d.height} cm` : undefined} />
+                <Field label="Blood group" value={d.bloodGroup} />
+                <Field label="Address" value={d.address} />
+                <Field label="Allergies" value={d.allergies} />
+                <Field label="Conditions" value={d.conditions} />
+                <Field label="Emergency contact" value={d.emergencyName ? `${d.emergencyName}${d.emergencyMobile ? ` · ${d.emergencyMobile}` : ''}` : undefined} />
+              </div>
+            ) : (
+              <div className="rounded-xl border hairline px-4 py-3 text-xs text-muted self-start">No extended health record on file.</div>
+            )}
+          </div>
+        </Card>
+
+        {/* Full visit history for this patient */}
+        <Card padded={false}>
+          <div className="px-5 py-4 border-b hairline flex items-center justify-between">
+            <div>
+              <CardTitle>Visit history</CardTitle>
+              <CardSubtitle>Every visit for this patient</CardSubtitle>
+            </div>
+            <Badge tone="neutral">{patientVisits.length}</Badge>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-sm">
+              <thead className="bg-ink-50 dark:bg-ink-900/60">
+                <tr className="text-left text-[11px] uppercase tracking-wider text-muted">
+                  <th className="px-5 py-3">Date · Time</th>
+                  <th className="px-5 py-3">Token</th>
+                  <th className="px-5 py-3">Source</th>
+                  <th className="px-5 py-3">Diagnosis</th>
+                  <th className="px-5 py-3">Visit ID</th>
+                  <th className="px-5 py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y hairline">
+                {patientVisits.map((v) => (
+                  <tr key={v.id} className={v.emergency ? 'bg-danger-500/5' : ''}>
+                    <td className="px-5 py-3 text-muted whitespace-nowrap">{fmtDate(v.date)} · {v.time}</td>
+                    <td className={`px-5 py-3 font-semibold ${v.emergency ? 'text-danger-500' : ''}`}>{v.token}</td>
+                    <td className="px-5 py-3"><SourceBadge source={v.source} /></td>
+                    <td className="px-5 py-3 text-ink-700 dark:text-ink-200">{v.diagnosis ?? '—'}</td>
+                    <td className="px-5 py-3 font-mono text-[11px] text-brand-600 dark:text-brand-300">{v.id}</td>
+                    <td className="px-5 py-3"><Badge tone={v.tone} size="sm" pulse={v.status === 'In consultation'}>{v.status}</Badge></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        {/* Prescriptions for this patient */}
+        <Card padded={false}>
+          <div className="px-5 py-4 border-b hairline flex items-center justify-between">
+            <div>
+              <CardTitle>Prescriptions</CardTitle>
+              <CardSubtitle>All prescriptions on record</CardSubtitle>
+            </div>
+            <Badge tone="neutral">{patientRx.length}</Badge>
+          </div>
+          {patientRx.length ? (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-sm">
+                <thead className="bg-ink-50 dark:bg-ink-900/60">
+                  <tr className="text-left text-[11px] uppercase tracking-wider text-muted">
+                    <th className="px-5 py-3">Date</th>
+                    <th className="px-5 py-3">Type</th>
+                    <th className="px-5 py-3">Summary</th>
+                    <th className="px-5 py-3">Medicines</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y hairline">
+                  {patientRx.map((r) => (
+                    <tr key={r.id}>
+                      <td className="px-5 py-3 text-muted whitespace-nowrap">{r.date}</td>
+                      <td className="px-5 py-3"><Badge tone="brand" size="sm">{r.kind}</Badge></td>
+                      <td className="px-5 py-3 text-ink-700 dark:text-ink-200">{r.summary}</td>
+                      <td className="px-5 py-3 text-muted">{(r.doc?.meds ?? []).filter((m) => m.name).map((m) => m.name).join(', ') || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="px-5 py-10 text-center text-sm text-muted">
+              <FileText size={20} className="mx-auto mb-2 opacity-40" />
+              No prescriptions for this patient yet.
+            </div>
+          )}
+        </Card>
+
+        {/* Edit patient — same form, mobile locked */}
+        <AddPatientModal open={!!editEntry} editEntry={editEntry ?? undefined} onClose={() => setEditEntry(null)} />
+      </motion.div>
+    );
+  }
+
+  // ─── List view ───────────────────────────────────────────────────────────
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -167,7 +452,7 @@ export function ClinicPatients() {
           <CardHeader className="mb-0">
             <div>
               <CardTitle>Patient history</CardTitle>
-              <CardSubtitle>Every visit — in queue and completed, normal &amp; emergency. Click a visit ID to see everything.</CardSubtitle>
+              <CardSubtitle>Every visit — in queue and completed, normal &amp; emergency. Click a row to open the full patient record.</CardSubtitle>
             </div>
             <Badge tone="neutral">{rows.length} shown</Badge>
           </CardHeader>
@@ -240,6 +525,7 @@ export function ClinicPatients() {
                   key={r.id}
                   onClick={() => setSelected(r)}
                   className={`cursor-pointer transition-colors hover:bg-ink-50 dark:hover:bg-ink-900/40 ${r.emergency ? 'bg-danger-500/5' : ''}`}
+                  title="Open full patient record"
                 >
                   <td className={`px-5 py-3.5 font-semibold ${r.emergency ? 'text-danger-500' : ''}`}>{r.token}</td>
                   <td className="px-5 py-3.5 font-medium text-ink-900 dark:text-ink-50">
@@ -249,16 +535,7 @@ export function ClinicPatients() {
                     </div>
                   </td>
                   <td className="px-5 py-3.5 text-muted">{r.mobile}</td>
-                  <td className="px-5 py-3.5">
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); setSelected(r); }}
-                      className="font-mono text-[11px] text-brand-600 dark:text-brand-300 hover:underline"
-                      title="Show full visit details"
-                    >
-                      {r.id}
-                    </button>
-                  </td>
+                  <td className="px-5 py-3.5 font-mono text-[11px] text-brand-600 dark:text-brand-300">{r.id}</td>
                   <td className="px-5 py-3.5"><SourceBadge source={r.source} /></td>
                   <td className="px-5 py-3.5 text-muted whitespace-nowrap">{fmtDate(r.date)} · {r.time}</td>
                   <td className="px-5 py-3.5"><Badge tone={r.tone} size="sm" pulse={r.status === 'In consultation'}>{r.status}</Badge></td>
@@ -273,103 +550,6 @@ export function ClinicPatients() {
           </table>
         </div>
       </Card>
-
-      {/* ─── Visit detail panel — "show all" ─────────────────────────────── */}
-      <AnimatePresence>
-        {selected && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="fixed inset-0 z-[60] bg-ink-950/60 backdrop-blur-sm"
-              onClick={() => setSelected(null)}
-              aria-hidden
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 26 }}
-              className="fixed inset-0 z-[70] flex items-start sm:items-center justify-center p-4 sm:p-6 pointer-events-none overflow-y-auto"
-              role="dialog" aria-modal="true"
-            >
-              <div className="w-full max-w-lg pointer-events-auto rounded-2xl bg-white dark:bg-ink-900 border hairline shadow-2xl my-auto">
-                <div className="flex items-center justify-between gap-3 px-5 py-4 border-b hairline">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Avatar name={selected.name} size="sm" />
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-ink-900 dark:text-ink-50 truncate">{selected.name}</span>
-                        <span className={`text-sm font-bold ${selected.emergency ? 'text-danger-500' : 'text-brand-600 dark:text-brand-300'}`}>{selected.token}</span>
-                        {selected.emergency && <Badge tone="danger" size="sm">Emergency</Badge>}
-                      </div>
-                      <div className="text-[11px] text-muted inline-flex items-center gap-1"><Phone size={10} /> {selected.mobile}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {selected.entry && (
-                      <button
-                        type="button"
-                        onClick={() => { setEditEntry(selected.entry!); setSelected(null); }}
-                        className="inline-flex items-center gap-1.5 rounded-xl border hairline px-3 h-9 text-xs font-semibold text-ink-700 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-800 transition-colors"
-                      >
-                        <Pencil size={13} /> Edit
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setSelected(null)}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800"
-                      aria-label="Close"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-5 max-h-[70vh] overflow-y-auto">
-                  <div className="rounded-xl border hairline divide-y hairline px-4">
-                    <div className="py-2 text-[11px] font-semibold uppercase tracking-wider text-muted">Visit</div>
-                    <Field label="Visit ID" value={<span className="font-mono">{selected.id}</span>} />
-                    <Field label="Token" value={selected.token} />
-                    <Field label="Status" value={<Badge tone={selected.tone} size="sm">{selected.status}</Badge>} />
-                    <Field label="Date" value={fmtDate(selected.date)} />
-                    <Field label="Time" value={selected.time} />
-                    <Field label="Source" value={<SourceBadge source={selected.source} />} />
-                    <Field label="Doctor" value={selected.doctor} />
-                    <Field label="Diagnosis" value={selected.diagnosis} />
-                    <Field label="Consultation fee" value={selected.fee !== undefined ? `₹${selected.fee}` : undefined} />
-                  </div>
-
-                  <div className="mt-4 rounded-xl border hairline divide-y hairline px-4">
-                    <div className="py-2 text-[11px] font-semibold uppercase tracking-wider text-muted">Patient</div>
-                    <Field label="Name" value={selected.name} />
-                    <Field label="Mobile" value={selected.mobile} />
-                    <Field label="Age" value={selected.age} />
-                    <Field label="Gender" value={selected.gender} />
-                  </div>
-
-                  {d && (d.weight || d.height || d.bloodGroup || d.address || d.allergies || d.conditions || d.emergencyName) && (
-                    <div className="mt-4 rounded-xl border hairline divide-y hairline px-4">
-                      <div className="py-2 text-[11px] font-semibold uppercase tracking-wider text-muted">Health record</div>
-                      <Field label="Weight" value={d.weight !== undefined ? `${d.weight} kg` : undefined} />
-                      <Field label="Height" value={d.height !== undefined ? `${d.height} cm` : undefined} />
-                      <Field label="Blood group" value={d.bloodGroup} />
-                      <Field label="Address" value={d.address} />
-                      <Field label="Allergies" value={d.allergies} />
-                      <Field label="Conditions" value={d.conditions} />
-                      <Field label="Emergency contact" value={d.emergencyName ? `${d.emergencyName}${d.emergencyMobile ? ` · ${d.emergencyMobile}` : ''}` : undefined} />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Edit patient — same form, mobile locked */}
-      <AddPatientModal open={!!editEntry} editEntry={editEntry ?? undefined} onClose={() => setEditEntry(null)} />
     </div>
   );
 }
