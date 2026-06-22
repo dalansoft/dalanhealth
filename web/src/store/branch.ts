@@ -8,6 +8,8 @@ export interface Branch {
   address?: string;
   /** True if this is the primary / HQ branch. */
   primary?: boolean;
+  /** Doctors attending at this branch. */
+  doctors?: string[];
 }
 
 interface BranchState {
@@ -21,9 +23,9 @@ interface BranchState {
 // Demo seed — three branches under a single clinic group. In production this
 // would come from the backend when the clinic admin signs in.
 const demoBranches: Branch[] = [
-  { id: 'b1', name: 'Sharma ENT Clinic', city: 'Boring Road, Patna', primary: true, address: '12 Boring Road, Patna 800001' },
-  { id: 'b2', name: 'Sharma ENT — Kankarbagh', city: 'Kankarbagh, Patna', address: 'Plot 7, Main Road, Kankarbagh, Patna' },
-  { id: 'b3', name: 'Sharma ENT — Gaya', city: 'Civil Lines, Gaya', address: 'Near Bus Stand, Civil Lines, Gaya 823001' },
+  { id: 'b1', name: 'Sharma ENT Clinic', city: 'Boring Road, Patna', primary: true, address: '12 Boring Road, Patna 800001', doctors: ['Dr. Anil Sharma'] },
+  { id: 'b2', name: 'Sharma ENT — Kankarbagh', city: 'Kankarbagh, Patna', address: 'Plot 7, Main Road, Kankarbagh, Patna', doctors: ['Dr. Priya Gupta'] },
+  { id: 'b3', name: 'Sharma ENT — Gaya', city: 'Civil Lines, Gaya', address: 'Near Bus Stand, Civil Lines, Gaya 823001', doctors: ['Dr. Ravi Kumar'] },
 ];
 
 // Cross-tab sync — switching branches in the clinic dashboard tab should also

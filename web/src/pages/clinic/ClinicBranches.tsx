@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Building2, MapPin, Star, Plus, Check, Trash2 } from 'lucide-react';
+import { Building2, MapPin, Star, Plus, Check, Trash2, Stethoscope } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -124,6 +124,15 @@ function BranchCard({ branch, active, onActivate, onDelete, onMakePrimary, canDe
           </div>
           {branch.address && (
             <div className="mt-2 text-[11px] text-muted line-clamp-2">{branch.address}</div>
+          )}
+          {branch.doctors && branch.doctors.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {branch.doctors.map((d, i) => (
+                <span key={i} className="inline-flex items-center gap-1 rounded-md bg-brand-500/10 px-1.5 py-0.5 text-[10px] font-medium text-brand-700 dark:text-brand-300">
+                  <Stethoscope size={9} /> {d}
+                </span>
+              ))}
+            </div>
           )}
         </div>
       </div>
