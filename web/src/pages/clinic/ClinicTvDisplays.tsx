@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import {
   Monitor, Plus, Trash2, Copy, RefreshCw, Power, Edit3, Check,
   AlertCircle, KeyRound, Clock, Building2, ExternalLink, Megaphone, Send,
-  Play, Save, RotateCcw, ChevronUp, ChevronDown,
+  Play, Save, RotateCcw, ChevronUp, ChevronDown, Cloud,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useBranch } from '@/store/branch';
 import { useSound } from '@/store/sound';
+import { useTts } from '@/store/tts';
 import { useQueue } from '@/store/queue';
 import { useTvAccounts, type TvAccount, type TvSchedule } from '@/store/tvAccounts';
 import { postAnnouncement } from '@/lib/announceBus';
@@ -372,9 +373,61 @@ function AnnouncementSettingsCard() {
               </Button>
             </div>
           </div>
+
+          <CloudVoiceSettings onTest={handlePreview} />
         </div>
       </div>
     </Card>
+  );
+}
+
+/**
+ * Optional premium cloud-voice config. When an endpoint is set, every spoken
+ * announcement automatically routes through it (Google / Polly / ElevenLabs
+ * Indian or Bihari voice) instead of the device's browser voice. Empty = off.
+ */
+function CloudVoiceSettings({ onTest }: { onTest: () => void }) {
+  const { endpoint, voice, accent, enabled, setConfig } = useTts();
+  const active = enabled && !!endpoint.trim();
+  const input = 'w-full rounded-lg border hairline bg-white dark:bg-ink-900 px-3 py-2 text-sm text-ink-900 dark:text-ink-50 outline-none focus:ring-2 focus:ring-brand-500/30';
+
+  return (
+    <div className="rounded-xl border hairline bg-ink-50/40 dark:bg-ink-900/40 p-3 space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">
+          <Cloud size={13} className="text-brand-600 dark:text-brand-300" /> Premium cloud voice
+          <span className="normal-case text-[10px] text-ink-400">optional</span>
+        </span>
+        <Badge tone={active ? 'success' : 'neutral'} size="sm">{active ? 'Active' : 'Device voice'}</Badge>
+      </div>
+      <div className="text-[10px] text-muted">
+        Point this at your TTS endpoint for a natural Indian / Bihari voice on every device. When set, announcements use it
+        automatically and fall back to the device voice if it fails. Leave blank to keep the browser voice.
+      </div>
+      <div>
+        <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1">Endpoint URL</label>
+        <input className={input} value={endpoint} onChange={(e) => setConfig({ endpoint: e.target.value })} placeholder="https://api.your-backend.com/tts" />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1">Voice</label>
+          <input className={input} value={voice} onChange={(e) => setConfig({ voice: e.target.value })} placeholder="e.g. hi-IN-Wavenet-A" />
+        </div>
+        <div>
+          <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted mb-1">Accent</label>
+          <input className={input} value={accent} onChange={(e) => setConfig({ accent: e.target.value })} placeholder="e.g. bihari" />
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <label className="inline-flex items-center gap-2 text-xs text-ink-700 dark:text-ink-200">
+          <input type="checkbox" checked={enabled} disabled={!endpoint.trim()} onChange={(e) => setConfig({ enabled: e.target.checked })} />
+          Use cloud voice
+        </label>
+        <Button size="sm" variant="outline" leftIcon={<Play size={14} />} onClick={onTest} disabled={!active}>
+          Test cloud voice
+        </Button>
+      </div>
+    </div>
   );
 }
 
