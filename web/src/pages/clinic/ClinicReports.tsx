@@ -5,7 +5,7 @@ import { StatCard } from '@/components/ui/StatCard';
 import { Badge } from '@/components/ui/Badge';
 import { Users, IndianRupee, RotateCw, Repeat, Calendar } from 'lucide-react';
 import {
-  buildDailySeries, PRESETS, resolvePreset, inRange, totals, bucketize, pctDelta, ymd,
+  buildDailySeries, PRESETS, resolvePreset, inRange, totals, bucketize, pctDelta, ymd, startOfDay,
   type PresetKey,
 } from '@/lib/reports';
 import { inr, inrCompact } from '@/lib/format';
@@ -19,6 +19,7 @@ const tooltipStyle = { background: 'rgba(15,23,42,0.95)', border: 'none', border
 
 export function ClinicReports() {
   const series = useMemo(() => buildDailySeries(400), []);
+  const todayStr = ymd(startOfDay(new Date()));
 
   const init = resolvePreset('7d');
   const [preset, setPreset] = useState<PresetKey>('7d');
@@ -33,14 +34,17 @@ export function ClinicReports() {
   };
 
   const { tot, prevTot, buckets, sourcePie, rangeLabel } = useMemo(() => {
+    const today = startOfDay(new Date());
     const fromD = parseDay(from);
     const toD = parseDay(to);
     const lo = fromD <= toD ? fromD : toD;
-    const hi = fromD <= toD ? toD : fromD;
-    const pts = inRange(series, lo, hi);
+    let hi = fromD <= toD ? toD : fromD;
+    // Never report beyond today — future days have no data (show 0).
+    if (hi.getTime() > today.getTime()) hi = today;
+    const pts = lo.getTime() > hi.getTime() ? [] : inRange(series, lo, hi);
 
     // Previous equal-length window for the deltas.
-    const lenDays = Math.round((hi.getTime() - lo.getTime()) / DAY_MS) + 1;
+    const lenDays = Math.max(1, Math.round((hi.getTime() - lo.getTime()) / DAY_MS) + 1);
     const prevHi = new Date(lo.getTime() - DAY_MS);
     const prevLo = new Date(prevHi.getTime() - (lenDays - 1) * DAY_MS);
     const prevPts = inRange(series, prevLo, prevHi);
@@ -85,9 +89,9 @@ export function ClinicReports() {
               ))}
             </div>
             <div className="flex items-center gap-2">
-              <DateField label="From" value={from} max={to} onChange={(v) => { setFrom(v); setPreset('custom'); }} />
+              <DateField label="From" value={from} max={to < todayStr ? to : todayStr} onChange={(v) => { setFrom(v); setPreset('custom'); }} />
               <span className="text-muted text-xs">to</span>
-              <DateField label="To" value={to} min={from} onChange={(v) => { setTo(v); setPreset('custom'); }} />
+              <DateField label="To" value={to} min={from} max={todayStr} onChange={(v) => { setTo(v); setPreset('custom'); }} />
             </div>
           </div>
         </div>
