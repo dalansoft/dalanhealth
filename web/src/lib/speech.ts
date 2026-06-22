@@ -16,7 +16,11 @@
  * "Shailesh Raj" is spoken as शैलेश राज.
  */
 
-export type AnnounceLang = 'en' | 'hi' | 'both';
+/** A single spoken language. Bhojpuri ('bho') is written in Devanagari and
+ *  read by the Hindi voice (no dedicated Bhojpuri TTS voice exists). */
+export type Lang = 'en' | 'hi' | 'bho';
+/** Ordered list of languages to speak, in the order chosen by the clinic. */
+export type AnnounceLang = Lang[];
 
 let cachedVoices: SpeechSynthesisVoice[] = [];
 
@@ -58,6 +62,54 @@ function scoreVoice(v: SpeechSynthesisVoice, lang: 'en' | 'hi'): number {
   if (MALE_HINTS.some((h) => name.includes(h))) s -= 30;
   if (name.includes('google')) s += 6; // typically clear + pleasant
   return s;
+}
+
+/** Is a real Hindi (hi-*) voice installed on this device? When not, Devanagari
+ *  text is unreadable by an English voice — it ends up speaking only the digits
+ *  (the "it only says the number" bug). We romanize as a fallback in that case. */
+function hasHindiVoice(): boolean {
+  return refreshVoices().some((v) => v.lang.toLowerCase().replace('_', '-').startsWith('hi'));
+}
+
+// ─── Devanagari → Latin (romanization fallback) ────────────────────────────
+// Used only when no Hindi voice is installed, so an English/Indian voice can
+// still read the full Hindi/Bhojpuri sentence phonetically instead of skipping
+// every Devanagari word.
+const DEV_CONS: Record<string, string> = {
+  'क': 'k', 'ख': 'kh', 'ग': 'g', 'घ': 'gh', 'ङ': 'n',
+  'च': 'ch', 'छ': 'chh', 'ज': 'j', 'झ': 'jh', 'ञ': 'n',
+  'ट': 't', 'ठ': 'th', 'ड': 'd', 'ढ': 'dh', 'ण': 'n',
+  'त': 't', 'थ': 'th', 'द': 'd', 'ध': 'dh', 'न': 'n',
+  'प': 'p', 'फ': 'ph', 'ब': 'b', 'भ': 'bh', 'म': 'm',
+  'य': 'y', 'र': 'r', 'ल': 'l', 'व': 'v', 'श': 'sh',
+  'ष': 'sh', 'स': 's', 'ह': 'h', 'ळ': 'l',
+  'क़': 'q', 'ख़': 'kh', 'ग़': 'g', 'ज़': 'z', 'ड़': 'r', 'ढ़': 'rh', 'फ़': 'f', 'य़': 'y',
+};
+const DEV_MATRA: Record<string, string> = {
+  'ा': 'aa', 'ि': 'i', 'ी': 'ee', 'ु': 'u', 'ू': 'oo',
+  'े': 'e', 'ै': 'ai', 'ो': 'o', 'ौ': 'au', 'ृ': 'ri',
+};
+const DEV_VOWEL: Record<string, string> = {
+  'अ': 'a', 'आ': 'aa', 'इ': 'i', 'ई': 'ee', 'उ': 'u', 'ऊ': 'oo',
+  'ए': 'e', 'ऐ': 'ai', 'ओ': 'o', 'औ': 'au', 'ऋ': 'ri',
+};
+
+export function devToLatin(s: string): string {
+  let out = '';
+  let pending = ''; // a consonant awaiting its vowel
+  const flush = (vowel: string) => { out += pending + vowel; pending = ''; };
+  for (const ch of s) {
+    if (DEV_CONS[ch]) { if (pending) flush('a'); pending = DEV_CONS[ch]; }
+    else if (DEV_MATRA[ch] !== undefined) { if (pending) flush(DEV_MATRA[ch]); else out += DEV_MATRA[ch]; }
+    else if (ch === '्') { if (pending) { out += pending; pending = ''; } } // virama → no vowel
+    else if (ch === 'ं' || ch === 'ँ') { if (pending) flush('a'); out += 'n'; }
+    else if (ch === 'ः') { if (pending) flush('a'); out += 'h'; }
+    else if (ch === '़') { /* nukta — ignore, base already mapped */ }
+    else if (DEV_VOWEL[ch]) { if (pending) flush('a'); out += DEV_VOWEL[ch]; }
+    else { if (pending) flush('a'); out += ch; } // digits, latin, spaces, punctuation
+  }
+  if (pending) flush('a');
+  return out;
 }
 
 function pickVoice(lang: 'en' | 'hi'): SpeechSynthesisVoice | undefined {
@@ -163,6 +215,13 @@ export function nameToDevanagari(name: string): string {
 /** Default call sentences — used until the clinic saves its own template. */
 export const DEFAULT_TEMPLATE_EN = 'Token number [Token no], [Name], please proceed to the consultation room.';
 export const DEFAULT_TEMPLATE_HI = 'टोकन नंबर [Token no], [Name], कृपया परामर्श कक्ष में पधारें।';
+export const DEFAULT_TEMPLATE_BHO = 'टोकन नंबर [Token no], [Name], कृपया डॉक्टर साहेब के कमरा में आईं।';
+
+export const LANG_META: Record<Lang, { label: string; short: string }> = {
+  en: { label: 'English', short: 'EN' },
+  hi: { label: 'हिन्दी', short: 'हि' },
+  bho: { label: 'भोजपुरी', short: 'भोज' },
+};
 
 // Placeholders are forgiving: [Token no], [token], {token number}, [NAME],
 // {name} … all work. Token number and patient name are filled automatically.
@@ -170,22 +229,26 @@ const TOKEN_RE = /[[{]\s*token[^\]}]*[\]}]/gi;
 const NAME_RE = /[[{]\s*name[^\]}]*[\]}]/gi;
 
 /** Fill a clinic-written template with the live token + patient name. The
- *  name is transliterated to Devanagari for the Hindi voice. */
-export function fillTemplate(template: string, token: number, name: string, lang: 'en' | 'hi'): string {
-  const spokenName = lang === 'hi' ? nameToDevanagari(name) : name;
+ *  name is transliterated to Devanagari for the Hindi / Bhojpuri voices. */
+export function fillTemplate(template: string, token: number, name: string, lang: Lang): string {
+  const spokenName = lang === 'en' ? name : nameToDevanagari(name);
   return template.replace(TOKEN_RE, String(token)).replace(NAME_RE, spokenName);
 }
 
 interface Templates {
   templateEn?: string;
   templateHi?: string;
+  templateBho?: string;
 }
 
-function sentenceFor(lang: 'en' | 'hi', token: number, name: string, t?: Templates): string {
-  const tpl = lang === 'hi'
-    ? (t?.templateHi?.trim() || DEFAULT_TEMPLATE_HI)
-    : (t?.templateEn?.trim() || DEFAULT_TEMPLATE_EN);
-  return fillTemplate(tpl, token, name, lang);
+function templateFor(lang: Lang, t?: Templates): string {
+  if (lang === 'hi') return t?.templateHi?.trim() || DEFAULT_TEMPLATE_HI;
+  if (lang === 'bho') return t?.templateBho?.trim() || DEFAULT_TEMPLATE_BHO;
+  return t?.templateEn?.trim() || DEFAULT_TEMPLATE_EN;
+}
+
+function sentenceFor(lang: Lang, token: number, name: string, t?: Templates): string {
+  return fillTemplate(templateFor(lang, t), token, name, lang);
 }
 
 function utter(lang: 'en' | 'hi', text: string): SpeechSynthesisUtterance {
@@ -203,9 +266,23 @@ function utter(lang: 'en' | 'hi', text: string): SpeechSynthesisUtterance {
   return u;
 }
 
+// Speak one sentence in one language. Hindi & Bhojpuri use the Hindi voice;
+// when no Hindi voice exists we romanize so the English voice reads it fully
+// (instead of speaking only the digits).
+function speakOne(synth: SpeechSynthesis, lang: Lang, sentence: string): void {
+  const needsDevanagari = lang === 'hi' || lang === 'bho';
+  if (needsDevanagari && !hasHindiVoice()) {
+    synth.speak(utter('en', devToLatin(sentence)));
+  } else {
+    synth.speak(utter(needsDevanagari ? 'hi' : 'en', sentence));
+  }
+}
+
+const normLangs = (lang: AnnounceLang): Lang[] => (Array.isArray(lang) && lang.length ? lang : ['en']);
+
 /**
- * Speak the "now serving" announcement. For 'both', Hindi is spoken first
- * then English (queued back-to-back). No-op if speechSynthesis is missing.
+ * Speak the "now serving" announcement. Languages are spoken back-to-back in
+ * the order the clinic chose. No-op if speechSynthesis is missing.
  */
 export function speakAnnouncement(opts: {
   token: number;
@@ -213,21 +290,20 @@ export function speakAnnouncement(opts: {
   lang: AnnounceLang;
   templateEn?: string;
   templateHi?: string;
+  templateBho?: string;
 }): void {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
   const synth = window.speechSynthesis;
   // Clear anything mid-speech so rapid "complete" clicks don't pile up.
   synth.cancel();
-
-  const langs: ('en' | 'hi')[] = opts.lang === 'both' ? ['hi', 'en'] : [opts.lang];
-  for (const l of langs) {
-    synth.speak(utter(l, sentenceFor(l, opts.token, opts.name, opts)));
+  for (const l of normLangs(opts.lang)) {
+    speakOne(synth, l, sentenceFor(l, opts.token, opts.name, opts));
   }
 }
 
 /**
- * Speak arbitrary operator-written text (custom PA-style announcement).
- * For 'both' the same text is read twice — Hindi voice first, then English.
+ * Speak arbitrary operator-written text (custom PA-style announcement). Read
+ * once, with the voice picked from the primary language / the script used.
  */
 export function speakCustomText(text: string, lang: AnnounceLang): void {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
@@ -235,9 +311,12 @@ export function speakCustomText(text: string, lang: AnnounceLang): void {
   if (!trimmed) return;
   const synth = window.speechSynthesis;
   synth.cancel();
-  const langs: ('en' | 'hi')[] = lang === 'both' ? ['hi', 'en'] : [lang];
-  for (const l of langs) {
-    synth.speak(utter(l, trimmed));
+  const primary = normLangs(lang)[0];
+  const isDevanagari = /[ऀ-ॿ]/.test(trimmed) || primary === 'hi' || primary === 'bho';
+  if (isDevanagari && !hasHindiVoice()) {
+    synth.speak(utter('en', devToLatin(trimmed)));
+  } else {
+    synth.speak(utter(isDevanagari ? 'hi' : 'en', trimmed));
   }
 }
 
@@ -254,7 +333,7 @@ export function cancelSpeech(): void {
 export function previewVoice(
   lang: AnnounceLang,
   name = 'Aman Kumar',
-  templates?: { templateEn?: string; templateHi?: string },
+  templates?: { templateEn?: string; templateHi?: string; templateBho?: string },
   token = 1,
 ): void {
   speakAnnouncement({ token, name, lang, ...templates });
