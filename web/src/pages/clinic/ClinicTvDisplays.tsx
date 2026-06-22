@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Monitor, Plus, Trash2, Copy, RefreshCw, Power, Edit3, Check,
   AlertCircle, KeyRound, Clock, Building2, ExternalLink, Megaphone, Send,
@@ -12,7 +12,7 @@ import { useSound } from '@/store/sound';
 import { useQueue } from '@/store/queue';
 import { useTvAccounts, type TvAccount, type TvSchedule } from '@/store/tvAccounts';
 import { postAnnouncement } from '@/lib/announceBus';
-import { previewVoice, DEFAULT_TEMPLATE_EN, DEFAULT_TEMPLATE_HI, DEFAULT_TEMPLATE_BHO, LANG_META, type Lang } from '@/lib/speech';
+import { previewVoice, hasIndianVoice, DEFAULT_TEMPLATE_EN, DEFAULT_TEMPLATE_HI, DEFAULT_TEMPLATE_BHO, LANG_META, type Lang } from '@/lib/speech';
 import { unlockAudio } from '@/lib/chime';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/cn';
@@ -168,6 +168,14 @@ function AnnouncementSettingsCard() {
   const [text, setText] = useState('');
   const [sentAt, setSentAt] = useState<number | null>(null);
 
+  // Voices load async — check shortly after mount whether this device has any
+  // Indian-accent voice; if not, the accent will be foreign (browser limit).
+  const [noIndianVoice, setNoIndianVoice] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setNoIndianVoice(!hasIndianVoice()), 800);
+    return () => clearTimeout(t);
+  }, []);
+
   const dirty = enDraft !== templateEn || hiDraft !== templateHi || bhoDraft !== templateBho;
 
   const draftFor = (l: Lang) => (l === 'en' ? enDraft : l === 'hi' ? hiDraft : bhoDraft);
@@ -287,6 +295,12 @@ function AnnouncementSettingsCard() {
               </div>
             )}
             <div className="mt-1 text-[10px] text-muted">Female voice · Indian accent · applies to every TV instantly. Bhojpuri uses the Hindi voice.</div>
+            {noIndianVoice && (
+              <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-warning-500/40 bg-warning-500/5 px-3 py-2 text-[11px] text-warning-700 dark:text-warning-300">
+                <AlertCircle size={13} className="mt-0.5 shrink-0" />
+                <span>This device has no Indian (hi-IN / en-IN) voice, so the accent will be foreign. Install a <b>Hindi (India)</b> voice in your OS settings for a natural Indian accent — the sentence is still read in full meanwhile.</span>
+              </div>
+            )}
           </div>
 
           {/* Call sentence template — write → play → save */}
