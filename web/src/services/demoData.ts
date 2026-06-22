@@ -134,10 +134,12 @@ export const branchData: Record<string, BranchData> = {
  */
 export const getBranchData = (
   branchId: string | undefined,
-  branchMeta?: { name?: string; city?: string },
+  branchMeta?: { name?: string; city?: string; doctors?: string[] },
 ): BranchData => {
-  if (branchId && branchData[branchId]) return branchData[branchId];
-  return {
+  // Doctors assigned to the branch (in the branch store) win over any seeded
+  // demo doctor, so the name you set on the branch is the one that shows.
+  const assigned = branchMeta?.doctors?.map((d) => d.trim()).filter(Boolean) ?? [];
+  const base: BranchData = (branchId && branchData[branchId]) ? branchData[branchId] : {
     doctor: 'Doctor not assigned',
     specialization: 'Add a specialization',
     city: branchMeta?.city ?? 'City',
@@ -148,6 +150,7 @@ export const getBranchData = (
     todayPatients: 0,
     completedToday: 0,
   };
+  return assigned.length ? { ...base, doctor: assigned.join(', ') } : base;
 };
 
 export const demoPatient = {
