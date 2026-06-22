@@ -120,7 +120,7 @@ export function PatientBook() {
               </div>
               {error && <div className="text-xs text-danger-500">{error}</div>}
               <Button fullWidth size="lg" leftIcon={<Ticket size={16} />} onClick={book} disabled={!canSubmit}>Get token · Free</Button>
-              <div className="text-[11px] text-muted text-center">Name &amp; mobile required · No payment now — pay ₹9 + GST to the compounder at the counter.</div>
+              <div className="text-[11px] text-muted text-center">Name &amp; mobile required · Getting a token is free.</div>
             </div>
           ) : (
             <GeoGate geo={geo} dist={dist} onOverride={() => setOverride(true)} />
@@ -142,8 +142,8 @@ function Booked({ token, ahead, waitMin }: { token: number; ahead: number; waitM
       <div className="text-[11px] uppercase tracking-wider text-muted">Your token</div>
       <div className="text-6xl font-extrabold tracking-tight text-token">#{token}</div>
       <div className="mt-2 text-sm text-muted">{ahead} ahead of you · ~{waitMin || 5} min wait</div>
-      <div className="mt-4 rounded-xl border border-warning-500/40 bg-warning-500/5 px-3 py-2.5 text-xs text-warning-700 dark:text-warning-300">
-        Please pay <b>₹9 + GST</b> to the <b>compounder</b> at the clinic counter to confirm your visit.
+      <div className="mt-4 rounded-xl border border-success-500/30 bg-success-500/5 px-3 py-2.5 text-xs text-success-700 dark:text-success-300">
+        You're in the queue. Please stay nearby — your token will be called on the clinic screen.
       </div>
     </motion.div>
   );
