@@ -167,7 +167,7 @@ export function ClinicQueue() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.98 }}
                     transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-                    onClick={() => navigate(`/clinic/patients?focus=${q.patientMobile.replace(/\D/g, '')}`)}
+                    onClick={() => navigate(`/clinic/patients?p=${q.patientMobile.replace(/\D/g, '').slice(-10)}`)}
                     className={`text-sm cursor-pointer transition-colors hover:bg-ink-50 dark:hover:bg-ink-900/60 ${q.emergency ? 'bg-danger-500/5' : q.wasSkipped ? 'bg-warning-500/5' : ''}`}
                     title="Open this patient's full record in Patients"
                   >

@@ -14,7 +14,7 @@ import { SourceBadge } from '@/components/ui/SourceBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import { useQueue, tokenLabel, type QueueEntry, type QueueSource, type PatientDetails } from '@/store/queue';
 import { usePrescriptions, type Rx, type RxMed } from '@/store/prescriptions';
-import { AddPatientModal } from '@/pages/receptionist/AddPatientModal';
+import { AddPatient } from '@/pages/receptionist/AddPatient';
 import { demoPatients } from '@/services/demoData';
 
 type Tone = 'brand' | 'accent' | 'success' | 'neutral' | 'warning';
@@ -193,9 +193,8 @@ export function ClinicPatients() {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
   const [dateFilter, setDateFilter] = useState('');
-  const [selected, setSelected] = useState<Row | null>(null);
-  const [editEntry, setEditEntry] = useState<QueueEntry | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const past = useMemo(buildPastVisits, []);
@@ -239,25 +238,31 @@ export function ClinicPatients() {
     });
   }, [allRows, query, statusFilter, dateFilter]);
 
-  // Deep-link: queue rows open here as `?focus=<mobile digits>` and auto-show
-  // that patient's full history. Clear the param so refreshes stay clean.
-  useEffect(() => {
-    const f = searchParams.get('focus');
-    if (!f) return;
-    const match = allRows.find((r) => last10(r.mobile) === f.slice(-10));
-    if (match) setSelected(match);
-    const next = new URLSearchParams(searchParams);
-    next.delete('focus');
-    setSearchParams(next, { replace: true });
-  }, [searchParams, allRows, setSearchParams]);
+  // Selection is driven by the URL (?p=<mobile>) so the "Patients" sidebar link
+  // — which points at /clinic/patients with no query — closes the record and
+  // returns to the list. Queue rows deep-link here with the same param.
+  const selKey = searchParams.get('p');
+  const selected = useMemo(
+    () => (selKey ? allRows.find((r) => last10(r.mobile) === selKey) ?? null : null),
+    [allRows, selKey],
+  );
+  const openPatient = (r: Row) => setSearchParams({ p: last10(r.mobile) });
+  const closePatient = () => setSearchParams({});
 
-  // Esc closes the inline patient view.
+  // Leave edit mode whenever the selected patient changes.
+  useEffect(() => { setEditing(false); }, [selKey]);
+
+  // Esc → cancel edit if editing, otherwise back to the list.
   useEffect(() => {
     if (!selected) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelected(null); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (editing) setEditing(false);
+      else setSearchParams({});
+    };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [selected]);
+  }, [selected, editing, setSearchParams]);
 
   // All visits + prescriptions for the selected patient (across all dates).
   const patientVisits = useMemo(
@@ -283,32 +288,56 @@ export function ClinicPatients() {
   // ─── Inline patient view (same tab, no floating dialog) ──────────────────
   if (selected) {
     const d = selected.details;
+    const editTarget: QueueEntry = selected.entry ?? {
+      id: `hist-${last10(selected.mobile)}`,
+      token: 0,
+      patientName: selected.name,
+      patientMobile: selected.mobile,
+      source: selected.source,
+      status: 'Waiting',
+      joinedAt: selected.time,
+      details: selected.details ?? { age: selected.age, gender: selected.gender as PatientDetails['gender'] },
+    };
     return (
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <button
             type="button"
-            onClick={() => setSelected(null)}
+            onClick={() => (editing ? setEditing(false) : closePatient())}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-600 dark:text-ink-300 hover:text-ink-900 dark:hover:text-ink-50"
           >
-            <ChevronLeft size={16} /> Back to patients
+            <ChevronLeft size={16} /> {editing ? 'Back to record' : 'Back to patients'}
           </button>
-          <div className="flex items-center gap-2">
-            {selected.entry && (
-              <Button variant="outline" size="sm" leftIcon={<Pencil size={14} />} onClick={() => setEditEntry(selected.entry!)}>
+          {!editing && (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" leftIcon={<Pencil size={14} />} onClick={() => setEditing(true)}>
                 Edit
               </Button>
-            )}
-            <Button
-              size="sm"
-              leftIcon={downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-              onClick={doDownload}
-              disabled={downloading}
-            >
-              Download record (PDF)
-            </Button>
-          </div>
+              <Button
+                size="sm"
+                leftIcon={downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                onClick={doDownload}
+                disabled={downloading}
+              >
+                Download record (PDF)
+              </Button>
+            </div>
+          )}
         </div>
+
+        {editing ? (
+          <Card>
+            <CardHeader className="mb-0">
+              <div>
+                <CardTitle>Edit patient</CardTitle>
+                <CardSubtitle>Update details — the mobile number can’t be changed.</CardSubtitle>
+              </div>
+            </CardHeader>
+            <div className="mt-4">
+              <AddPatient embedded editEntry={editTarget} onClose={() => setEditing(false)} />
+            </div>
+          </Card>
+        ) : (<>
 
         {/* Patient header + info */}
         <Card>
@@ -430,9 +459,7 @@ export function ClinicPatients() {
             </div>
           )}
         </Card>
-
-        {/* Edit patient — same form, mobile locked */}
-        <AddPatientModal open={!!editEntry} editEntry={editEntry ?? undefined} onClose={() => setEditEntry(null)} />
+        </>)}
       </motion.div>
     );
   }
@@ -523,7 +550,7 @@ export function ClinicPatients() {
               {rows.map((r) => (
                 <tr
                   key={r.id}
-                  onClick={() => setSelected(r)}
+                  onClick={() => openPatient(r)}
                   className={`cursor-pointer transition-colors hover:bg-ink-50 dark:hover:bg-ink-900/40 ${r.emergency ? 'bg-danger-500/5' : ''}`}
                   title="Open full patient record"
                 >
