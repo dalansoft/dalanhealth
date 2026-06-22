@@ -5,10 +5,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { router } from './routes';
 import './styles/index.css';
 
-// PWA: when the service worker is updated by a new deploy, it activates
-// immediately (skipWaiting/clientsClaim) — reload once so the fresh build is
-// actually shown, instead of the stale cached app. Guarded so it never loops
-// and never fires on the very first install (no prior controller).
+// PWA self-update — the user never has to clear cache. When a new build is
+// deployed: we check for it (on load, when the tab is refocused, and every few
+// minutes); the updated service worker activates immediately
+// (skipWaiting/clientsClaim) and we reload once so the fresh app is shown.
+// Guarded so it never loops and never reloads on the first install.
 if ('serviceWorker' in navigator) {
   const hadController = !!navigator.serviceWorker.controller;
   let reloaded = false;
@@ -17,6 +18,15 @@ if ('serviceWorker' in navigator) {
     reloaded = true;
     if (hadController) window.location.reload();
   });
+
+  const checkForUpdate = () =>
+    navigator.serviceWorker.getRegistration().then((r) => r?.update()).catch(() => undefined);
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkForUpdate();
+  });
+  window.addEventListener('focus', checkForUpdate);
+  setInterval(checkForUpdate, 5 * 60 * 1000);
 }
 
 const queryClient = new QueryClient({
