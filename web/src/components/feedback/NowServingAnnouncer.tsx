@@ -39,6 +39,7 @@ export function NowServingAnnouncer({ placement = 'panel', speak = false }: Prop
   const announceLang = useSound((s) => s.announceLang);
   const templateEn = useSound((s) => s.templateEn);
   const templateHi = useSound((s) => s.templateHi);
+  const templateBho = useSound((s) => s.templateBho);
 
   const prevTokenRef = useRef<number | null>(null);
   const [toast, setToast] = useState<{ token: number; name: string; source: string; emergency?: boolean; emergencyNo?: number } | null>(null);
@@ -99,6 +100,7 @@ export function NowServingAnnouncer({ placement = 'panel', speak = false }: Prop
                   lang: announceLang,
                   templateEn,
                   templateHi,
+                  templateBho,
                 }),
                 700,
               );

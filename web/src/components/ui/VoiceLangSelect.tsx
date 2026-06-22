@@ -9,16 +9,21 @@ import type { AnnounceLang } from '@/lib/speech';
 import { cn } from '@/lib/cn';
 
 interface Option {
+  key: string;
   value: AnnounceLang;
   label: string;
   short: string;
 }
 
 const OPTIONS: Option[] = [
-  { value: 'en', label: 'English', short: 'EN' },
-  { value: 'hi', label: 'हिन्दी', short: 'हि' },
-  { value: 'both', label: 'Hindi + English', short: 'हि+EN' },
+  { key: 'en', value: ['en'], label: 'English', short: 'EN' },
+  { key: 'hi', value: ['hi'], label: 'हिन्दी', short: 'हि' },
+  { key: 'bho', value: ['bho'], label: 'भोजपुरी', short: 'भोज' },
+  { key: 'hi,en', value: ['hi', 'en'], label: 'Hindi + English', short: 'हि+EN' },
+  { key: 'hi,en,bho', value: ['hi', 'en', 'bho'], label: 'Hindi + English + Bhojpuri', short: 'हि+EN+भोज' },
 ];
+
+const keyOf = (l: AnnounceLang) => l.join(',');
 
 /**
  * Announcement-language picker for the TV display. Sets the voice used by the
@@ -31,7 +36,7 @@ export function VoiceLangSelect({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const current = OPTIONS.find((o) => o.value === announceLang) ?? OPTIONS[0];
+  const current = OPTIONS.find((o) => o.key === keyOf(announceLang)) ?? OPTIONS[0];
 
   useEffect(() => {
     if (!open) return;
@@ -55,9 +60,9 @@ export function VoiceLangSelect({ className }: { className?: string }) {
     // the screen (a hardcoded sample name here previously confused operators).
     unlockAudio();
     const current = useQueue.getState().entries[0];
-    const { templateEn, templateHi } = useSound.getState();
+    const { templateEn, templateHi, templateBho } = useSound.getState();
     setTimeout(
-      () => previewVoice(value, current?.patientName, { templateEn, templateHi }, current?.token ?? 1),
+      () => previewVoice(value, current?.patientName, { templateEn, templateHi, templateBho }, current?.token ?? 1),
       80,
     );
   };
@@ -92,10 +97,10 @@ export function VoiceLangSelect({ className }: { className?: string }) {
               Announcement voice
             </div>
             {OPTIONS.map((o) => {
-              const active = o.value === announceLang;
+              const active = o.key === keyOf(announceLang);
               return (
                 <button
-                  key={o.value}
+                  key={o.key}
                   type="button"
                   onClick={() => choose(o.value)}
                   className={cn(

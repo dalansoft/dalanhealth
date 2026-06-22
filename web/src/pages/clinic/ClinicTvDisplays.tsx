@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Monitor, Plus, Trash2, Copy, RefreshCw, Power, Edit3, Check,
   AlertCircle, KeyRound, Clock, Building2, ExternalLink, Megaphone, Send,
-  Play, Save, RotateCcw,
+  Play, Save, RotateCcw, ChevronUp, ChevronDown,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -12,7 +12,7 @@ import { useSound } from '@/store/sound';
 import { useQueue } from '@/store/queue';
 import { useTvAccounts, type TvAccount, type TvSchedule } from '@/store/tvAccounts';
 import { postAnnouncement } from '@/lib/announceBus';
-import { previewVoice, DEFAULT_TEMPLATE_EN, DEFAULT_TEMPLATE_HI, type AnnounceLang } from '@/lib/speech';
+import { previewVoice, DEFAULT_TEMPLATE_EN, DEFAULT_TEMPLATE_HI, DEFAULT_TEMPLATE_BHO, LANG_META, type Lang } from '@/lib/speech';
 import { unlockAudio } from '@/lib/chime';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/cn';
@@ -143,31 +143,51 @@ export function ClinicTvDisplays() {
 
 // ─── Announcement settings (voice language + custom PA message) ──────────
 
-const LANG_OPTIONS: { value: AnnounceLang; label: string }[] = [
-  { value: 'en', label: 'English' },
-  { value: 'hi', label: 'हिन्दी' },
-  { value: 'both', label: 'Hindi + English' },
-];
+const ALL_LANGS: Lang[] = ['en', 'hi', 'bho'];
+const LANG_PLACEHOLDER: Record<Lang, string> = {
+  en: 'Token number [Token no], [Name], please go to the doctor chamber.',
+  hi: 'टोकन नंबर [Token no], [Name], कृपया डॉक्टर के कक्ष में जाएँ।',
+  bho: 'टोकन नंबर [Token no], [Name], कृपया डॉक्टर साहेब के कमरा में आईं।',
+};
 
 function AnnouncementSettingsCard() {
   const announceLang = useSound((s) => s.announceLang);
   const setLang = useSound((s) => s.setLang);
   const templateEn = useSound((s) => s.templateEn);
   const templateHi = useSound((s) => s.templateHi);
+  const templateBho = useSound((s) => s.templateBho);
   const setTemplates = useSound((s) => s.setTemplates);
 
   // Drafts — edited locally, applied on Save so half-typed sentences never
   // reach a live TV.
   const [enDraft, setEnDraft] = useState(templateEn);
   const [hiDraft, setHiDraft] = useState(templateHi);
+  const [bhoDraft, setBhoDraft] = useState(templateBho);
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
   const [text, setText] = useState('');
   const [sentAt, setSentAt] = useState<number | null>(null);
 
-  const dirty = enDraft !== templateEn || hiDraft !== templateHi;
-  const showEn = announceLang === 'en' || announceLang === 'both';
-  const showHi = announceLang === 'hi' || announceLang === 'both';
+  const dirty = enDraft !== templateEn || hiDraft !== templateHi || bhoDraft !== templateBho;
+
+  const draftFor = (l: Lang) => (l === 'en' ? enDraft : l === 'hi' ? hiDraft : bhoDraft);
+  const setDraftFor = (l: Lang, v: string) => (l === 'en' ? setEnDraft(v) : l === 'hi' ? setHiDraft(v) : setBhoDraft(v));
+
+  // Enable/disable a language (keep at least one) and reorder the play order.
+  const toggleLang = (l: Lang) => {
+    if (announceLang.includes(l)) {
+      if (announceLang.length > 1) setLang(announceLang.filter((x) => x !== l));
+    } else {
+      setLang([...announceLang, l]);
+    }
+  };
+  const moveLang = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= announceLang.length) return;
+    const copy = [...announceLang];
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+    setLang(copy);
+  };
 
   // Speak the DRAFT templates with the live current patient (or sample data)
   // so the operator hears exactly what the waiting room will hear.
@@ -177,13 +197,13 @@ function AnnouncementSettingsCard() {
     previewVoice(
       announceLang,
       current?.patientName,
-      { templateEn: enDraft, templateHi: hiDraft },
+      { templateEn: enDraft, templateHi: hiDraft, templateBho: bhoDraft },
       current?.token ?? 1,
     );
   };
 
   const handleSave = () => {
-    setTemplates(enDraft, hiDraft);
+    setTemplates(enDraft, hiDraft, bhoDraft);
     setSavedAt(Date.now());
     setTimeout(() => setSavedAt(null), 2500);
   };
@@ -191,12 +211,12 @@ function AnnouncementSettingsCard() {
   const handleReset = () => {
     setEnDraft(DEFAULT_TEMPLATE_EN);
     setHiDraft(DEFAULT_TEMPLATE_HI);
+    setBhoDraft(DEFAULT_TEMPLATE_BHO);
   };
 
   // Insert a placeholder chip at the end of a draft field.
-  const insertInto = (which: 'en' | 'hi', placeholder: string) => {
-    if (which === 'en') setEnDraft((d) => `${d.trimEnd()} ${placeholder}`.trimStart());
-    else setHiDraft((d) => `${d.trimEnd()} ${placeholder}`.trimStart());
+  const insertInto = (which: Lang, placeholder: string) => {
+    setDraftFor(which, `${draftFor(which).trimEnd()} ${placeholder}`.trimStart());
   };
 
   const handlePlay = () => {
@@ -222,27 +242,51 @@ function AnnouncementSettingsCard() {
             </div>
           </div>
 
-          {/* Language — synced live to the TV via the sound store */}
+          {/* Language — pick languages + the order they're spoken in */}
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-1.5">Announcement language</div>
-            <div className="inline-grid grid-cols-3 rounded-xl border hairline p-1 text-sm">
-              {LANG_OPTIONS.map((o) => (
-                <button
-                  key={o.value}
-                  type="button"
-                  onClick={() => setLang(o.value)}
-                  className={cn(
-                    'rounded-lg px-3 py-2 transition-all whitespace-nowrap',
-                    announceLang === o.value
-                      ? 'bg-brand-500 text-white'
-                      : 'text-muted hover:text-ink-900 dark:hover:text-ink-50',
-                  )}
-                >
-                  {o.label}
-                </button>
-              ))}
+            <div className="flex flex-wrap gap-2">
+              {ALL_LANGS.map((l) => {
+                const on = announceLang.includes(l);
+                return (
+                  <button
+                    key={l}
+                    type="button"
+                    onClick={() => toggleLang(l)}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors',
+                      on
+                        ? 'border-brand-500 bg-brand-500/10 text-brand-700 dark:text-brand-300'
+                        : 'hairline text-ink-600 dark:text-ink-300 hover:bg-ink-50 dark:hover:bg-ink-800',
+                    )}
+                  >
+                    {on ? <Check size={13} /> : <Plus size={13} />} {LANG_META[l].label}
+                  </button>
+                );
+              })}
             </div>
-            <div className="mt-1 text-[10px] text-muted">Female voice · Indian accent · applies to every TV instantly.</div>
+
+            {/* Order — only matters when 2+ languages are on */}
+            {announceLang.length > 1 && (
+              <div className="mt-2 rounded-xl border hairline bg-ink-50/40 dark:bg-ink-900/40 p-2">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5 px-1">Spoken in this order</div>
+                <div className="space-y-1">
+                  {announceLang.map((l, i) => (
+                    <div key={l} className="flex items-center gap-2 rounded-lg bg-white dark:bg-ink-900 border hairline px-2.5 py-1.5">
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-brand-500/15 text-brand-700 dark:text-brand-300 text-[11px] font-bold">{i + 1}</span>
+                      <span className="text-sm font-medium text-ink-900 dark:text-ink-50 flex-1">{LANG_META[l].label}</span>
+                      <button type="button" onClick={() => moveLang(i, -1)} disabled={i === 0} className="text-ink-400 hover:text-brand-600 disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Move up">
+                        <ChevronUp size={15} />
+                      </button>
+                      <button type="button" onClick={() => moveLang(i, 1)} disabled={i === announceLang.length - 1} className="text-ink-400 hover:text-brand-600 disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Move down">
+                        <ChevronDown size={15} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="mt-1 text-[10px] text-muted">Female voice · Indian accent · applies to every TV instantly. Bhojpuri uses the Hindi voice.</div>
           </div>
 
           {/* Call sentence template — write → play → save */}
@@ -255,24 +299,16 @@ function AnnouncementSettingsCard() {
               </div>
             </div>
 
-            {showEn && (
+            {announceLang.map((l) => (
               <TemplateField
-                label="English sentence"
-                value={enDraft}
-                onChange={setEnDraft}
-                onInsert={(p) => insertInto('en', p)}
-                placeholder="Token number [Token no], [Name], please go to the doctor chamber."
+                key={l}
+                label={`${LANG_META[l].label} sentence`}
+                value={draftFor(l)}
+                onChange={(v) => setDraftFor(l, v)}
+                onInsert={(p) => insertInto(l, p)}
+                placeholder={LANG_PLACEHOLDER[l]}
               />
-            )}
-            {showHi && (
-              <TemplateField
-                label="Hindi sentence"
-                value={hiDraft}
-                onChange={setHiDraft}
-                onInsert={(p) => insertInto('hi', p)}
-                placeholder="टोकन नंबर [Token no], [Name], कृपया डॉक्टर के कक्ष में जाएँ।"
-              />
-            )}
+            ))}
 
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <button
