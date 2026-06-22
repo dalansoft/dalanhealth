@@ -11,7 +11,7 @@ import { useQueue, type QueueEntry, tokenLabel } from '@/store/queue';
 import { useQueueBoot } from '@/hooks/useQueueBoot';
 import { useEta } from '@/hooks/useEta';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PatientDetailsDrawer } from '@/components/dashboard/PatientDetailsDrawer';
 import { AddPatientModal } from '@/pages/receptionist/AddPatientModal';
 import { NowServingAnnouncer } from '@/components/feedback/NowServingAnnouncer';
@@ -25,6 +25,7 @@ export function ClinicQueue() {
   const [addOpen, setAddOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<QueueEntry | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   // Deep-link support: navigating here as `?patient=<id>` (from the header
   // GlobalSearch) auto-opens the patient drawer with that entry's history.
@@ -166,9 +167,9 @@ export function ClinicQueue() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.98 }}
                     transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-                    onClick={() => setSelectedEntry(q)}
+                    onClick={() => navigate(`/clinic/patients?focus=${q.patientMobile.replace(/\D/g, '')}`)}
                     className={`text-sm cursor-pointer transition-colors hover:bg-ink-50 dark:hover:bg-ink-900/60 ${q.emergency ? 'bg-danger-500/5' : q.wasSkipped ? 'bg-warning-500/5' : ''}`}
-                    title="Click for full patient details & visit history"
+                    title="Open this patient's full record in Patients"
                   >
                     <td className={`px-5 py-3.5 font-semibold ${q.emergency ? 'text-danger-500' : ''}`}>{tokenLabel(q)}</td>
                     <td className="px-5 py-3.5 font-medium text-ink-900 dark:text-ink-50">
