@@ -304,28 +304,23 @@ export function DashboardShell({ nav, children, title, subtitle, topRight }: Pro
         {sidebar('desktop')}
       </aside>
 
-      {/* Mobile drawer */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="md:hidden fixed inset-0 z-50 flex"
-          >
-            <motion.div
-              initial={{ x: -260 }}
-              animate={{ x: 0 }}
-              exit={{ x: -260 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-              className="w-[260px] h-full"
-            >
-              {sidebar('mobile')}
-            </motion.div>
-            <button className="flex-1 bg-ink-950/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          </motion.div>
+      {/* Mobile drawer — CSS-driven (not AnimatePresence). framer-motion's exit
+          animation could get stuck open when closing coincided with a route
+          navigation, leaving the drawer covering the page. CSS transitions +
+          a plain conditional can't get stuck: when closed it's transparent,
+          slid off, and pointer-events-none. */}
+      <div
+        className={cn(
+          'md:hidden fixed inset-0 z-50 flex transition-opacity duration-200',
+          mobileOpen ? 'opacity-100' : 'opacity-0 pointer-events-none',
         )}
-      </AnimatePresence>
+        aria-hidden={!mobileOpen}
+      >
+        <div className={cn('w-[260px] h-full transition-transform duration-300 ease-out', mobileOpen ? 'translate-x-0' : '-translate-x-full')}>
+          {sidebar('mobile')}
+        </div>
+        <button className="flex-1 bg-ink-950/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} aria-label="Close menu" />
+      </div>
 
       <div className="flex-1 min-w-0 flex flex-col">
         <header className="sticky top-0 z-30 border-b hairline bg-white/70 dark:bg-ink-950/70 backdrop-blur-xl">
