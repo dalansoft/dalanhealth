@@ -45,26 +45,31 @@ export function TvDisplay() {
   const tvAccount = user?.role === 'tv_display' && user.tvId
     ? tvAccounts.find((a) => a.id === user.tvId)
     : undefined;
-  const effectiveBranchId = tvAccount?.branchId ?? user?.branchId ?? storeBranchId;
+  // Depend on these stable primitives, NOT the tvAccount object — touchTv()
+  // replaces that object every heartbeat, and depending on the object made the
+  // effects re-run → touch → re-render forever (React error #185).
+  const tvAccountId = tvAccount?.id;
+  const tvAccountBranchId = tvAccount?.branchId;
+  const effectiveBranchId = tvAccountBranchId ?? user?.branchId ?? storeBranchId;
   const branch = branches.find((b) => b.id === effectiveBranchId);
   const data = getBranchData(effectiveBranchId, branch);
 
   // If a TV session locks to a branch different from the dashboard's stored
   // selection, sync the branch store so QueuePreview / Profile / etc. line up.
   useEffect(() => {
-    if (tvAccount && tvAccount.branchId !== storeBranchId) {
-      switchBranch(tvAccount.branchId);
+    if (tvAccountBranchId && tvAccountBranchId !== storeBranchId) {
+      switchBranch(tvAccountBranchId);
     }
-  }, [tvAccount, storeBranchId, switchBranch]);
+  }, [tvAccountBranchId, storeBranchId, switchBranch]);
 
   // Heartbeat: stamp lastSeenAt so admins can see this TV is alive. Every
   // 60s is plenty — we're not building Datadog.
   useEffect(() => {
-    if (!tvAccount) return;
-    touchTv(tvAccount.id);
-    const id = setInterval(() => touchTv(tvAccount.id), 60_000);
+    if (!tvAccountId) return;
+    touchTv(tvAccountId);
+    const id = setInterval(() => touchTv(tvAccountId), 60_000);
     return () => clearInterval(id);
-  }, [tvAccount, touchTv]);
+  }, [tvAccountId, touchTv]);
 
   // ─── Live vs demo data source ─────────────────────────────────────────
   // A physical wall TV opens /display/clinic?clinic=<clinic-id> — no login
