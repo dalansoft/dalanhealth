@@ -1,25 +1,88 @@
-import { motion } from 'framer-motion';
-import { Download, Share2, Printer } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import QRCode from 'qrcode';
+import { Download, Share2, Printer, MapPin, Check } from 'lucide-react';
 import { Card, CardSubtitle, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { demoClinic } from '@/services/demoData';
+import { useCurrentBranch } from '@/store/branch';
+import { useQueue } from '@/store/queue';
+import { getBranchData } from '@/services/demoData';
 
 export function ClinicQR() {
+  const branch = useCurrentBranch();
+  const data = getBranchData(branch?.id, branch);
+  const entries = useQueue((s) => s.entries);
+  const current = entries[0];
+
+  // Unique booking URL per clinic + branch.
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://dalanhealth.mlsons.in';
+  const bookUrl = `${origin}/book?b=${branch?.id ?? ''}`;
+
+  const [png, setPng] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    QRCode.toDataURL(bookUrl, { width: 640, margin: 2, errorCorrectionLevel: 'M', color: { dark: '#0f172a', light: '#ffffff' } })
+      .then((url) => { if (alive) setPng(url); })
+      .catch(() => { if (alive) setPng(''); });
+    return () => { alive = false; };
+  }, [bookUrl]);
+
+  const download = () => {
+    if (!png) return;
+    const a = document.createElement('a');
+    a.href = png;
+    a.download = `dalanhealth-qr-${(branch?.name ?? 'clinic').replace(/\s+/g, '-').toLowerCase()}.png`;
+    a.click();
+  };
+
+  const printPoster = () => {
+    const w = window.open('', '_blank', 'width=720,height=900');
+    if (!w) return;
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${branch?.name ?? 'Clinic'} — Scan to book</title>
+      <style>@page{margin:18mm}body{font-family:Inter,system-ui,sans-serif;text-align:center;color:#0f172a;margin:0}
+      h1{font-size:30px;margin:8px 0 2px}.sub{color:#64748b;font-size:15px;margin:0 0 18px}
+      img{width:380px;height:380px}.tag{margin-top:14px;font-size:18px;font-weight:700}.url{color:#64748b;font-size:13px;margin-top:6px;word-break:break-all}</style>
+      </head><body>
+      <h1>${branch?.name ?? 'Clinic'}</h1>
+      <p class="sub">${data.doctor} · ${data.specialization}</p>
+      <img src="${png}" />
+      <div class="tag">Scan to join the queue — Free</div>
+      <div class="url">${bookUrl}</div>
+      </body></html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 300);
+  };
+
+  const share = async () => {
+    try {
+      if (navigator.share) await navigator.share({ title: branch?.name ?? 'Clinic', text: 'Scan to join the queue', url: bookUrl });
+      else { await navigator.clipboard.writeText(bookUrl); setCopied(true); setTimeout(() => setCopied(false), 1500); }
+    } catch { /* user cancelled */ }
+  };
+
   return (
     <div className="grid lg:grid-cols-2 gap-5">
       <Card className="text-center">
         <div className="mx-auto inline-block rounded-3xl bg-white p-6 shadow-card">
-          <QRMock />
+          {png
+            ? <img src={png} alt="Clinic QR" className="w-56 h-56" />
+            : <div className="w-56 h-56 animate-pulse rounded-xl bg-ink-100 dark:bg-ink-800" />}
         </div>
-        <h3 className="mt-5 text-lg font-semibold text-ink-900 dark:text-ink-50">{demoClinic.name}</h3>
-        <p className="text-sm text-muted">Scan with any camera. New patients install the app; returning patients land directly in your queue.</p>
+        <h3 className="mt-5 text-lg font-semibold text-ink-900 dark:text-ink-50">{branch?.name ?? data.doctor}</h3>
+        <p className="text-sm text-muted">Unique to this branch. Patients scan to enter <b>this</b> queue — no login, just name + mobile (within ~100 m of the clinic).</p>
+        <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-ink-50 dark:bg-ink-900/60 px-2.5 py-1 text-[11px] font-mono text-muted">
+          <MapPin size={11} /> {bookUrl}
+        </div>
         <div className="mt-5 flex flex-wrap justify-center gap-2">
-          <Button leftIcon={<Download size={14} />}>Download PNG</Button>
-          <Button variant="outline" leftIcon={<Printer size={14} />}>Print poster</Button>
-          <Button variant="ghost" leftIcon={<Share2 size={14} />}>Share link</Button>
+          <Button leftIcon={<Download size={14} />} onClick={download} disabled={!png}>Download PNG</Button>
+          <Button variant="outline" leftIcon={<Printer size={14} />} onClick={printPoster} disabled={!png}>Print poster</Button>
+          <Button variant="ghost" leftIcon={copied ? <Check size={14} /> : <Share2 size={14} />} onClick={share}>{copied ? 'Copied' : 'Share link'}</Button>
         </div>
       </Card>
+
       <Card>
         <CardHeader>
           <div>
@@ -30,16 +93,18 @@ export function ClinicQR() {
         </CardHeader>
         <div className="rounded-2xl border hairline bg-white dark:bg-ink-900 p-5">
           <div className="text-xs uppercase tracking-wider text-muted">Clinic</div>
-          <div className="text-xl font-semibold text-ink-900 dark:text-ink-50">{demoClinic.name}</div>
-          <div className="text-sm text-muted">{demoClinic.doctor} · {demoClinic.specialization}</div>
+          <div className="text-xl font-semibold text-ink-900 dark:text-ink-50">{branch?.name ?? data.doctor}</div>
+          <div className="text-sm text-muted">{data.doctor} · {data.specialization}</div>
           <div className="mt-5 grid grid-cols-3 gap-3">
-            <Tile label="Timing" val={demoClinic.timing.split(',')[0]} />
-            <Tile label="Current token" val="#12" />
-            <Tile label="Est. wait" val="~38 min" />
+            <Tile label="Timing" val={(data.timing || '—').split(',')[0]} />
+            <Tile label="Now serving" val={current ? `#${current.token}` : '—'} />
+            <Tile label="Est. wait" val={`~${Math.max(5, entries.length * 12)} min`} />
           </div>
-          <div className="mt-5 grid grid-cols-2 gap-2">
-            <Button>Join queue · Free</Button>
-            <Button variant="outline">Book · ₹9 + GST</Button>
+          <div className="mt-5">
+            <a href={bookUrl} target="_blank" rel="noreferrer">
+              <Button fullWidth>Get token · Free</Button>
+            </a>
+            <div className="mt-2 text-[11px] text-muted text-center">Pay ₹9 + GST to the compounder at the counter.</div>
           </div>
         </div>
       </Card>
@@ -53,19 +118,3 @@ const Tile = ({ label, val }: { label: string; val: string }) => (
     <div className="text-sm font-semibold text-ink-900 dark:text-ink-50">{val}</div>
   </div>
 );
-
-function QRMock() {
-  const cells = Array.from({ length: 21 * 21 });
-  return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-[repeat(21,minmax(0,1fr))] gap-px w-56 h-56">
-      {cells.map((_, i) => {
-        const x = i % 21;
-        const y = Math.floor(i / 21);
-        const corner = (x < 7 && y < 7) || (x > 13 && y < 7) || (x < 7 && y > 13);
-        const dotted = (x + y) % 3 === 0 || (x * y) % 7 === 1 || (x === y);
-        const on = corner ? (Math.abs(x - 3) <= 2 && Math.abs(y - 3) <= 2) || (Math.abs(x - 17) <= 2 && Math.abs(y - 3) <= 2) || (Math.abs(x - 3) <= 2 && Math.abs(y - 17) <= 2) : dotted;
-        return <span key={i} className={on ? 'bg-ink-900' : 'bg-white'} />;
-      })}
-    </motion.div>
-  );
-}

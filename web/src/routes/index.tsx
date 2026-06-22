@@ -69,6 +69,7 @@ export const router = createBrowserRouter([
         ],
       },
       { path: '/demo', element: <DemoSelector /> },
+      { path: '/book', element: lz(() => import('@/pages/public/PatientBook'), 'PatientBook') },
       { path: '/display/clinic', element: lz(() => import('@/pages/display/TvDisplay'), 'TvDisplay') },
       { path: '/tv/pair', element: lz(() => import('@/pages/display/TvPair'), 'TvPair') },
       { path: '/tv', element: lz(() => import('@/pages/display/TvPair'), 'TvPair') },
