@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Save, Clock, Palette, Bell, MessageCircle, MessageSquare, Mail, Smartphone, Sparkles, Check } from 'lucide-react';
+import { Save, Clock, Palette, Bell, MessageCircle, MessageSquare, Mail, Smartphone, Sparkles, Check, Plus, Trash2 } from 'lucide-react';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -9,6 +9,8 @@ import { useEstimate } from '@/store/estimate';
 import { useEta } from '@/hooks/useEta';
 import { cn } from '@/lib/cn';
 import { demoClinic } from '@/services/demoData';
+
+interface TimeSlot { id: string; label: string; from: string; to: string }
 
 const Toggle = ({ on, onChange, label, icon, desc }: { on: boolean; onChange: (v: boolean) => void; label: string; icon: React.ReactNode; desc?: string }) => (
   <div className="flex items-center justify-between gap-4 rounded-xl border hairline p-4">
@@ -40,10 +42,13 @@ export function ClinicSettings() {
   const [doctor, setDoctor] = useState(demoClinic.doctor);
   const [spec, setSpec] = useState(demoClinic.specialization);
   const [city, setCity] = useState(demoClinic.city);
-  const [t1Start, setT1Start] = useState('10:00');
-  const [t1End, setT1End] = useState('14:00');
-  const [t2Start, setT2Start] = useState('17:00');
-  const [t2End, setT2End] = useState('20:00');
+  const [slots, setSlots] = useState<TimeSlot[]>([
+    { id: 's1', label: 'Morning', from: '10:00', to: '14:00' },
+    { id: 's2', label: 'Evening', from: '17:00', to: '20:00' },
+  ]);
+  const updateSlot = (id: string, patch: Partial<TimeSlot>) => setSlots((list) => list.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  const addSlot = () => setSlots((list) => [...list, { id: `s-${Date.now()}`, label: `Slot ${list.length + 1}`, from: '09:00', to: '12:00' }]);
+  const removeSlot = (id: string) => setSlots((list) => (list.length > 1 ? list.filter((s) => s.id !== id) : list));
   const [push, setPush] = useState(true);
   const [whatsapp, setWhatsapp] = useState(true);
   const [sms, setSms] = useState(true);
@@ -81,26 +86,36 @@ export function ClinicSettings() {
         <CardHeader>
           <div>
             <CardTitle>Doctor timing</CardTitle>
-            <CardSubtitle>Block-based — patients see "Doctor sitting till" and queue estimates derive from this</CardSubtitle>
+            <CardSubtitle>Add as many sittings as you like — patients see "Doctor sitting till" and queue estimates derive from these</CardSubtitle>
           </div>
           <Clock size={16} className="text-muted" />
         </CardHeader>
         <div className="grid sm:grid-cols-2 gap-4">
-          <div className="rounded-xl border hairline p-4">
-            <div className="text-xs font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-300 mb-2">Morning</div>
-            <div className="grid grid-cols-2 gap-2">
-              <Input label="From" type="time" value={t1Start} onChange={(e) => setT1Start(e.target.value)} />
-              <Input label="To" type="time" value={t1End} onChange={(e) => setT1End(e.target.value)} />
+          {slots.map((s) => (
+            <div key={s.id} className="rounded-xl border hairline p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <input
+                  value={s.label}
+                  onChange={(e) => updateSlot(s.id, { label: e.target.value })}
+                  className="flex-1 min-w-0 bg-transparent text-xs font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-300 outline-none"
+                  placeholder="Slot name"
+                />
+                {slots.length > 1 && (
+                  <button type="button" onClick={() => removeSlot(s.id)} className="text-ink-400 hover:text-danger-500" aria-label="Remove timing">
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Input label="From" type="time" value={s.from} onChange={(e) => updateSlot(s.id, { from: e.target.value })} />
+                <Input label="To" type="time" value={s.to} onChange={(e) => updateSlot(s.id, { to: e.target.value })} />
+              </div>
             </div>
-          </div>
-          <div className="rounded-xl border hairline p-4">
-            <div className="text-xs font-semibold uppercase tracking-wider text-accent-600 dark:text-accent-300 mb-2">Evening</div>
-            <div className="grid grid-cols-2 gap-2">
-              <Input label="From" type="time" value={t2Start} onChange={(e) => setT2Start(e.target.value)} />
-              <Input label="To" type="time" value={t2End} onChange={(e) => setT2End(e.target.value)} />
-            </div>
-          </div>
+          ))}
         </div>
+        <Button variant="outline" size="sm" leftIcon={<Plus size={14} />} onClick={addSlot} className="mt-3">
+          Add timing
+        </Button>
       </Card>
 
       <Card>
