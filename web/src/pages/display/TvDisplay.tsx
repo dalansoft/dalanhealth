@@ -11,6 +11,7 @@ import { useQueue, tokenLabel } from '@/store/queue';
 import { useQueueBoot } from '@/hooks/useQueueBoot';
 import { useEta } from '@/hooks/useEta';
 import { useBranch } from '@/store/branch';
+import { useClinicTiming, fmtSlot } from '@/store/clinicTiming';
 import { getBranchData } from '@/services/demoData';
 import { useAuth } from '@/store/auth';
 import { useTvAccounts, isWithinSchedule } from '@/store/tvAccounts';
@@ -154,7 +155,10 @@ export function TvDisplay() {
   const date = now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const year = now.getFullYear();
 
-  const timingBlocks = data.timing.split(',').map((t) => t.trim()).filter(Boolean);
+  // Doctor sitting blocks come from the shared timing store (edited in
+  // Settings), so adding a 3rd sitting reflects on the TV / QR / booking.
+  const timingSlots = useClinicTiming((s) => s.slots);
+  const timingBlocks = timingSlots.map(fmtSlot);
 
   const statusFor = (idx: number) => {
     if (idx === 0) return { label: 'Get ready', tone: 'text-brand-600 dark:text-brand-300' };
