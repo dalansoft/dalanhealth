@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Building2, MapPin, Star, AlertCircle, Check } from 'lucide-react';
+import { X, Building2, MapPin, Star, AlertCircle, Check, Stethoscope, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useBranch } from '@/store/branch';
 import { cn } from '@/lib/cn';
@@ -29,6 +29,7 @@ export function AddBranchModal({ open, onClose, onAdded }: Props) {
   const [name, setName] = useState('');
   const [city, setCity] = useState('');
   const [address, setAddress] = useState('');
+  const [doctors, setDoctors] = useState<string[]>(['']);
   const [isPrimary, setIsPrimary] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; city?: string }>({});
   const [saving, setSaving] = useState(false);
@@ -40,6 +41,7 @@ export function AddBranchModal({ open, onClose, onAdded }: Props) {
       setName('');
       setCity('');
       setAddress('');
+      setDoctors(['']);
       setIsPrimary(false);
       setErrors({});
       setTimeout(() => nameRef.current?.focus(), 50);
@@ -73,6 +75,7 @@ export function AddBranchModal({ open, onClose, onAdded }: Props) {
     const updatedExisting = isPrimary
       ? branches.map((b) => ({ ...b, primary: false }))
       : branches;
+    const cleanDoctors = doctors.map((d) => d.trim()).filter(Boolean);
     setBranches([
       ...updatedExisting,
       {
@@ -81,6 +84,7 @@ export function AddBranchModal({ open, onClose, onAdded }: Props) {
         city: city.trim(),
         address: address.trim() || undefined,
         primary: isPrimary,
+        doctors: cleanDoctors.length ? cleanDoctors : undefined,
       },
     ]);
     setTimeout(() => {
@@ -176,6 +180,35 @@ export function AddBranchModal({ open, onClose, onAdded }: Props) {
                   onChange={setAddress}
                   placeholder="12 Boring Road, Patna 800001"
                 />
+
+                {/* Doctors at this branch */}
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-muted mb-1.5">Doctors at this branch</label>
+                  <div className="space-y-2">
+                    {doctors.map((d, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <div className="flex-1 flex items-center gap-2 rounded-xl border hairline bg-white dark:bg-ink-900 px-3 py-2.5 focus-within:ring-2 focus-within:ring-brand-500/30 transition-shadow">
+                          <Stethoscope size={14} className="text-ink-400 shrink-0" />
+                          <input
+                            type="text"
+                            value={d}
+                            onChange={(e) => setDoctors((list) => list.map((x, idx) => (idx === i ? e.target.value : x)))}
+                            placeholder="Dr. Anil Sharma"
+                            className="flex-1 min-w-0 bg-transparent outline-none text-sm text-ink-900 dark:text-ink-50 placeholder:text-ink-400"
+                          />
+                        </div>
+                        {doctors.length > 1 && (
+                          <button type="button" onClick={() => setDoctors((list) => list.filter((_, idx) => idx !== i))} className="text-ink-400 hover:text-danger-500" aria-label="Remove doctor">
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <button type="button" onClick={() => setDoctors((list) => [...list, ''])} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand-600 dark:text-brand-300 hover:underline">
+                    <Plus size={12} /> Add another doctor
+                  </button>
+                </div>
 
                 {/* Primary toggle */}
                 <label className="flex items-center gap-3 rounded-xl border hairline px-3 py-2.5 cursor-pointer hover:bg-ink-50 dark:hover:bg-ink-800 transition-colors">
