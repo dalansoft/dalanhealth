@@ -3,12 +3,15 @@ import { motion } from 'framer-motion';
 import {
   Camera, Save, RotateCcw, User as UserIcon, Phone, Mail, MapPin,
   Stethoscope, GraduationCap, Award, FileText, AlertCircle, CheckCircle2,
+  Plus, Trash2, Paperclip, ShieldCheck, ScrollText,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { useAuth } from '@/store/auth';
 import { cn } from '@/lib/cn';
+
+interface Cred { name: string; number: string; fileName?: string; fileUrl?: string }
 
 interface FormState {
   name: string;
@@ -20,12 +23,17 @@ interface FormState {
   qualification: string;
   aboutMe: string;
   photoDataUrl: string;
+  licenses: Cred[];
+  certificates: Cred[];
 }
 
 const emptyForm: FormState = {
   name: '', mobile: '', email: '', address: '', specialization: '',
   experience: '', qualification: '', aboutMe: '', photoDataUrl: '',
+  licenses: [], certificates: [],
 };
+
+const credKey = (list: Cred[]) => JSON.stringify(list.map(({ name, number, fileName }) => ({ name, number, fileName })));
 
 /**
  * Full profile editor for the signed-in clinic admin / doctor. Lets them
@@ -56,6 +64,8 @@ export function ClinicProfile() {
       qualification: user.qualification ?? '',
       aboutMe: user.aboutMe ?? '',
       photoDataUrl: user.photoDataUrl ?? '',
+      licenses: (user.licenses ?? []).map((c) => ({ ...c })),
+      certificates: (user.certificates ?? []).map((c) => ({ ...c })),
     });
     setErrors({});
   }, [user]);
@@ -71,7 +81,9 @@ export function ClinicProfile() {
       form.experience !== (user.experience ?? '') ||
       form.qualification !== (user.qualification ?? '') ||
       form.aboutMe !== (user.aboutMe ?? '') ||
-      form.photoDataUrl !== (user.photoDataUrl ?? '')
+      form.photoDataUrl !== (user.photoDataUrl ?? '') ||
+      credKey(form.licenses) !== credKey(user.licenses ?? []) ||
+      credKey(form.certificates) !== credKey(user.certificates ?? [])
     );
   }, [form, user]);
 
@@ -103,7 +115,7 @@ export function ClinicProfile() {
     const next: typeof errors = {};
     if (!form.name.trim()) next.name = 'Name is required';
     if (!form.mobile.trim()) next.mobile = 'Mobile is required';
-    else if (form.mobile.replace(/\D/g, '').length < 10) next.mobile = 'Enter a valid mobile number';
+    else if (form.mobile.replace(/\D/g, '').length !== 10) next.mobile = 'Mobile must be exactly 10 digits';
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       next.email = 'Enter a valid email';
     }
@@ -127,6 +139,8 @@ export function ClinicProfile() {
       qualification: form.qualification.trim() || undefined,
       aboutMe: form.aboutMe.trim() || undefined,
       photoDataUrl: form.photoDataUrl || undefined,
+      licenses: form.licenses.filter((c) => c.name.trim() || c.number.trim()).map(({ name, number, fileName }) => ({ name: name.trim(), number: number.trim(), fileName })),
+      certificates: form.certificates.filter((c) => c.name.trim() || c.number.trim()).map(({ name, number, fileName }) => ({ name: name.trim(), number: number.trim(), fileName })),
     });
     setTimeout(() => {
       setSaving(false);
@@ -141,6 +155,8 @@ export function ClinicProfile() {
       address: user.address ?? '', specialization: user.specialization ?? '',
       experience: user.experience ?? '', qualification: user.qualification ?? '',
       aboutMe: user.aboutMe ?? '', photoDataUrl: user.photoDataUrl ?? '',
+      licenses: (user.licenses ?? []).map((c) => ({ ...c })),
+      certificates: (user.certificates ?? []).map((c) => ({ ...c })),
     });
     setErrors({});
     setSavedAt(null);
@@ -231,10 +247,13 @@ export function ClinicProfile() {
             label="Mobile"
             required
             error={errors.mobile}
-            value={form.mobile}
-            onChange={(v) => set('mobile', v)}
-            placeholder="+91 98765 43210"
+            value={form.mobile.replace(/\D/g, '').slice(0, 10)}
+            onChange={(v) => set('mobile', v.replace(/\D/g, '').slice(0, 10))}
+            placeholder="9876543210"
             type="tel"
+            inputMode="numeric"
+            maxLength={10}
+            prefix="+91"
           />
         </div>
       </Card>
@@ -283,6 +302,34 @@ export function ClinicProfile() {
             />
           </div>
         </div>
+      </Card>
+
+      {/* Licenses / registrations */}
+      <Card>
+        <CredSection
+          title="Licenses & registrations"
+          subtitle="Add each medical license / registration — name, number and an attachment."
+          icon={<ShieldCheck size={14} />}
+          nameLabel="License name"
+          namePlaceholder="e.g. Medical Council Registration"
+          addLabel="Add license"
+          items={form.licenses}
+          onChange={(list) => set('licenses', list)}
+        />
+      </Card>
+
+      {/* Certificates */}
+      <Card>
+        <CredSection
+          title="Certificates"
+          subtitle="Add certificates / qualifications — name, number and an attachment."
+          icon={<ScrollText size={14} />}
+          nameLabel="Certificate name"
+          namePlaceholder="e.g. Fellowship in Rhinology"
+          addLabel="Add certificate"
+          items={form.certificates}
+          onChange={(list) => set('certificates', list)}
+        />
       </Card>
 
       {/* About me */}
@@ -343,7 +390,7 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
 }
 
 function Field({
-  icon, label, required, error, value, onChange, placeholder, type = 'text',
+  icon, label, required, error, value, onChange, placeholder, type = 'text', inputMode, maxLength, prefix,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -353,6 +400,9 @@ function Field({
   onChange: (v: string) => void;
   placeholder?: string;
   type?: string;
+  inputMode?: 'numeric' | 'text' | 'tel' | 'email';
+  maxLength?: number;
+  prefix?: string;
 }) {
   return (
     <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}>
@@ -365,8 +415,11 @@ function Field({
         error ? 'border-danger-500/60' : 'hairline',
       )}>
         <span className="text-ink-400 shrink-0">{icon}</span>
+        {prefix && <span className="text-sm font-semibold text-ink-700 dark:text-ink-200 shrink-0">{prefix}</span>}
         <input
           type={type}
+          inputMode={inputMode}
+          maxLength={maxLength}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
@@ -379,5 +432,87 @@ function Field({
         </div>
       )}
     </motion.div>
+  );
+}
+
+// ─── Repeatable credential section (licenses / certificates) ────────────────
+function CredSection({
+  title, subtitle, icon, nameLabel, namePlaceholder, addLabel, items, onChange,
+}: {
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  nameLabel: string;
+  namePlaceholder: string;
+  addLabel: string;
+  items: Cred[];
+  onChange: (list: Cred[]) => void;
+}) {
+  const update = (i: number, patch: Partial<Cred>) => onChange(items.map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
+  const remove = (i: number) => onChange(items.filter((_, idx) => idx !== i));
+  const add = () => onChange([...items, { name: '', number: '' }]);
+
+  const attach = (i: number, file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => update(i, { fileName: file.name, fileUrl: String(reader.result ?? '') });
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div>
+      <SectionHeader title={title} subtitle={subtitle} />
+      <div className="space-y-3">
+        {items.map((c, i) => (
+          <div key={i} className="rounded-xl border hairline p-3 space-y-3 bg-ink-50/40 dark:bg-ink-900/40">
+            <div className="flex items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">{icon} {title.split(' ')[0]} {i + 1}</span>
+              <button type="button" onClick={() => remove(i)} className="text-ink-400 hover:text-danger-500" aria-label="Remove">
+                <Trash2 size={14} />
+              </button>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-muted mb-1.5">{nameLabel}</label>
+                <input
+                  value={c.name}
+                  onChange={(e) => update(i, { name: e.target.value })}
+                  placeholder={namePlaceholder}
+                  className="w-full rounded-xl border hairline bg-white dark:bg-ink-900 px-3 py-2.5 text-sm text-ink-900 dark:text-ink-50 outline-none focus:ring-2 focus:ring-brand-500/30"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-muted mb-1.5">Number</label>
+                <input
+                  value={c.number}
+                  onChange={(e) => update(i, { number: e.target.value })}
+                  placeholder="Registration / certificate no."
+                  className="w-full rounded-xl border hairline bg-white dark:bg-ink-900 px-3 py-2.5 text-sm text-ink-900 dark:text-ink-50 outline-none focus:ring-2 focus:ring-brand-500/30"
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="inline-flex items-center gap-1.5 rounded-lg border hairline px-3 py-2 text-xs font-semibold text-ink-700 dark:text-ink-200 hover:bg-ink-100 dark:hover:bg-ink-800 cursor-pointer transition-colors">
+                <Paperclip size={13} /> {c.fileName ? 'Replace file' : 'Attach file'}
+                <input
+                  type="file"
+                  accept="image/*,application/pdf,.doc,.docx"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) attach(i, f); e.target.value = ''; }}
+                />
+              </label>
+              {c.fileName && (
+                <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+                  <FileText size={12} className="text-brand-600 dark:text-brand-300" /> {c.fileName}
+                  <button type="button" onClick={() => update(i, { fileName: undefined, fileUrl: undefined })} className="text-ink-400 hover:text-danger-500">×</button>
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      <Button type="button" variant="outline" size="sm" leftIcon={<Plus size={14} />} onClick={add} className="mt-3">
+        {addLabel}
+      </Button>
+    </div>
   );
 }

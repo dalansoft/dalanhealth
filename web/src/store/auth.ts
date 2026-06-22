@@ -25,6 +25,18 @@ export interface SessionUser {
   aboutMe?: string;
   /** Data-URI for the uploaded profile photo (demo persistence). */
   photoDataUrl?: string;
+  /** Repeatable medical licenses / registrations (name + number + file). */
+  licenses?: Credential[];
+  /** Repeatable certificates / qualifications (name + number + file). */
+  certificates?: Credential[];
+}
+
+/** A named credential the doctor can list and attach a document for. The file
+ *  data-URL is kept in memory only; just the file name is persisted. */
+export interface Credential {
+  name: string;
+  number: string;
+  fileName?: string;
 }
 
 interface AuthState {
