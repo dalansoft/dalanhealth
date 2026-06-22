@@ -16,6 +16,10 @@ const fmtNice = (d: Date) => d.toLocaleDateString('en-IN', { day: '2-digit', mon
 
 const SOURCE_COLORS = { offline: '#0ea5e9', online: '#3b82f6', qr: '#6366f1' };
 const tooltipStyle = { background: 'rgba(15,23,42,0.95)', border: 'none', borderRadius: 12, color: 'white', fontSize: 12 } as const;
+// recharts colours item/label text per-series; force white so the dark tooltip
+// stays readable (the pie item was rendering near-black on navy).
+const tooltipItem = { color: '#fff' } as const;
+const tooltipLabel = { color: '#fff', fontWeight: 600 } as const;
 
 export function ClinicReports() {
   const series = useMemo(() => buildDailySeries(400), []);
@@ -120,7 +124,7 @@ export function ClinicReports() {
                 <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
                 <XAxis dataKey="label" stroke="currentColor" opacity={0.6} fontSize={11} minTickGap={16} />
                 <YAxis stroke="currentColor" opacity={0.6} fontSize={11} />
-                <Tooltip contentStyle={tooltipStyle} />
+                <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItem} labelStyle={tooltipLabel} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="offline" stackId="a" fill={SOURCE_COLORS.offline} name="Offline" />
                 <Bar dataKey="online" stackId="a" fill={SOURCE_COLORS.online} name="Online" />
@@ -143,7 +147,7 @@ export function ClinicReports() {
                 <Pie data={sourcePie} dataKey="value" nameKey="name" outerRadius={90} innerRadius={48} paddingAngle={2}>
                   {sourcePie.map((s) => <Cell key={s.name} fill={s.color} />)}
                 </Pie>
-                <Tooltip contentStyle={tooltipStyle} />
+                <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItem} labelStyle={tooltipLabel} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
               </PieChart>
             </ResponsiveContainer>
@@ -165,7 +169,7 @@ export function ClinicReports() {
                 <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
                 <XAxis dataKey="label" stroke="currentColor" opacity={0.6} fontSize={11} minTickGap={16} />
                 <YAxis stroke="currentColor" opacity={0.6} fontSize={11} tickFormatter={(v) => inrCompact(v)} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => inr(v)} />
+                <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItem} labelStyle={tooltipLabel} formatter={(v: number) => inr(v)} />
                 <Line type="monotone" dataKey="revenue" stroke={SOURCE_COLORS.online} strokeWidth={2.5} dot={{ r: 2 }} name="Revenue" />
               </LineChart>
             </ResponsiveContainer>
@@ -185,7 +189,7 @@ export function ClinicReports() {
                 <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
                 <XAxis dataKey="label" stroke="currentColor" opacity={0.6} fontSize={11} minTickGap={16} />
                 <YAxis stroke="currentColor" opacity={0.6} fontSize={11} />
-                <Tooltip contentStyle={tooltipStyle} />
+                <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItem} labelStyle={tooltipLabel} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="patients" fill={SOURCE_COLORS.online} name="Visits" radius={[6, 6, 0, 0]} />
                 <Bar dataKey="followups" fill={SOURCE_COLORS.qr} name="Follow-ups" radius={[6, 6, 0, 0]} />
