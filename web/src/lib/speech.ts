@@ -18,6 +18,8 @@
 
 /** A single spoken language. Bhojpuri ('bho') is written in Devanagari and
  *  read by the Hindi voice (no dedicated Bhojpuri TTS voice exists). */
+import { cloudConfig, synthesize, playUrls, cancelCloudAudio } from '@/lib/cloudTts';
+
 export type Lang = 'en' | 'hi' | 'bho';
 /** Ordered list of languages to speak, in the order chosen by the clinic. */
 export type AnnounceLang = Lang[];
@@ -328,6 +330,34 @@ function speakSequence(utterances: SpeechSynthesisUtterance[]): void {
   }, 90);
 }
 
+// ─── Cloud TTS path (premium Indian / Bihari voice) ────────────────────────
+// When a cloud endpoint is configured we synthesize each line there and play
+// the clips back-to-back. Returns false (so the caller falls back to the
+// browser voice) when cloud is off or any clip fails.
+export async function speakViaCloud(items: { lang: Lang; text: string }[]): Promise<boolean> {
+  const cfg = cloudConfig();
+  if (!cfg) return false;
+  try {
+    const urls: string[] = [];
+    for (const it of items) urls.push(await synthesize(it.text, it.lang, cfg));
+    if (!urls.length) return false;
+    if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel();
+    void playUrls(urls);
+    return true;
+  } catch {
+    return false; // any failure → browser fallback
+  }
+}
+
+// Route a set of (lang, text) lines to the cloud if configured, else browser.
+function speakItems(items: { lang: Lang; text: string }[]): void {
+  if (cloudConfig()) {
+    speakViaCloud(items).then((ok) => { if (!ok) speakSequence(items.map((it) => utterFor(it.lang, it.text))); });
+  } else {
+    speakSequence(items.map((it) => utterFor(it.lang, it.text)));
+  }
+}
+
 /**
  * Speak the "now serving" announcement. Languages are spoken back-to-back in
  * the order the clinic chose. No-op if speechSynthesis is missing.
@@ -340,8 +370,8 @@ export function speakAnnouncement(opts: {
   templateHi?: string;
   templateBho?: string;
 }): void {
-  const utterances = normLangs(opts.lang).map((l) => utterFor(l, sentenceFor(l, opts.token, opts.name, opts)));
-  speakSequence(utterances);
+  const items = normLangs(opts.lang).map((l) => ({ lang: l, text: sentenceFor(l, opts.token, opts.name, opts) }));
+  speakItems(items);
 }
 
 /**
@@ -353,17 +383,27 @@ export function speakCustomText(text: string, lang: AnnounceLang): void {
   if (!trimmed) return;
   const primary = normLangs(lang)[0];
   const isDevanagari = /[ऀ-ॿ]/.test(trimmed) || primary === 'hi' || primary === 'bho';
+  const spokenLang: Lang = isDevanagari ? (primary === 'bho' ? 'bho' : 'hi') : 'en';
+  if (cloudConfig()) {
+    speakViaCloud([{ lang: spokenLang, text: trimmed }]).then((ok) => { if (!ok) browserCustom(trimmed, isDevanagari); });
+  } else {
+    browserCustom(trimmed, isDevanagari);
+  }
+}
+
+function browserCustom(trimmed: string, isDevanagari: boolean): void {
   const u = (isDevanagari && !hasHindiVoice())
     ? utter('en', devToLatin(trimmed))
     : utter(isDevanagari ? 'hi' : 'en', trimmed);
   speakSequence([u]);
 }
 
-/** Stop any in-progress announcement (e.g. when sound is muted). */
+/** Stop any in-progress announcement (browser or cloud) — e.g. when muted. */
 export function cancelSpeech(): void {
   if (typeof window !== 'undefined' && window.speechSynthesis) {
     window.speechSynthesis.cancel();
   }
+  cancelCloudAudio();
 }
 
 /** A short spoken sample so the operator can preview the chosen voice/lang.
