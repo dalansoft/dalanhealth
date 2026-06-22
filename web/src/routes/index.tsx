@@ -2,6 +2,7 @@ import { lazy, Suspense, type ComponentType } from 'react';
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { ScrollToTop } from './ScrollToTop';
 import { ProtectedRoute } from './ProtectedRoute';
+import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 
 // Eager — needed for first paint of the public/auth entry points.
 import { PublicLayout } from '@/components/layout/PublicLayout';
@@ -36,6 +37,7 @@ function RootLayout() {
       <Suspense fallback={<RouteLoader />}>
         <Outlet />
       </Suspense>
+      <InstallPrompt />
     </>
   );
 }
