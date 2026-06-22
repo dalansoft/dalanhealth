@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useCurrentBranch } from '@/store/branch';
 import { useQueue } from '@/store/queue';
+import { useClinicTiming, fmtSlot } from '@/store/clinicTiming';
 import { getBranchData } from '@/services/demoData';
 
 export function ClinicQR() {
@@ -13,6 +14,7 @@ export function ClinicQR() {
   const data = getBranchData(branch?.id, branch);
   const entries = useQueue((s) => s.entries);
   const current = entries[0];
+  const timingSlots = useClinicTiming((s) => s.slots);
 
   // Unique booking URL per clinic + branch.
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://dalanhealth.mlsons.in';
@@ -95,8 +97,13 @@ export function ClinicQR() {
           <div className="text-xs uppercase tracking-wider text-muted">Clinic</div>
           <div className="text-xl font-semibold text-ink-900 dark:text-ink-50">{branch?.name ?? data.doctor}</div>
           <div className="text-sm text-muted">{data.doctor} · {data.specialization}</div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {timingSlots.map((s) => (
+              <span key={s.id} className="rounded-md bg-brand-500/10 px-2 py-0.5 text-[11px] font-medium text-brand-700 dark:text-brand-300">{fmtSlot(s)}</span>
+            ))}
+          </div>
           <div className="mt-5 grid grid-cols-3 gap-3">
-            <Tile label="Timing" val={(data.timing || '—').split(',')[0]} />
+            <Tile label="Timing" val={timingSlots[0] ? fmtSlot(timingSlots[0]) : '—'} />
             <Tile label="Now serving" val={current ? `#${current.token}` : '—'} />
             <Tile label="Est. wait" val={`~${Math.max(5, entries.length * 12)} min`} />
           </div>

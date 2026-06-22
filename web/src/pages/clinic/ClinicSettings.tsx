@@ -6,13 +6,12 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useTheme } from '@/store/theme';
 import { useEstimate } from '@/store/estimate';
+import { useClinicTiming, type TimeSlot } from '@/store/clinicTiming';
 import { useEta } from '@/hooks/useEta';
 import { cn } from '@/lib/cn';
 import { demoClinic } from '@/services/demoData';
 
-interface TimeSlot { id: string; label: string; from: string; to: string }
-
-const Toggle = ({ on, onChange, label, icon, desc }: { on: boolean; onChange: (v: boolean) => void; label: string; icon: React.ReactNode; desc?: string }) => (
+const Toggle =({ on, onChange, label, icon, desc }: { on: boolean; onChange: (v: boolean) => void; label: string; icon: React.ReactNode; desc?: string }) => (
   <div className="flex items-center justify-between gap-4 rounded-xl border hairline p-4">
     <div className="flex items-start gap-3 min-w-0">
       <div className="h-9 w-9 rounded-xl bg-brand-500/15 text-brand-600 dark:text-brand-300 flex items-center justify-center shrink-0">{icon}</div>
@@ -42,13 +41,11 @@ export function ClinicSettings() {
   const [doctor, setDoctor] = useState(demoClinic.doctor);
   const [spec, setSpec] = useState(demoClinic.specialization);
   const [city, setCity] = useState(demoClinic.city);
-  const [slots, setSlots] = useState<TimeSlot[]>([
-    { id: 's1', label: 'Morning', from: '10:00', to: '14:00' },
-    { id: 's2', label: 'Evening', from: '17:00', to: '20:00' },
-  ]);
-  const updateSlot = (id: string, patch: Partial<TimeSlot>) => setSlots((list) => list.map((s) => (s.id === id ? { ...s, ...patch } : s)));
-  const addSlot = () => setSlots((list) => [...list, { id: `s-${Date.now()}`, label: `Slot ${list.length + 1}`, from: '09:00', to: '12:00' }]);
-  const removeSlot = (id: string) => setSlots((list) => (list.length > 1 ? list.filter((s) => s.id !== id) : list));
+  const slots = useClinicTiming((s) => s.slots);
+  const setSlots = useClinicTiming((s) => s.setSlots);
+  const updateSlot = (id: string, patch: Partial<TimeSlot>) => setSlots(slots.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  const addSlot = () => setSlots([...slots, { id: `s-${Date.now()}`, label: `Slot ${slots.length + 1}`, from: '09:00', to: '12:00' }]);
+  const removeSlot = (id: string) => { if (slots.length > 1) setSlots(slots.filter((s) => s.id !== id)); };
   const [push, setPush] = useState(true);
   const [whatsapp, setWhatsapp] = useState(true);
   const [sms, setSms] = useState(true);

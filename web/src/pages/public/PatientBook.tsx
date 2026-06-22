@@ -6,6 +6,7 @@ import { Logo } from '@/components/ui/Logo';
 import { Button } from '@/components/ui/Button';
 import { useBranch } from '@/store/branch';
 import { useQueue } from '@/store/queue';
+import { useClinicTiming, fmtSlot } from '@/store/clinicTiming';
 import { getBranchData } from '@/services/demoData';
 import { distanceMeters, GEOFENCE_METRES, fmtDistance } from '@/lib/geo';
 
@@ -26,6 +27,7 @@ export function PatientBook() {
   const branchId = params.get('b') ?? params.get('branch');
   const branch = useMemo(() => branches.find((b) => b.id === branchId) ?? branches[0], [branches, branchId]);
   const data = getBranchData(branch?.id, branch);
+  const timingSlots = useClinicTiming((s) => s.slots);
 
   const [geo, setGeo] = useState<GeoState>('checking');
   const [dist, setDist] = useState<number | null>(null);
@@ -87,8 +89,14 @@ export function PatientBook() {
           <div className="text-sm text-muted inline-flex items-center gap-1.5"><Stethoscope size={12} /> {data.doctor} · {data.specialization}</div>
           {branch?.address && <div className="mt-1 text-xs text-muted inline-flex items-start gap-1.5"><MapPin size={12} className="mt-0.5" /> {branch.address}</div>}
 
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {timingSlots.map((s) => (
+              <span key={s.id} className="rounded-md bg-brand-500/10 px-2 py-0.5 text-[11px] font-medium text-brand-700 dark:text-brand-300">{fmtSlot(s)}</span>
+            ))}
+          </div>
+
           <div className="mt-4 grid grid-cols-3 gap-2">
-            <Tile label="Timing" val={(data.timing || '—').split(',')[0]} />
+            <Tile label="Timing" val={timingSlots[0] ? fmtSlot(timingSlots[0]) : '—'} />
             <Tile label="Now serving" val={current ? `#${current.token}` : '—'} />
             <Tile label="Est. wait" val={`~${waitMin || 5} min`} />
           </div>
