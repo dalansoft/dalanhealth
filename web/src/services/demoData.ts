@@ -132,6 +132,11 @@ export const branchData: Record<string, BranchData> = {
  * returns a clean zero state using the branch's metadata so the dashboard
  * renders without bleeding data from another branch.
  */
+// Cache derived results so the SAME inputs return the SAME object reference.
+// Returning a fresh object on every call makes effects that depend on it loop
+// forever (React error #185) — caching keeps referential stability.
+const branchDataCache = new Map<string, BranchData>();
+
 export const getBranchData = (
   branchId: string | undefined,
   branchMeta?: { name?: string; city?: string; doctors?: string[] },
@@ -139,6 +144,10 @@ export const getBranchData = (
   // Doctors assigned to the branch (in the branch store) win over any seeded
   // demo doctor, so the name you set on the branch is the one that shows.
   const assigned = branchMeta?.doctors?.map((d) => d.trim()).filter(Boolean) ?? [];
+  const cacheKey = `${branchId ?? ''}|${branchMeta?.city ?? ''}|${assigned.join(',')}`;
+  const cached = branchDataCache.get(cacheKey);
+  if (cached) return cached;
+
   const base: BranchData = (branchId && branchData[branchId]) ? branchData[branchId] : {
     doctor: 'Doctor not assigned',
     specialization: 'Add a specialization',
@@ -150,7 +159,9 @@ export const getBranchData = (
     todayPatients: 0,
     completedToday: 0,
   };
-  return assigned.length ? { ...base, doctor: assigned.join(', ') } : base;
+  const result = assigned.length ? { ...base, doctor: assigned.join(', ') } : base;
+  branchDataCache.set(cacheKey, result);
+  return result;
 };
 
 export const demoPatient = {
