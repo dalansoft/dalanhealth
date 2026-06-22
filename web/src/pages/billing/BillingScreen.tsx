@@ -1,13 +1,16 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Printer, Download, Share2, Save, Receipt } from 'lucide-react';
+import { Printer, Download, Share2, Save, Receipt, Search, Check } from 'lucide-react';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Logo } from '@/components/ui/Logo';
+import { useQueue } from '@/store/queue';
 import { demoClinic } from '@/services/demoData';
 import { inr } from '@/lib/format';
+
+interface PatientOpt { name: string; mobile: string; when: string }
 
 export function BillingScreen() {
   const [consultation, setConsultation] = useState(300);
@@ -17,6 +20,24 @@ export function BillingScreen() {
   const [notes, setNotes] = useState('');
   const [patient, setPatient] = useState('Shailesh Kumar');
   const [mobile, setMobile] = useState('+91 98765 43210');
+
+  const completed = useQueue((s) => s.completed);
+  const entries = useQueue((s) => s.entries);
+
+  // Patients you can bill — completed visits first, then anyone still in queue.
+  const patientOptions = useMemo<PatientOpt[]>(() => {
+    const seen = new Set<string>();
+    const out: PatientOpt[] = [];
+    const push = (name: string, mob: string, when: string) => {
+      const k = mob.replace(/\D/g, '').slice(-10);
+      if (!k || seen.has(k)) return;
+      seen.add(k);
+      out.push({ name, mobile: mob, when });
+    };
+    completed.forEach((e) => push(e.patientName, e.patientMobile, `Completed${e.completedAt ? ` · ${e.completedAt}` : ''}`));
+    entries.forEach((e) => push(e.patientName, e.patientMobile, 'In queue'));
+    return out;
+  }, [completed, entries]);
 
   const total = useMemo(() => Math.max(0, consultation + medicine + extra - discount), [consultation, medicine, extra, discount]);
   const invoiceNo = useMemo(() => `INV-${Math.floor(Math.random() * 9000 + 1000)}`, []);
@@ -32,6 +53,11 @@ export function BillingScreen() {
           <Badge tone="brand">Draft</Badge>
         </CardHeader>
         <div className="space-y-3">
+          <PatientPicker
+            options={patientOptions}
+            selected={patient}
+            onPick={(o) => { setPatient(o.name); setMobile(o.mobile); }}
+          />
           <Input label="Patient name" value={patient} onChange={(e) => setPatient(e.target.value)} />
           <Input label="Mobile" value={mobile} onChange={(e) => setMobile(e.target.value)} />
           <div className="grid grid-cols-2 gap-3">
@@ -142,3 +168,55 @@ const Row = ({ label, amount }: { label: string; amount: number }) => (
 const NumberInput = ({ label, val, onChange }: { label: string; val: number; onChange: (n: number) => void }) => (
   <Input label={label} type="number" value={Number.isNaN(val) ? '' : val} onChange={(e) => onChange(Number(e.target.value) || 0)} />
 );
+
+// Searchable patient picker — find a completed/queued patient and fill the
+// invoice instead of typing the name + mobile by hand.
+function PatientPicker({ options, selected, onPick }: { options: PatientOpt[]; selected: string; onPick: (o: PatientOpt) => void }) {
+  const [q, setQ] = useState('');
+  const [open, setOpen] = useState(false);
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const nq = norm(q);
+  const filtered = nq ? options.filter((o) => norm(`${o.name} ${o.mobile}`).includes(nq)) : options;
+
+  return (
+    <div>
+      <div className="mb-1.5 text-xs font-medium text-ink-700 dark:text-ink-300 uppercase tracking-wide">Select patient</div>
+      <div className="relative">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400 pointer-events-none" />
+        <input
+          value={q}
+          onChange={(e) => { setQ(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          placeholder="Search completed patient by name or mobile…"
+          className="w-full pl-9 pr-3 py-2.5 rounded-xl border hairline bg-white dark:bg-ink-900 text-sm text-ink-900 dark:text-ink-50 outline-none focus:border-brand-500/70 focus:ring-4 focus:ring-brand-500/10"
+        />
+        {open && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden />
+            <div className="absolute z-20 mt-1 w-full max-h-60 overflow-auto rounded-xl border hairline bg-white dark:bg-ink-900 shadow-lg">
+              {filtered.length ? filtered.map((o, i) => {
+                const active = o.name === selected;
+                return (
+                  <button
+                    key={`${o.mobile}-${i}`}
+                    type="button"
+                    onClick={() => { onPick(o); setQ(''); setOpen(false); }}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left hover:bg-ink-50 dark:hover:bg-ink-800"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-ink-900 dark:text-ink-50 truncate">{o.name}</div>
+                      <div className="text-[11px] text-muted truncate">{o.mobile} · {o.when}</div>
+                    </div>
+                    {active && <Check size={14} className="text-brand-600 dark:text-brand-300 shrink-0" />}
+                  </button>
+                );
+              }) : (
+                <div className="px-3 py-3 text-sm text-muted">No patients found.</div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
