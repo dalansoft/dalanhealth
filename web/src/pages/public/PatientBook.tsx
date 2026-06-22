@@ -53,6 +53,7 @@ export function PatientBook() {
   }, [branch?.id, branch?.lat, branch?.lng]);
 
   const canBook = geo === 'inside' || geo === 'nocoords' || override;
+  const canSubmit = name.trim().length > 0 && mobile.replace(/\D/g, '').length === 10;
 
   const book = () => {
     if (!name.trim()) { setError('Please enter your name'); return; }
@@ -98,22 +99,28 @@ export function PatientBook() {
           ) : canBook ? (
             <div className="mt-5 space-y-3">
               <div className="text-sm font-semibold text-ink-900 dark:text-ink-50">Get your token — free</div>
-              <Field icon={<User size={14} />} placeholder="Your full name" value={name} onChange={(v) => { setName(v); setError(null); }} />
-              <div className="flex items-center gap-2 rounded-xl border hairline bg-white dark:bg-ink-900 px-3 py-2.5 focus-within:ring-2 focus-within:ring-brand-500/30">
-                <Phone size={14} className="text-ink-400 shrink-0" />
-                <span className="text-sm font-semibold text-ink-700 dark:text-ink-200">+91</span>
-                <input
-                  inputMode="numeric"
-                  maxLength={10}
-                  value={mobile.replace(/\D/g, '').slice(0, 10)}
-                  onChange={(e) => { setMobile(e.target.value.replace(/\D/g, '').slice(0, 10)); setError(null); }}
-                  placeholder="9876543210"
-                  className="flex-1 min-w-0 bg-transparent outline-none text-sm tracking-wider text-ink-900 dark:text-ink-50 placeholder:text-ink-400"
-                />
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-muted">Full name <span className="text-danger-500">*</span></label>
+                <Field icon={<User size={14} />} placeholder="Your full name" value={name} onChange={(v) => { setName(v); setError(null); }} />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-muted">Mobile number <span className="text-danger-500">*</span></label>
+                <div className="flex items-center gap-2 rounded-xl border hairline bg-white dark:bg-ink-900 px-3 py-2.5 focus-within:ring-2 focus-within:ring-brand-500/30">
+                  <Phone size={14} className="text-ink-400 shrink-0" />
+                  <span className="text-sm font-semibold text-ink-700 dark:text-ink-200">+91</span>
+                  <input
+                    inputMode="numeric"
+                    maxLength={10}
+                    value={mobile.replace(/\D/g, '').slice(0, 10)}
+                    onChange={(e) => { setMobile(e.target.value.replace(/\D/g, '').slice(0, 10)); setError(null); }}
+                    placeholder="9876543210"
+                    className="flex-1 min-w-0 bg-transparent outline-none text-sm tracking-wider text-ink-900 dark:text-ink-50 placeholder:text-ink-400"
+                  />
+                </div>
               </div>
               {error && <div className="text-xs text-danger-500">{error}</div>}
-              <Button fullWidth size="lg" leftIcon={<Ticket size={16} />} onClick={book}>Get token · Free</Button>
-              <div className="text-[11px] text-muted text-center">No payment now — pay ₹9 + GST to the compounder at the counter.</div>
+              <Button fullWidth size="lg" leftIcon={<Ticket size={16} />} onClick={book} disabled={!canSubmit}>Get token · Free</Button>
+              <div className="text-[11px] text-muted text-center">Name &amp; mobile required · Getting a token is free.</div>
             </div>
           ) : (
             <GeoGate geo={geo} dist={dist} onOverride={() => setOverride(true)} />
@@ -135,8 +142,8 @@ function Booked({ token, ahead, waitMin }: { token: number; ahead: number; waitM
       <div className="text-[11px] uppercase tracking-wider text-muted">Your token</div>
       <div className="text-6xl font-extrabold tracking-tight text-token">#{token}</div>
       <div className="mt-2 text-sm text-muted">{ahead} ahead of you · ~{waitMin || 5} min wait</div>
-      <div className="mt-4 rounded-xl border border-warning-500/40 bg-warning-500/5 px-3 py-2.5 text-xs text-warning-700 dark:text-warning-300">
-        Please pay <b>₹9 + GST</b> to the <b>compounder</b> at the clinic counter to confirm your visit.
+      <div className="mt-4 rounded-xl border border-success-500/30 bg-success-500/5 px-3 py-2.5 text-xs text-success-700 dark:text-success-300">
+        You're in the queue. Please stay nearby — your token will be called on the clinic screen.
       </div>
     </motion.div>
   );

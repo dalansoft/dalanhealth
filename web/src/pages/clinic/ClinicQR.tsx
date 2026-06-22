@@ -104,7 +104,6 @@ export function ClinicQR() {
             <a href={bookUrl} target="_blank" rel="noreferrer">
               <Button fullWidth>Get token · Free</Button>
             </a>
-            <div className="mt-2 text-[11px] text-muted text-center">Pay ₹9 + GST to the compounder at the counter.</div>
           </div>
         </div>
       </Card>
