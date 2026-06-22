@@ -42,25 +42,40 @@ if (typeof window !== 'undefined' && window.speechSynthesis) {
 const FEMALE_HINTS = ['heera', 'kalpana', 'swara', 'neerja', 'aarohi', 'ananya', 'veena', 'priya', 'female'];
 const MALE_HINTS = ['ravi', 'hemant', 'madhur', 'rishi', 'prabhat', 'male', 'mark', 'david', 'ryan'];
 
+/**
+ * Score a voice for a target language. We push hard for an **Indian accent**
+ * (en-IN / hi-IN — the closest the OS offers to a Bihar/Hindi-belt accent) and
+ * for **high-quality** voices (Microsoft "Online (Natural)", Google, neural),
+ * which sound far better than the default offline voices. A true Bhojpuri /
+ * Bihari accent isn't available from any browser voice — that needs a cloud
+ * TTS, which the static deploy can't call.
+ */
 function scoreVoice(v: SpeechSynthesisVoice, lang: 'en' | 'hi'): number {
   const name = v.name.toLowerCase();
   const loc = v.lang.toLowerCase().replace('_', '-');
   const isHindi = loc.startsWith('hi');
   const isEnIndia = loc === 'en-in';
+  const isIndia = loc.endsWith('-in');
   let s = 0;
   if (lang === 'hi') {
-    if (isHindi) s += 100;
+    if (isHindi) s += 120;
     else if (isEnIndia) s += 40; // can at least pronounce Indian words
+    else if (loc.startsWith('en')) s += 5;
   } else {
-    if (isEnIndia) s += 100;
+    if (isEnIndia) s += 120;
     // No en-IN installed? A Hindi voice reading English text still sounds
     // Indian — much better for this product than a US/UK voice.
-    else if (isHindi) s += 60;
-    else if (loc.startsWith('en')) s += 20;
+    else if (isHindi) s += 70;
+    else if (loc.startsWith('en')) s += 15;
   }
+  if (isIndia) s += 25;
+  // Quality markers — natural / neural / online voices are dramatically better.
+  if (/(natural|neural|online)/.test(name)) s += 60;
+  if (v.localService === false) s += 30; // cloud/online (Edge natural, etc.)
+  if (name.includes('google')) s += 25;  // clear + pleasant on Chrome/Android
+  if (name.includes('microsoft')) s += 8;
   if (FEMALE_HINTS.some((h) => name.includes(h))) s += 20;
   if (MALE_HINTS.some((h) => name.includes(h))) s -= 30;
-  if (name.includes('google')) s += 6; // typically clear + pleasant
   return s;
 }
 
@@ -261,9 +276,15 @@ function utter(lang: 'en' | 'hi', text: string): SpeechSynthesisUtterance {
     u.lang = lang === 'hi' ? 'hi-IN' : 'en-IN';
   }
   u.volume = 1;     // max — actual loudness follows the device volume
-  u.rate = 0.92;    // a touch slower so it carries across a waiting room
-  u.pitch = 1.12;   // slightly raised → clearer, reads as female
+  u.rate = 0.95;    // a touch slower so it carries across a waiting room
+  u.pitch = 1.0;    // natural — high-quality voices sound off when pitched up
   return u;
+}
+
+/** Whether any Indian-locale voice (hi-IN / en-IN, …) is installed. Used to
+ *  hint the operator when only foreign-accent voices are available. */
+export function hasIndianVoice(): boolean {
+  return refreshVoices().some((v) => v.lang.toLowerCase().replace('_', '-').endsWith('-in'));
 }
 
 // Speak one sentence in one language. Hindi & Bhojpuri use the Hindi voice;
