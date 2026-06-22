@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Plus, Printer, Download, Share2, Upload, Camera, FileText,
-  File as FileIcon, X, Check, RefreshCw, Image as ImageIcon, Search, Save, Loader2, History,
+  File as FileIcon, X, Check, RefreshCw, Image as ImageIcon, Search, Save, Loader2, History, Eye,
 } from 'lucide-react';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -551,6 +551,7 @@ const KIND_META: Record<RxKind, { label: string; tone: 'brand' | 'accent' | 'suc
 function PrescriptionHistory() {
   const list = usePrescriptions((s) => s.list);
   const [q, setQ] = useState('');
+  const [preview, setPreview] = useState<Rx | null>(null);
   const filtered = useMemo(() => {
     const n = q.toLowerCase().replace(/\s/g, '');
     return !n ? list : list.filter((r) => `${r.patientName}${r.patientMobile}${r.summary}`.toLowerCase().replace(/\s/g, '').includes(n));
@@ -570,6 +571,34 @@ function PrescriptionHistory() {
           <Badge tone="neutral">{filtered.length}</Badge>
         </div>
       </div>
+
+      {/* Inline preview — shows the prescription on this page (no popup) */}
+      {preview && (
+        <div className="border-t hairline p-5 bg-ink-50/60 dark:bg-ink-900/40">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="text-sm font-semibold text-ink-900 dark:text-ink-50">
+              Preview — {preview.patientName} <span className="font-normal text-muted">· {preview.date}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" leftIcon={<Printer size={14} />} onClick={() => { void printRx(preview); }}>Print</Button>
+              <Button size="sm" variant="outline" leftIcon={<Download size={14} />} onClick={() => { void downloadRx(preview); }}>Download</Button>
+              <button type="button" onClick={() => setPreview(null)} aria-label="Close preview" className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800">
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+          <div className="mx-auto max-w-3xl max-h-[70vh] overflow-auto rounded-2xl border hairline shadow-card p-6" style={{ background: '#ffffff' }}>
+            {preview.kind !== 'digital' && preview.fileUrl
+              ? ((preview.fileName ?? '').toLowerCase().endsWith('.pdf') || preview.fileUrl.startsWith('data:application/pdf')
+                  ? <embed src={preview.fileUrl} type="application/pdf" style={{ width: '100%', height: '70vh' }} />
+                  : <img src={preview.fileUrl} alt={preview.fileName ?? 'Prescription'} style={{ maxWidth: '100%', display: 'block', margin: '0 auto' }} />)
+              : preview.kind !== 'digital'
+                ? <div className="py-10 text-center text-sm text-muted">Original file isn’t available in this session. Re-upload it to preview.</div>
+                : <RxDocument doc={preview.doc ?? docFromRx(preview)} />}
+          </div>
+        </div>
+      )}
+
       <div className="overflow-x-auto border-t hairline">
         <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-ink-50 dark:bg-ink-900/60">
@@ -591,6 +620,9 @@ function PrescriptionHistory() {
                 <td className="px-5 py-3"><Badge tone={KIND_META[r.kind].tone} size="sm">{KIND_META[r.kind].label}</Badge></td>
                 <td className="px-5 py-3 text-ink-700 dark:text-ink-200">{r.summary}</td>
                 <td className="px-5 py-3 text-right whitespace-nowrap">
+                  <button type="button" onClick={() => setPreview(r)} title="Preview prescription" className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 hover:text-brand-600 dark:hover:text-brand-300">
+                    <Eye size={14} />
+                  </button>
                   <button type="button" onClick={() => { void printRx(r); }} title="Print prescription" className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 hover:text-brand-600 dark:hover:text-brand-300">
                     <Printer size={14} />
                   </button>
