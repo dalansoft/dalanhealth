@@ -1,22 +1,23 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
+import { Plus, ArrowDownCircle, ArrowUpCircle, Users, Check } from 'lucide-react';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { demoClinic } from '@/services/demoData';
+import { Modal } from '@/components/ui/Modal';
+import { useWallet, visitsLeft, PER_VISIT_FEE, MIN_RECHARGE } from '@/store/wallet';
 import { inr } from '@/lib/format';
 
-const tx = [
-  { date: 'Today, 12:42 PM', type: 'recharge' as const, amount: 5000, status: 'Success' },
-  { date: 'Today, 12:30 PM', type: 'deduction' as const, amount: 12, status: 'Success', note: 'Consultation #14' },
-  { date: 'Today, 12:11 PM', type: 'deduction' as const, amount: 12, status: 'Success', note: 'Consultation #13' },
-  { date: 'Today, 11:54 AM', type: 'deduction' as const, amount: 12, status: 'Success', note: 'Consultation #12' },
-  { date: 'Yesterday', type: 'recharge' as const, amount: 10000, status: 'Success' },
-];
+const PRESETS = [1000, 3000, 5000];
 
 export function ClinicWallet() {
-  const balance = demoClinic.walletBalance;
+  const balance = useWallet((s) => s.balance);
+  const txns = useWallet((s) => s.txns);
+  const recharge = useWallet((s) => s.recharge);
+  const [open, setOpen] = useState(false);
   const low = balance < 1000;
+  const covered = visitsLeft(balance);
+
   return (
     <div className="space-y-5">
       <div className="grid lg:grid-cols-3 gap-5">
@@ -24,16 +25,21 @@ export function ClinicWallet() {
           <div className="absolute inset-0 -z-10 bg-gradient-to-br from-brand-500/15 via-transparent to-accent-500/15" />
           <CardHeader>
             <div>
-                <CardTitle>Wallet balance</CardTitle>
-                  <CardSubtitle>Auto-deducts ₹9 + GST per completed consultation (Growth plan)</CardSubtitle>
+              <CardTitle>Wallet balance</CardTitle>
+              <CardSubtitle>Auto-deducts ₹{PER_VISIT_FEE} + GST per completed consultation (Growth plan)</CardSubtitle>
             </div>
             {low && <Badge tone="warning" pulse>Low balance</Badge>}
           </CardHeader>
           <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="text-5xl font-semibold tracking-tight text-ink-900 dark:text-ink-50">
             {inr(balance)}
           </motion.div>
+          <div className="mt-2 inline-flex items-center gap-2 text-sm text-muted">
+            <Users size={14} className="text-brand-600 dark:text-brand-300" />
+            Covers <span className="font-semibold text-ink-800 dark:text-ink-100">{covered.toLocaleString('en-IN')}</span> more consultations
+            <span className="text-ink-400">· {inr(balance)} ÷ ₹{PER_VISIT_FEE}</span>
+          </div>
           <div className="mt-6 flex flex-wrap gap-2">
-            <Button leftIcon={<Plus size={14} />}>Recharge</Button>
+            <Button leftIcon={<Plus size={14} />} onClick={() => setOpen(true)}>Recharge</Button>
             <Button variant="outline">View invoices</Button>
             <Button variant="ghost">Setup auto-recharge</Button>
           </div>
@@ -43,7 +49,7 @@ export function ClinicWallet() {
           <div className="space-y-3">
             <div className="flex items-center justify-between text-sm"><span className="text-muted">Warning</span><span className="font-semibold">₹1,000</span></div>
             <div className="flex items-center justify-between text-sm"><span className="text-muted">Critical</span><span className="font-semibold text-danger-500">₹200</span></div>
-            <div className="flex items-center justify-between text-sm"><span className="text-muted">Plan</span><Badge tone="brand" size="sm">Growth · ₹9 + GST/visit</Badge></div>
+            <div className="flex items-center justify-between text-sm"><span className="text-muted">Plan</span><Badge tone="brand" size="sm">Growth · ₹{PER_VISIT_FEE} + GST/visit</Badge></div>
           </div>
         </Card>
       </div>
@@ -64,8 +70,8 @@ export function ClinicWallet() {
             </tr>
           </thead>
           <tbody className="divide-y hairline">
-            {tx.map((t, i) => (
-              <tr key={i}>
+            {txns.map((t) => (
+              <tr key={t.id}>
                 <td className="px-5 py-3 text-muted">{t.date}</td>
                 <td className="px-5 py-3">
                   <span className="inline-flex items-center gap-2">
@@ -84,6 +90,66 @@ export function ClinicWallet() {
         </table>
         </div>
       </Card>
+
+      <RechargeModal open={open} onClose={() => setOpen(false)} onConfirm={(amt) => { recharge(amt); setOpen(false); }} />
     </div>
+  );
+}
+
+function RechargeModal({ open, onClose, onConfirm }: { open: boolean; onClose: () => void; onConfirm: (amount: number) => void }) {
+  const [amount, setAmount] = useState(1000);
+  const valid = amount >= MIN_RECHARGE;
+  const visits = Math.floor((Number.isFinite(amount) ? amount : 0) / PER_VISIT_FEE);
+
+  return (
+    <Modal open={open} onClose={onClose} title="Recharge wallet" description={`Minimum ₹${MIN_RECHARGE.toLocaleString('en-IN')}. Every ₹${PER_VISIT_FEE} covers one consultation.`} size="sm">
+      <div className="space-y-4">
+        <div className="grid grid-cols-3 gap-2">
+          {PRESETS.map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setAmount(p)}
+              className={`rounded-xl border px-3 py-3 text-sm font-semibold transition-colors ${
+                amount === p
+                  ? 'border-brand-500 bg-brand-500/10 text-brand-700 dark:text-brand-300'
+                  : 'hairline text-ink-700 dark:text-ink-200 hover:bg-ink-50 dark:hover:bg-ink-800'
+              }`}
+            >
+              ₹{p.toLocaleString('en-IN')}
+            </button>
+          ))}
+        </div>
+
+        <div>
+          <div className="mb-1.5 text-xs font-medium text-ink-700 dark:text-ink-300 uppercase tracking-wide">Or enter an amount</div>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400">₹</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={MIN_RECHARGE}
+              step={500}
+              value={Number.isNaN(amount) ? '' : amount}
+              onChange={(e) => setAmount(Math.floor(Number(e.target.value) || 0))}
+              className="w-full pl-7 pr-3 py-2.5 rounded-xl border hairline bg-white dark:bg-ink-900 text-sm text-ink-900 dark:text-ink-50 outline-none focus:border-brand-500/70 focus:ring-4 focus:ring-brand-500/10"
+            />
+          </div>
+          {!valid && <div className="mt-1.5 text-xs text-danger-500">Minimum recharge is ₹{MIN_RECHARGE.toLocaleString('en-IN')}.</div>}
+        </div>
+
+        <div className="rounded-xl border hairline bg-ink-50/60 dark:bg-ink-900/40 px-3 py-2.5 flex items-center gap-2 text-sm">
+          <Users size={15} className="text-brand-600 dark:text-brand-300 shrink-0" />
+          <span>
+            Covers <span className="font-semibold text-ink-900 dark:text-ink-50">{visits.toLocaleString('en-IN')}</span> consultations
+            <span className="text-muted"> · ₹{(valid ? amount : 0).toLocaleString('en-IN')} ÷ ₹{PER_VISIT_FEE}</span>
+          </span>
+        </div>
+
+        <Button fullWidth leftIcon={<Check size={15} />} disabled={!valid} onClick={() => valid && onConfirm(amount)}>
+          Recharge ₹{(valid ? amount : MIN_RECHARGE).toLocaleString('en-IN')}
+        </Button>
+      </div>
+    </Modal>
   );
 }
