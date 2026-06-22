@@ -69,11 +69,16 @@ function scoreVoice(v: SpeechSynthesisVoice, lang: 'en' | 'hi'): number {
     else if (loc.startsWith('en')) s += 15;
   }
   if (isIndia) s += 25;
-  // Quality markers — natural / neural / online voices are dramatically better.
-  if (/(natural|neural|online)/.test(name)) s += 60;
-  if (v.localService === false) s += 30; // cloud/online (Edge natural, etc.)
-  if (name.includes('google')) s += 25;  // clear + pleasant on Chrome/Android
-  if (name.includes('microsoft')) s += 8;
+  // Reliability first: offline/local voices don't stream, so they don't break
+  // up mid-sentence. Online "network" voices (Google/Edge natural) sound nicer
+  // but stutter or get blocked — badly in privacy browsers like Brave — which
+  // is the "breaking voice" the operator heard on Hindi/Bhojpuri.
+  if (v.localService) s += 45;
+  else s -= 25;
+  // Quality markers — secondary to reliability.
+  if (/(natural|neural)/.test(name)) s += 16;
+  if (name.includes('microsoft')) s += 12; // offline MS Heera/Kalpana = stable
+  if (name.includes('google')) s += 8;
   if (FEMALE_HINTS.some((h) => name.includes(h))) s += 20;
   if (MALE_HINTS.some((h) => name.includes(h))) s -= 30;
   return s;
@@ -287,19 +292,41 @@ export function hasIndianVoice(): boolean {
   return refreshVoices().some((v) => v.lang.toLowerCase().replace('_', '-').endsWith('-in'));
 }
 
-// Speak one sentence in one language. Hindi & Bhojpuri use the Hindi voice;
-// when no Hindi voice exists we romanize so the English voice reads it fully
+// Chromium pauses long-running synthesis and can drop utterances queued right
+// after cancel() — both surface as a "breaking"/choppy voice. A periodic
+// pause→resume keeps it alive; we stop the timer once nothing is speaking.
+let keepAliveTimer: ReturnType<typeof setInterval> | null = null;
+function startKeepAlive(): void {
+  if (typeof window === 'undefined' || !window.speechSynthesis || keepAliveTimer) return;
+  keepAliveTimer = setInterval(() => {
+    const s = window.speechSynthesis;
+    if (s.speaking || s.pending) { try { s.pause(); s.resume(); } catch { /* ignore */ } }
+    else if (keepAliveTimer) { clearInterval(keepAliveTimer); keepAliveTimer = null; }
+  }, 6000);
+}
+
+// Build the utterance for one language. Hindi & Bhojpuri use the Hindi voice;
+// when no Hindi voice exists we romanize so the available voice reads it fully
 // (instead of speaking only the digits).
-function speakOne(synth: SpeechSynthesis, lang: Lang, sentence: string): void {
+function utterFor(lang: Lang, sentence: string): SpeechSynthesisUtterance {
   const needsDevanagari = lang === 'hi' || lang === 'bho';
-  if (needsDevanagari && !hasHindiVoice()) {
-    synth.speak(utter('en', devToLatin(sentence)));
-  } else {
-    synth.speak(utter(needsDevanagari ? 'hi' : 'en', sentence));
-  }
+  if (needsDevanagari && !hasHindiVoice()) return utter('en', devToLatin(sentence));
+  return utter(needsDevanagari ? 'hi' : 'en', sentence);
 }
 
 const normLangs = (lang: AnnounceLang): Lang[] => (Array.isArray(lang) && lang.length ? lang : ['en']);
+
+// Speak a list of utterances reliably: cancel, wait a tick (so Chromium
+// doesn't swallow the first one), then queue them and keep the engine alive.
+function speakSequence(utterances: SpeechSynthesisUtterance[]): void {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+  const synth = window.speechSynthesis;
+  synth.cancel();
+  setTimeout(() => {
+    for (const u of utterances) synth.speak(u);
+    startKeepAlive();
+  }, 90);
+}
 
 /**
  * Speak the "now serving" announcement. Languages are spoken back-to-back in
@@ -313,13 +340,8 @@ export function speakAnnouncement(opts: {
   templateHi?: string;
   templateBho?: string;
 }): void {
-  if (typeof window === 'undefined' || !window.speechSynthesis) return;
-  const synth = window.speechSynthesis;
-  // Clear anything mid-speech so rapid "complete" clicks don't pile up.
-  synth.cancel();
-  for (const l of normLangs(opts.lang)) {
-    speakOne(synth, l, sentenceFor(l, opts.token, opts.name, opts));
-  }
+  const utterances = normLangs(opts.lang).map((l) => utterFor(l, sentenceFor(l, opts.token, opts.name, opts)));
+  speakSequence(utterances);
 }
 
 /**
@@ -327,18 +349,14 @@ export function speakAnnouncement(opts: {
  * once, with the voice picked from the primary language / the script used.
  */
 export function speakCustomText(text: string, lang: AnnounceLang): void {
-  if (typeof window === 'undefined' || !window.speechSynthesis) return;
   const trimmed = text.trim();
   if (!trimmed) return;
-  const synth = window.speechSynthesis;
-  synth.cancel();
   const primary = normLangs(lang)[0];
   const isDevanagari = /[ऀ-ॿ]/.test(trimmed) || primary === 'hi' || primary === 'bho';
-  if (isDevanagari && !hasHindiVoice()) {
-    synth.speak(utter('en', devToLatin(trimmed)));
-  } else {
-    synth.speak(utter(isDevanagari ? 'hi' : 'en', trimmed));
-  }
+  const u = (isDevanagari && !hasHindiVoice())
+    ? utter('en', devToLatin(trimmed))
+    : utter(isDevanagari ? 'hi' : 'en', trimmed);
+  speakSequence([u]);
 }
 
 /** Stop any in-progress announcement (e.g. when sound is muted). */
