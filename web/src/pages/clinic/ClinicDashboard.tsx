@@ -48,7 +48,7 @@ export function ClinicDashboard() {
   const liveQueue = entries.length;
 
   return (
-    <div className="h-full flex flex-col gap-3 min-h-0">
+    <div className="flex flex-col gap-3 lg:h-full lg:min-h-0">
       <NowServingAnnouncer placement="panel" />
       <div className="shrink-0 flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -83,7 +83,7 @@ export function ClinicDashboard() {
         <StatTile label="Earnings today" value={inr(data.todayRevenue)} hint="Revenue generated" icon={<IndianRupee size={14} />} accent="warning" sparkline={clinicSparklines.earnings} dense />
       </div>
 
-      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 lg:flex-1 lg:min-h-0">
         <QueuePreview entries={entries} viewAllTo="/clinic/queue" limit={5} />
         <CurrentTokenCard current={current} onComplete={advance} onSkip={skipCurrent} />
         <WalletMiniCard balance={data.walletBalance} perVisitRate={9} to="/clinic/wallet" />

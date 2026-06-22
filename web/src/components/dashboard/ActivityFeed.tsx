@@ -28,12 +28,12 @@ interface Props {
 
 export function ActivityFeed({ title = 'Recent activity', subtitle = 'Today', items }: Props) {
   return (
-    <Card className="h-full flex flex-col overflow-hidden">
+    <Card className="flex flex-col overflow-hidden lg:h-full">
       <div className="shrink-0 mb-3">
         <CardTitle>{title}</CardTitle>
         <CardSubtitle>{subtitle}</CardSubtitle>
       </div>
-      <div className="flex-1 min-h-0 space-y-1.5 overflow-y-auto pr-1">
+      <div className="space-y-1.5 overflow-y-auto pr-1 lg:flex-1 lg:min-h-0">
         {items.map((it, i) => {
           const m = meta[it.kind];
           return (

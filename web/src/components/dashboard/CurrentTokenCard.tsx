@@ -19,10 +19,10 @@ interface Props {
  */
 export function CurrentTokenCard({ current, onComplete, onSkip }: Props) {
   return (
-    <Card className="relative overflow-hidden h-full">
+    <Card className="relative overflow-hidden lg:h-full">
       <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-token/15 blur-3xl" />
       <div className="pointer-events-none absolute -left-16 -bottom-16 h-40 w-40 rounded-full bg-brand-500/10 blur-3xl" />
-      <div className="relative flex flex-col h-full">
+      <div className="relative flex flex-col lg:h-full">
         <div className="flex items-start justify-between">
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">Current token</div>
