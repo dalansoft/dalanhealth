@@ -297,14 +297,6 @@ export const demoAllRecharges = [
   { id: 'r5', clinic: 'Skin & Smile', amount: 4000, method: 'UPI', when: 'Yesterday', status: 'Success' },
 ];
 
-export const demoCashbackCampaigns = [
-  { id: 'cb1', name: 'Welcome Reward', type: 'first_booking', amount: 1.0, scope: 'All patients', active: true, claimed: 1820 },
-  { id: 'cb2', name: 'Holi Special', type: 'festival', amount: 0.25, scope: 'All clinics', active: true, claimed: 642 },
-  { id: 'cb3', name: 'Chhath Pooja', type: 'festival', amount: 0.25, scope: 'Regional clinics', active: false, claimed: 510 },
-  { id: 'cb4', name: 'Dr. Sharma Boost', type: 'doctor_promo', amount: 0.50, scope: 'Sharma ENT', active: true, claimed: 88 },
-  { id: 'cb5', name: 'Default', type: 'normal', amount: 0.10, scope: 'All bookings', active: true, claimed: 14820 },
-];
-
 export const demoAdminNotifications = [
   { id: 'an1', time: 'Today, 12:42', channel: 'Push', recipient: '198 patients', event: 'queue_near', delivered: 196, failed: 2 },
   { id: 'an2', time: 'Today, 12:30', channel: 'WhatsApp', recipient: '74 patients', event: 'booking_created', delivered: 73, failed: 1 },

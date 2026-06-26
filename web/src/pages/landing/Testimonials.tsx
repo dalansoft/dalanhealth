@@ -12,7 +12,7 @@ const QUOTES: Quote[] = [
   { quote: 'My waiting room used to look like a railway platform. Now patients sit calmly watching the TV — they know exactly when their turn comes.', name: 'Dr. A. Sharma', role: 'ENT Specialist, Patna', metric: '−70% crowding at reception' },
   { quote: 'The compounder picked it up in one morning. Token disputes simply stopped — the screen is the truth, not the register.', name: 'Dr. R. Sinha', role: 'General Physician, Muzaffarpur', metric: 'Zero token disputes' },
   { quote: 'Patients book from home and walk in just before their number. The clinic feels organised for the first time in 12 years.', name: 'Dr. S. Kumari', role: 'Pediatrician, Gaya', metric: '40 min avg. wait → 12 min' },
-  { quote: '₹9 + GST per visit and nothing else. No yearly contract pressure, no surprise renewal call. I pay exactly for what I use.', name: 'Dr. V. Thakur', role: 'Orthopaedic Clinic, Bhagalpur', metric: '₹0 fixed cost' },
+  { quote: '₹9 incl. GST per visit and nothing else. No yearly contract pressure, no surprise renewal call. I pay exactly for what I use.', name: 'Dr. V. Thakur', role: 'Orthopaedic Clinic, Bhagalpur', metric: '₹0 fixed cost' },
   { quote: 'The Hindi voice announcement is the feature my elderly patients love most. They hear their name — no squinting at screens.', name: 'Dr. M. Ansari', role: 'Family Clinic, Darbhanga', metric: 'Hindi + English voice' },
   { quote: 'I check revenue and patient count from my phone at night. Before this, I found out at month-end from the register.', name: 'Dr. P. Verma', role: 'Skin Clinic, Patna', metric: 'Live daily analytics' },
 ];

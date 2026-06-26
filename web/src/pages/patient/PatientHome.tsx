@@ -1,9 +1,8 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Ticket, MapPin, Gift, ArrowRight, Clock } from 'lucide-react';
+import { Search, Ticket, MapPin, ArrowRight, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { demoPatient, demoDoctors, demoBookings } from '@/services/demoData';
-import { inr } from '@/lib/format';
 
 export function PatientHome() {
   const upcoming = demoBookings.find((b) => b.status === 'Upcoming');
@@ -45,10 +44,10 @@ export function PatientHome() {
       )}
 
       <div className="grid grid-cols-2 gap-3">
-        <Link to="/patient/wallet" className="rounded-2xl border hairline bg-white/80 dark:bg-ink-900/80 p-4">
-          <Gift size={16} className="text-accent-500" />
-          <div className="mt-3 text-[10px] uppercase tracking-wider text-muted">Cashback wallet</div>
-          <div className="text-xl font-semibold text-ink-900 dark:text-ink-50">{inr(demoPatient.walletBalance)}</div>
+        <Link to="/patient/search" className="rounded-2xl border hairline bg-white/80 dark:bg-ink-900/80 p-4">
+          <Search size={16} className="text-accent-500" />
+          <div className="mt-3 text-[10px] uppercase tracking-wider text-muted">Find a doctor</div>
+          <div className="text-xl font-semibold text-ink-900 dark:text-ink-50">Search</div>
         </Link>
         <Link to="/patient/bookings" className="rounded-2xl border hairline bg-white/80 dark:bg-ink-900/80 p-4">
           <Ticket size={16} className="text-brand-500" />

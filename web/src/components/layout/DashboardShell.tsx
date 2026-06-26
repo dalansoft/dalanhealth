@@ -348,13 +348,18 @@ export function DashboardShell({ nav, children, title, subtitle, topRight }: Pro
               <SoundToggle />
               <ThemeToggle />
               <NotificationBell />
-              <div className="hidden sm:flex items-center gap-2 rounded-xl border hairline pl-1 pr-3 py-1">
+              <button
+                type="button"
+                onClick={() => { if (user?.role === 'clinic_admin') navigate('/clinic/profile'); }}
+                title={user?.role === 'clinic_admin' ? 'Profile' : undefined}
+                className="hidden sm:flex items-center gap-2 rounded-xl border hairline pl-1 pr-3 py-1 hover:bg-ink-50 dark:hover:bg-ink-800/60 transition-colors text-left"
+              >
                 <Avatar name={user?.name ?? 'You'} src={user?.photoDataUrl} size="sm" />
                 <div className="leading-tight">
                   <div className="text-xs font-semibold text-ink-900 dark:text-ink-50 truncate max-w-[120px]">{user?.name ?? 'Guest'}</div>
                   <div className="text-[10px] uppercase tracking-wider text-muted">{user?.role?.replace('_', ' ') ?? 'guest'}</div>
                 </div>
-              </div>
+              </button>
             </div>
           </div>
         </header>

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Search, Ticket, Wallet, User } from 'lucide-react';
+import { Home, Search, Ticket, User } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { Badge } from '@/components/ui/Badge';
@@ -12,12 +12,11 @@ const tabs = [
   { to: '/patient', icon: <Home size={18} />, label: 'Home', end: true },
   { to: '/patient/search', icon: <Search size={18} />, label: 'Search' },
   { to: '/patient/queue', icon: <Ticket size={18} />, label: 'Queue' },
-  { to: '/patient/wallet', icon: <Wallet size={18} />, label: 'Wallet' },
   { to: '/patient/profile', icon: <User size={18} />, label: 'Profile' },
 ];
 
 export function MobileShell({ children }: { children: ReactNode }) {
-  const { user, isDemo, logout } = useAuth();
+  const { user, isDemo } = useAuth();
   const navigate = useNavigate();
 
   return (
@@ -28,7 +27,7 @@ export function MobileShell({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2">
             {isDemo && <Badge tone="accent" size="sm">Demo</Badge>}
             <ThemeToggle />
-            <button onClick={() => { logout(); navigate('/'); }}>
+            <button onClick={() => navigate('/patient/profile')} aria-label="Profile">
               <Avatar name={user?.name ?? 'Guest'} src={user?.photoDataUrl} size="sm" />
             </button>
           </div>

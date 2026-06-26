@@ -9,7 +9,7 @@ const demos = [
   {
     role: 'patient',
     title: 'Patient app',
-    desc: 'Doctor search, QR join queue, live token tracking, ₹5/visit booking and cashback wallet.',
+    desc: 'Doctor search, QR join queue, live token tracking and easy booking.',
     icon: Smartphone,
     tone: 'from-brand-500/15 to-brand-500/0',
     color: 'text-brand-600 dark:text-brand-300',
@@ -17,7 +17,7 @@ const demos = [
   {
     role: 'super_admin',
     title: 'Super admin',
-    desc: 'Clinic monitoring, revenue analytics, recharge, cashback campaigns, support.',
+    desc: 'Clinic monitoring, revenue analytics, recharge, plans, support.',
     icon: ShieldCheck,
     tone: 'from-accent-500/15 to-accent-500/0',
     color: 'text-accent-600 dark:text-accent-300',
