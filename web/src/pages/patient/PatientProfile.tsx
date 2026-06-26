@@ -1,9 +1,16 @@
+import { useNavigate } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
+import { useAuth } from '@/store/auth';
 import { demoPatient, demoBookings } from '@/services/demoData';
 
 export function PatientProfile() {
+  const logout = useAuth((s) => s.logout);
+  const navigate = useNavigate();
+  const onLogout = () => { logout(); navigate('/'); };
+
   return (
     <div className="space-y-5">
       <Card>
@@ -36,6 +43,14 @@ export function PatientProfile() {
           ))}
         </div>
       </Card>
+
+      <button
+        type="button"
+        onClick={onLogout}
+        className="w-full flex items-center justify-center gap-2 rounded-2xl border hairline bg-white dark:bg-ink-900 px-4 py-3.5 text-sm font-semibold text-danger-500 hover:bg-danger-500/10 transition-colors"
+      >
+        <LogOut size={16} /> Logout
+      </button>
     </div>
   );
 }
