@@ -23,6 +23,9 @@ export interface SessionUser {
   experience?: string;
   qualification?: string;
   aboutMe?: string;
+  /** Patient profile basics (editable in the patient app). */
+  age?: number;
+  gender?: string;
   /** Data-URI for the uploaded profile photo (demo persistence). */
   photoDataUrl?: string;
   /** Repeatable medical licenses / registrations (name + number + file). */
