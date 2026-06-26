@@ -1,7 +1,9 @@
-import { lazy, Suspense, type ComponentType } from 'react';
+import { Suspense } from 'react';
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { ScrollToTop } from './ScrollToTop';
 import { ProtectedRoute } from './ProtectedRoute';
+import { lazyNamed } from './lazyImport';
+import { RouteError } from './RouteError';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 
 // Eager — needed for first paint of the public/auth entry points.
@@ -15,9 +17,11 @@ import { NotFound } from '@/pages/NotFound';
 
 /* Lazy route helper: code-splits each page into its own chunk so the heavy
    dashboards (and recharts) never load with the public landing site. Works
-   with the project's named exports. */
+   with the project's named exports. `lazyNamed` adds stale-chunk recovery so a
+   redeploy never leaves users on a "Failed to fetch dynamically imported
+   module" screen. */
 function lz<M extends Record<string, unknown>>(factory: () => Promise<M>, name: keyof M) {
-  const C = lazy(() => factory().then((m) => ({ default: m[name] as ComponentType })));
+  const C = lazyNamed(factory, name);
   return <C />;
 }
 
@@ -45,6 +49,7 @@ function RootLayout() {
 export const router = createBrowserRouter([
   {
     element: <RootLayout />,
+    errorElement: <RouteError />,
     children: [
       {
         element: <PublicLayout />,
