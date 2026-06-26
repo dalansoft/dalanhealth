@@ -26,7 +26,7 @@ export function ClinicWallet() {
           <CardHeader>
             <div>
               <CardTitle>Wallet balance</CardTitle>
-              <CardSubtitle>Auto-deducts ₹{PER_VISIT_FEE} + GST per completed consultation (Growth plan)</CardSubtitle>
+              <CardSubtitle>Auto-deducts ₹{PER_VISIT_FEE} incl. GST per completed consultation (Growth plan)</CardSubtitle>
             </div>
             {low && <Badge tone="warning" pulse>Low balance</Badge>}
           </CardHeader>
@@ -49,7 +49,7 @@ export function ClinicWallet() {
           <div className="space-y-3">
             <div className="flex items-center justify-between text-sm"><span className="text-muted">Warning</span><span className="font-semibold">₹1,000</span></div>
             <div className="flex items-center justify-between text-sm"><span className="text-muted">Critical</span><span className="font-semibold text-danger-500">₹200</span></div>
-            <div className="flex items-center justify-between text-sm"><span className="text-muted">Plan</span><Badge tone="brand" size="sm">Growth · ₹{PER_VISIT_FEE} + GST/visit</Badge></div>
+            <div className="flex items-center justify-between text-sm"><span className="text-muted">Plan</span><Badge tone="brand" size="sm">Growth · ₹{PER_VISIT_FEE} incl. GST/visit</Badge></div>
           </div>
         </Card>
       </div>

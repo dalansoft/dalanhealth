@@ -48,7 +48,7 @@ export function PublicFooter() {
           <Logo size="lg" asLink={false} />
           <p className="mt-3 text-sm font-semibold gradient-text">Better Health</p>
           <p className="mt-3 max-w-sm text-sm text-muted">
-            Smart Token &amp; Digital OPD platform. Reduce waiting time, improve patient experience, and modernize your clinic — pay just ₹9 + GST per visit.
+            Smart Token &amp; Digital OPD platform. Reduce waiting time, improve patient experience, and modernize your clinic — pay just ₹9 incl. GST per visit.
           </p>
           <div className="mt-6 space-y-2 text-sm text-muted">
             <a href="mailto:info@dalanhealth.com" className="flex items-center gap-2 hover:text-brand-600 dark:hover:text-brand-300"><Mail size={14} /> info@dalanhealth.com</a>

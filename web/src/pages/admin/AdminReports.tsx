@@ -36,7 +36,6 @@ export function AdminReports() {
             'Revenue by plan',
             'Source mix (offline vs online vs QR)',
             'Follow-up funnel',
-            'Cashback issuance',
             'Wallet recharge log',
             'Notification delivery rate',
             'Support response time',

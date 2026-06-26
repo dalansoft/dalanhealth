@@ -1,6 +1,6 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, Building2, IndianRupee, Wallet, Layers, Gift, Bell,
+  LayoutDashboard, Building2, IndianRupee, Wallet, Layers, Bell,
   Headset, UserCog, BarChart3, Activity, Settings,
 } from 'lucide-react';
 import { DashboardShell, type NavSection } from '@/components/layout/DashboardShell';
@@ -22,7 +22,6 @@ const nav: NavSection[] = [
       { to: '/admin/revenue', label: 'Revenue', icon: <IndianRupee size={16} /> },
       { to: '/admin/wallet', label: 'Wallet & recharge', icon: <Wallet size={16} /> },
       { to: '/admin/plans', label: 'Plans & pricing', icon: <Layers size={16} /> },
-      { to: '/admin/cashback', label: 'Cashback', icon: <Gift size={16} /> },
     ],
   },
   {
@@ -43,7 +42,6 @@ const titles: Record<string, { title: string; sub: string }> = {
   '/admin/clinics': { title: 'Clinics', sub: 'Onboarded clinics across India' },
   '/admin/revenue': { title: 'Revenue', sub: 'MTD, YTD and per-clinic breakdown' },
   '/admin/wallet': { title: 'Wallet & recharges', sub: 'All wallet transactions across clinics' },
-  '/admin/cashback': { title: 'Cashback campaigns', sub: 'Festival, doctor-promo and first-booking rewards' },
 };
 
 export function AdminLayout() {

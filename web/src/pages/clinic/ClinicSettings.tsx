@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Save, Clock, Palette, Bell, MessageCircle, MessageSquare, Mail, Smartphone, Sparkles, Check, Plus, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Save, Clock, Palette, Bell, MessageCircle, MessageSquare, Mail, Smartphone, Sparkles, Check, Plus, Trash2, UserCircle } from 'lucide-react';
 import { Card, CardHeader, CardSubtitle, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -77,6 +78,9 @@ export function ClinicSettings() {
           <Input label="Specialization" value={spec} onChange={(e) => setSpec(e.target.value)} />
           <Input label="City" value={city} onChange={(e) => setCity(e.target.value)} />
         </div>
+        <Link to="/clinic/profile" className="mt-3 inline-flex items-center gap-2 rounded-xl border hairline px-4 py-2.5 text-sm font-semibold text-brand-700 dark:text-brand-300 hover:bg-brand-500/10 transition-colors">
+          <UserCircle size={15} /> Edit full profile — photo, email, qualifications, licenses &amp; certificates
+        </Link>
       </Card>
 
       <Card>

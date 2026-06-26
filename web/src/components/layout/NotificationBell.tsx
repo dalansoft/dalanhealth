@@ -15,7 +15,7 @@ const samples: NotificationItem[] = [
   { id: 'n1', title: 'Wallet auto-recharged', body: 'UPI top-up of ₹5,000 cleared', ago: '2 min ago', unread: true },
   { id: 'n2', title: 'New patient added', body: 'Ramesh Jha joined the queue (#9)', ago: '14 min ago', unread: true },
   { id: 'n3', title: 'Skipped patient returned', body: 'Anjali Devi is back — token #7', ago: '38 min ago', unread: false },
-  { id: 'n4', title: 'Daily report ready', body: 'Yesterday\'s revenue + cashback summary', ago: '4 hr ago', unread: false },
+  { id: 'n4', title: 'Daily report ready', body: 'Yesterday\'s revenue summary', ago: '4 hr ago', unread: false },
 ];
 
 /**

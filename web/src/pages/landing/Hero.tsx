@@ -80,7 +80,7 @@ export function Hero() {
             className="mt-6 inline-flex flex-col gap-1 rounded-2xl border border-token/30 bg-token/5 px-5 py-3"
           >
             <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-ink-900 dark:text-ink-50">
-              ₹9 <span className="text-sm font-semibold text-ink-600 dark:text-ink-300">+ GST</span>
+              ₹9 <span className="text-sm font-semibold text-ink-600 dark:text-ink-300">incl. GST</span>
               <span className="text-sm font-medium text-muted"> per visit</span>
             </span>
             <span className="text-[11px] text-muted">No Setup Fee • No Monthly Fee • No Annual Contract</span>

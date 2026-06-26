@@ -18,7 +18,6 @@ const features = [
   { id: 'docsU', label: 'Unlimited doctors', starter: false, growth: true },
   { id: 'analytics', label: 'Advanced analytics', starter: false, growth: true },
   { id: 'wa', label: 'WhatsApp + Push notifications', starter: false, growth: true },
-  { id: 'cb', label: 'Cashback campaigns', starter: false, growth: true },
   { id: 'support', label: 'Priority support', starter: false, growth: true },
 ];
 
