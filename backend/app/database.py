@@ -1,7 +1,14 @@
-"""Database layer — PostgreSQL via SQLAlchemy 2.0 async.
+"""Database layer — SQLAlchemy 2.0 async, engine-agnostic.
 
-Production:  Neon PostgreSQL  → DATABASE_URL=postgresql+asyncpg://…
+Production:  Azure SQL Database → DATABASE_URL=mssql+aioodbc://…?driver=ODBC+Driver+18+for+SQL+Server&Encrypt=yes
+             (PostgreSQL also supported → postgresql+asyncpg://… for Neon/Railway)
 Local dev:   SQLite (zero setup) → default sqlite+aiosqlite:///./dalanhealth.db
+
+The ORM in app/models/orm.py uses only portable column types (String, Text,
+Integer, Float, Boolean, DateTime, JSON) and UUID-string primary keys, so the
+same schema runs unchanged on SQL Server, PostgreSQL and SQLite. Only the
+driver-specific connect options and the tiny raw-SQL migration below are
+dialect-aware.
 
 Tables are created automatically at boot (`Base.metadata.create_all`) — fine
 for a greenfield schema. When the schema starts evolving with real data in
@@ -36,6 +43,9 @@ def _normalize_url(url: str) -> tuple[str, bool]:
     - Strips libpq-only query params (`sslmode`, `channel_binding`) that Neon
       includes by default — asyncpg rejects them as unknown kwargs and the
       app would crash at boot (seen as a Railway "Healthcheck failure").
+
+    SQL Server (`mssql+aioodbc://…`) and SQLite URLs are passed through
+    untouched — their TLS/driver options travel in the ODBC/DSN query string.
 
     Returns (url, ssl_required).
     """
@@ -88,13 +98,34 @@ class Database:
     async def _ensure_columns(self) -> None:
         """Tiny forward-only migration: create_all never ALTERs existing
         tables, so columns added after first deploy are applied here. Replace
-        with Alembic once the schema churns with real data."""
-        statements = [
-            "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS sort_order DOUBLE PRECISION",
-            "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS was_skipped BOOLEAN DEFAULT FALSE",
-        ]
+        with Alembic once the schema churns with real data.
+
+        Dialect-aware because the column DDL differs per engine (SQL Server
+        omits the COLUMN keyword and spells the types FLOAT / BIT). On a fresh
+        database create_all already made these columns, so this is a no-op
+        there; it only matters for tables that predate the columns."""
         assert self.engine is not None
-        for stmt in statements:
+        dialect = self.engine.dialect.name  # 'mssql' | 'postgresql' | 'sqlite'
+
+        # (column, postgres/sqlite type, sql-server type, default clause)
+        columns = [
+            ("sort_order", "DOUBLE PRECISION", "FLOAT", ""),
+            ("was_skipped", "BOOLEAN", "BIT", " DEFAULT 0"),
+        ]
+
+        for name, pg_type, mssql_type, default in columns:
+            if dialect == "mssql":
+                # SQL Server: guard on sys.columns; ADD (no COLUMN keyword).
+                stmt = (
+                    "IF NOT EXISTS (SELECT 1 FROM sys.columns "
+                    "WHERE object_id = OBJECT_ID('queue_entries') "
+                    f"AND name = '{name}') "
+                    f"ALTER TABLE queue_entries ADD {name} {mssql_type}{default}"
+                )
+            else:
+                # Postgres supports IF NOT EXISTS; SQLite needs the plain form,
+                # which errors harmlessly if the column already exists.
+                stmt = f"ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS {name} {pg_type}{default}"
             try:
                 async with self.engine.begin() as conn:
                     await conn.execute(text(stmt))

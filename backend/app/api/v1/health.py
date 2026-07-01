@@ -49,7 +49,9 @@ async def health():
 @router.get("/database")
 async def health_database():
     if await db.ping():
-        return _ok({"database": "postgresql"})
+        # Report the live engine (mssql on Azure SQL, postgresql on Neon, sqlite locally).
+        engine = db.engine.dialect.name if db.engine is not None else "unknown"
+        return _ok({"database": engine})
     return _fail("unreachable", "Database ping failed (SELECT 1)")
 
 

@@ -1,0 +1,9 @@
+# Azure SQL Database driver stack — layered on top of the base requirements.
+# Used only by Dockerfile.azure (Azure Container Apps). The base
+# requirements.txt stays free of the ODBC driver so the existing Railway /
+# Postgres image keeps building without the Microsoft apt repo + unixodbc.
+-r requirements.txt
+
+# Async SQL Server access for SQLAlchemy's mssql+aioodbc dialect.
+aioodbc==0.5.0
+pyodbc==5.1.0

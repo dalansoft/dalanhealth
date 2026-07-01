@@ -1,0 +1,78 @@
+# DalanHealth → Azure deploy (manual). Ships the web app to Azure Static Web
+# Apps and the FastAPI backend (as a container) to Azure Container Apps.
+#
+# Manual on purpose (workflow_dispatch): it runs only when you choose to, so it
+# never races the existing GitHub Pages / Railway pipelines during migration.
+# Once Azure is your source of truth, add a `push:` trigger and retire the old
+# workflows. Full setup steps live in deploy/AZURE-MIGRATION.md.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   AZURE_STATIC_WEB_APPS_API_TOKEN  Static Web App → Manage deployment token
+#   AZURE_CREDENTIALS                JSON from `az ad sp create-for-rbac --sdk-auth`
+#   AZURE_RESOURCE_GROUP             e.g. dalanhealth-rg
+#   AZURE_ACR_NAME                   Azure Container Registry name (no .azurecr.io)
+#   AZURE_CONTAINERAPP_NAME          e.g. dalanhealth-api
+#   VITE_API_BASE_URL                https URL of the Container App (used at web build)
+
+name: Deploy to Azure
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: azure-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Frontend → Azure Static Web Apps ──────────────────────────────────
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install & build
+        working-directory: web
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy to Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: web/dist
+          skip_app_build: true
+          skip_api_build: true
+
+  # ── Backend → Azure Container Apps (built from Dockerfile.azure) ───────
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build image & deploy to Container Apps
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}/backend
+          dockerfilePath: Dockerfile.azure
+          acrName: ${{ secrets.AZURE_ACR_NAME }}
+          resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          containerAppName: ${{ secrets.AZURE_CONTAINERAPP_NAME }}
+          imageToBuild: ${{ secrets.AZURE_ACR_NAME }}.azurecr.io/dalanhealth-api:${{ github.sha }}
+          # App settings (DATABASE_URL, JWT_SECRET, …) are managed on the
+          # Container App itself — see deploy/AZURE-MIGRATION.md — so secrets
+          # never live in this file.
